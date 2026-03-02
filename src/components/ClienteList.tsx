@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import ClienteArquivos from "@/components/ClienteArquivos";
 
 interface OrcamentoRow {
   id: string;
@@ -294,6 +295,10 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                     >
                       <Plus className="h-3.5 w-3.5" /> Novo Projeto
                     </Button>
+
+                    <div className="border-t pt-3 mt-2">
+                      <ClienteArquivos clienteId={cliente.id} />
+                    </div>
                   </div>
                 )}
               </div>
