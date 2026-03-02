@@ -65,6 +65,50 @@ export type Database = {
         }
         Relationships: []
       }
+      cliente_arquivos: {
+        Row: {
+          arquivo_path: string
+          arquivo_url: string
+          categoria: string
+          cliente_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          tamanho: number
+        }
+        Insert: {
+          arquivo_path: string
+          arquivo_url: string
+          categoria?: string
+          cliente_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          tamanho?: number
+        }
+        Update: {
+          arquivo_path?: string
+          arquivo_url?: string
+          categoria?: string
+          cliente_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tamanho?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_arquivos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           created_at: string
