@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import ImportMapper, { ImportField } from "./ImportMapper";
+import ImportMapper, { ImportField, ImportResult } from "./ImportMapper";
 
 const fields: ImportField[] = [
   { name: "codigo", label: "Código", required: true },
@@ -20,7 +20,7 @@ const parsePreco = (val: any): number | undefined => {
 const BATCH_SIZE = 500;
 
 const ImportPrecos = () => {
-  const handleImport = async (rows: Record<string, any>[], onProgress: (processed: number, total: number) => void) => {
+  const handleImport = async (rows: Record<string, any>[], onProgress: (processed: number, total: number) => void): Promise<ImportResult> => {
     const precos = rows
       .map((r) => {
         const preco_tabela = parsePreco(r.preco_tabela);
@@ -36,10 +36,12 @@ const ImportPrecos = () => {
 
     if (precos.length === 0) {
       toast.error("Nenhum registro com preços válidos encontrado.");
-      return;
+      return { totalProcessed: 0, totalSuccess: 0, failed: [] };
     }
 
     let totalUpdated = 0;
+    const allFailed: ImportResult["failed"] = [];
+
     for (let i = 0; i < precos.length; i += BATCH_SIZE) {
       const batch = precos.slice(i, i + BATCH_SIZE);
       const { data, error } = await supabase.functions.invoke("import-precos", {
@@ -47,13 +49,27 @@ const ImportPrecos = () => {
       });
 
       if (error) {
-        toast.error(error.message || "Erro na importação de preços");
-        return;
+        for (const item of batch) {
+          allFailed.push({ ...item, _erro: error.message || "Erro desconhecido no servidor" });
+        }
+      } else {
+        totalUpdated += data.updated ?? 0;
+        if (data.failed?.length) {
+          for (const f of data.failed) {
+            allFailed.push({ codigo: f.codigo, preco_tabela: f.preco_tabela, preco_minimo: f.preco_minimo, _erro: f.erro });
+          }
+        }
       }
-      totalUpdated += data.updated;
       onProgress(Math.min(i + BATCH_SIZE, precos.length), precos.length);
     }
-    toast.success(`${totalUpdated} preços atualizados com sucesso!`);
+
+    if (allFailed.length === 0) {
+      toast.success(`${totalUpdated} preços atualizados com sucesso!`);
+    } else {
+      toast.warning(`${totalUpdated} atualizados, ${allFailed.length} com erro.`);
+    }
+
+    return { totalProcessed: precos.length, totalSuccess: totalUpdated, failed: allFailed };
   };
 
   return (

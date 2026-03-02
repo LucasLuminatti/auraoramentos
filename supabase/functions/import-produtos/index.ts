@@ -26,27 +26,53 @@ serve(async (req) => {
       });
     }
 
-    // Insert in batches of 500
-    const batchSize = 500;
     let inserted = 0;
+    const failed: Array<Record<string, any>> = [];
 
-    for (let i = 0; i < produtos.length; i += batchSize) {
-      const batch = produtos.slice(i, i + batchSize);
+    // Validate and collect valid items
+    const validItems: Array<{ codigo: string; descricao: string }> = [];
+    for (const item of produtos) {
+      const codigo = String(item.codigo ?? '').trim();
+      const descricao = String(item.descricao ?? '').trim();
+
+      if (!codigo) {
+        failed.push({ ...item, erro: 'Campo "código" está vazio ou ausente' });
+        continue;
+      }
+      if (!descricao) {
+        failed.push({ ...item, erro: 'Campo "descrição" está vazio ou ausente' });
+        continue;
+      }
+      validItems.push({ codigo, descricao });
+    }
+
+    // Upsert valid items in batches of 500
+    const batchSize = 500;
+    for (let i = 0; i < validItems.length; i += batchSize) {
+      const batch = validItems.slice(i, i + batchSize);
       const { error } = await supabase
         .from('produtos')
         .upsert(batch, { onConflict: 'codigo' });
 
       if (error) {
-        console.error('Batch error:', error);
-        return new Response(JSON.stringify({ error: error.message, inserted }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // If batch fails, try individually to identify which ones failed
+        for (const item of batch) {
+          const { error: itemError } = await supabase
+            .from('produtos')
+            .upsert(item, { onConflict: 'codigo' });
+
+          if (itemError) {
+            failed.push({ ...item, erro: itemError.message });
+          } else {
+            inserted++;
+          }
+        }
+      } else {
+        inserted += batch.length;
       }
-      inserted += batch.length;
     }
 
-    return new Response(JSON.stringify({ success: true, inserted }), {
+    return new Response(JSON.stringify({ success: true, inserted, failed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
