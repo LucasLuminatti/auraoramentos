@@ -1,0 +1,201 @@
+import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Upload, Loader2, AlertCircle } from "lucide-react";
+
+export interface ImportField {
+  name: string;
+  label: string;
+  required: boolean;
+}
+
+interface ImportMapperProps {
+  fields: ImportField[];
+  onImport: (mappedRows: Record<string, any>[]) => Promise<void>;
+  importLabel?: string;
+}
+
+const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapperProps) => {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [previewRows, setPreviewRows] = useState<any[][]>([]);
+  const [rawRows, setRawRows] = useState<any[][]>([]);
+  const [importing, setImporting] = useState(false);
+  const [fileName, setFileName] = useState("");
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const allRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+    if (allRows.length < 2) {
+      setHeaders([]);
+      setRawRows([]);
+      setPreviewRows([]);
+      return;
+    }
+
+    const detectedHeaders = (allRows[0] as any[]).map((h) => String(h ?? "").trim()).filter(Boolean);
+    setHeaders(detectedHeaders);
+    setRawRows(allRows.slice(1));
+    setPreviewRows(allRows.slice(1, 6));
+
+    // Auto-map: try to match field names to headers (case-insensitive substring)
+    const autoMapping: Record<string, string> = {};
+    for (const field of fields) {
+      const match = detectedHeaders.find(
+        (h) => h.toLowerCase().includes(field.name.toLowerCase()) || h.toLowerCase().includes(field.label.toLowerCase())
+      );
+      if (match) autoMapping[field.name] = match;
+    }
+    setMapping(autoMapping);
+
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const allRequiredMapped = fields.every((f) => !f.required || mapping[f.name]);
+
+  const getMappedPreview = () => {
+    if (!allRequiredMapped) return [];
+    const headerIndexMap: Record<string, number> = {};
+    headers.forEach((h, i) => (headerIndexMap[h] = i));
+
+    return previewRows.map((row) => {
+      const mapped: Record<string, any> = {};
+      for (const field of fields) {
+        const col = mapping[field.name];
+        if (col) {
+          mapped[field.name] = row[headerIndexMap[col]] ?? "";
+        }
+      }
+      return mapped;
+    });
+  };
+
+  const handleImport = async () => {
+    setImporting(true);
+    try {
+      const headerIndexMap: Record<string, number> = {};
+      headers.forEach((h, i) => (headerIndexMap[h] = i));
+
+      const mappedData = rawRows
+        .map((row) => {
+          const mapped: Record<string, any> = {};
+          for (const field of fields) {
+            const col = mapping[field.name];
+            if (col) {
+              mapped[field.name] = row[headerIndexMap[col]] ?? "";
+            }
+          }
+          return mapped;
+        })
+        .filter((row) => fields.every((f) => !f.required || row[f.name]));
+
+      await onImport(mappedData);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const mappedPreview = getMappedPreview();
+  const totalValid = rawRows.filter((row) => {
+    const headerIndexMap: Record<string, number> = {};
+    headers.forEach((h, i) => (headerIndexMap[h] = i));
+    return fields.every((f) => {
+      if (!f.required) return true;
+      const col = mapping[f.name];
+      return col && row[headerIndexMap[col]];
+    });
+  }).length;
+
+  return (
+    <div className="space-y-6">
+      {/* Upload */}
+      <div className="rounded-xl border bg-card p-6 space-y-4">
+        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="hidden" />
+        <Button className="gap-2" onClick={() => fileRef.current?.click()}>
+          <Upload className="h-4 w-4" /> Selecionar Arquivo
+        </Button>
+        {fileName && <p className="text-sm text-muted-foreground">Arquivo: {fileName}</p>}
+      </div>
+
+      {/* Mapping */}
+      {headers.length > 0 && (
+        <div className="rounded-xl border bg-card p-6 space-y-4">
+          <h3 className="font-semibold text-foreground">Mapeamento de Colunas</h3>
+          <p className="text-sm text-muted-foreground">Para cada campo, selecione a coluna correspondente da sua planilha.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {fields.map((field) => (
+              <div key={field.name} className="space-y-1">
+                <label className="text-sm font-medium text-foreground">
+                  {field.label} {field.required && <span className="text-destructive">*</span>}
+                </label>
+                <Select value={mapping[field.name] || ""} onValueChange={(val) => setMapping((prev) => ({ ...prev, [field.name]: val }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a coluna..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {headers.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+
+          {!allRequiredMapped && (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              Mapeie todos os campos obrigatórios para continuar.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Preview */}
+      {allRequiredMapped && mappedPreview.length > 0 && (
+        <div className="rounded-xl border overflow-hidden">
+          <div className="bg-card px-4 py-3 border-b">
+            <h3 className="font-semibold text-foreground text-sm">Preview (primeiras {mappedPreview.length} linhas)</h3>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {fields.filter((f) => mapping[f.name]).map((f) => (
+                  <TableHead key={f.name}>{f.label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {mappedPreview.map((row, i) => (
+                <TableRow key={i}>
+                  {fields.filter((f) => mapping[f.name]).map((f) => (
+                    <TableCell key={f.name} className="text-sm">{String(row[f.name] ?? "")}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Import button */}
+      {allRequiredMapped && rawRows.length > 0 && (
+        <Button className="gap-2" disabled={importing || totalValid === 0} onClick={handleImport}>
+          {importing ? <><Loader2 className="h-4 w-4 animate-spin" /> Importando...</> : `${importLabel} ${totalValid} registros`}
+        </Button>
+      )}
+    </div>
+  );
+};
+
+export default ImportMapper;

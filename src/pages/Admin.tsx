@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -9,29 +9,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Upload, Loader2, CheckCircle, AlertCircle, Trash2, Search, ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, CheckCircle, Trash2, Search, ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
 import AdminExceptions from "@/components/AdminExceptions";
+import ImportProdutos from "@/components/ImportProdutos";
+import ImportPrecos from "@/components/ImportPrecos";
 
-interface ProdutoRow {
-  codigo: string;
-  descricao: string;
-  preco_tabela?: number;
-  preco_minimo?: number;
-}
 
 const Admin = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
 
   // Produtos tab
-  const [importLoading, setImportLoading] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [importProgress, setImportProgress] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
   const [produtos, setProdutos] = useState<any[]>([]);
   const [produtoSearch, setProdutoSearch] = useState("");
   const [loadingProdutos, setLoadingProdutos] = useState(false);
@@ -93,52 +85,6 @@ const Admin = () => {
     setClientes(data || []);
   };
 
-  // Import produtos logic
-  const parsePrecoMinimo = (val: any): number => {
-    if (typeof val === "number") return val;
-    if (!val) return 0;
-    const str = String(val).replace("R$", "").replace(/\s/g, "").replace(",", ".").replace("-", "0");
-    return parseFloat(str) || 0;
-  };
-
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImportLoading(true);
-    setImportResult(null);
-    setImportProgress("Lendo arquivo...");
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
-      const produtosImport: ProdutoRow[] = rows
-        .map((row) => {
-          const codigo = (row["Nº do item"] || row["N do item"] || row["codigo"] || "").toString().trim();
-          const descricao = (row["Descrição do item"] || row["Desc"] || row["descricao"] || row["Descrição"] || "").toString().trim();
-          const preco_tabela = parseFloat(row["PRECO TABELA V2"]) || 0;
-          const preco_minimo = parsePrecoMinimo(row["PRECO MINIMO V2"]);
-          return { codigo, descricao, preco_tabela, preco_minimo };
-        })
-        .filter((p) => p.codigo && p.descricao);
-      if (produtosImport.length === 0) {
-        setImportResult({ success: false, message: "Nenhum produto válido encontrado na planilha." });
-        setImportLoading(false);
-        return;
-      }
-      setImportProgress(`Importando ${produtosImport.length} produtos...`);
-      const { data: resData, error } = await supabase.functions.invoke("import-produtos", { body: { produtos: produtosImport } });
-      if (error) throw error;
-      setImportResult({ success: true, message: `${resData.inserted} produtos importados com sucesso!` });
-      fetchProdutos(produtoSearch);
-    } catch (err: any) {
-      setImportResult({ success: false, message: err.message || "Erro na importação" });
-    } finally {
-      setImportLoading(false);
-      setImportProgress("");
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
 
   const handleDeleteCliente = async () => {
     if (!deleteTarget) return;
@@ -221,6 +167,8 @@ const Admin = () => {
           <TabsList className="mb-6">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="excecoes">Exceções de Preço</TabsTrigger>
+            <TabsTrigger value="import-produtos">Importar Produtos</TabsTrigger>
+            <TabsTrigger value="import-precos">Importar Preços</TabsTrigger>
             <TabsTrigger value="produtos">Produtos</TabsTrigger>
             <TabsTrigger value="colaboradores">Colaboradores</TabsTrigger>
             <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
@@ -237,23 +185,19 @@ const Admin = () => {
             <AdminExceptions />
           </TabsContent>
 
+          {/* IMPORTAR PRODUTOS */}
+          <TabsContent value="import-produtos">
+            <ImportProdutos />
+          </TabsContent>
+
+          {/* IMPORTAR PREÇOS */}
+          <TabsContent value="import-precos">
+            <ImportPrecos />
+          </TabsContent>
+
           {/* PRODUTOS */}
           <TabsContent value="produtos" className="space-y-6">
             <div className="flex gap-4 flex-wrap">
-              <div className="flex-1 min-w-[280px] rounded-xl border bg-card p-6 space-y-4">
-                <h3 className="font-semibold text-foreground">Importar Produtos</h3>
-              <p className="text-sm text-muted-foreground">Selecione a planilha Excel com as colunas "Nº do item", "Descrição do item", "PRECO TABELA V2" e "PRECO MINIMO V2"</p>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="hidden" />
-              <Button className="gap-2" disabled={importLoading} onClick={() => fileRef.current?.click()}>
-                {importLoading ? <><Loader2 className="h-4 w-4 animate-spin" />{importProgress}</> : <><Upload className="h-4 w-4" />Selecionar Arquivo</>}
-              </Button>
-              {importResult && (
-                <div className={`flex items-start gap-3 rounded-lg border p-4 ${importResult.success ? "border-green-500/30 bg-green-500/10 text-green-700" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
-                  {importResult.success ? <CheckCircle className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
-                  <p className="text-sm">{importResult.message}</p>
-                </div>
-              )}
-              </div>
               <div className="flex-shrink-0 w-[220px] rounded-xl border bg-card p-6 flex flex-col items-center justify-center gap-3 text-center">
                 <ImageIcon className="h-8 w-8 text-primary" />
                 <h3 className="font-semibold text-foreground text-sm">Upload de Imagens</h3>
