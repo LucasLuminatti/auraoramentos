@@ -9,19 +9,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Upload, Loader2, CheckCircle, Trash2, Search, ImageIcon } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
 import AdminExceptions from "@/components/AdminExceptions";
 import ImportProdutos from "@/components/ImportProdutos";
 import ImportPrecos from "@/components/ImportPrecos";
-
+import ImportImagens from "@/components/ImportImagens";
 
 const Admin = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+
+  const [importSubTab, setImportSubTab] = useState<"produtos" | "precos" | "imagens">("produtos");
 
   // Produtos tab
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -47,7 +48,6 @@ const Admin = () => {
     fetchClientes();
   }, []);
 
-  // Debounced search for produtos
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchProdutos(produtoSearch);
@@ -85,7 +85,6 @@ const Admin = () => {
     setClientes(data || []);
   };
 
-
   const handleDeleteCliente = async () => {
     if (!deleteTarget) return;
     const { error } = await supabase.from("clientes").delete().eq("id", deleteTarget.id);
@@ -109,8 +108,6 @@ const Admin = () => {
     fetchColaboradores();
   };
 
-  const displayProdutos = produtos;
-
   const statusLabel = (s: string) => {
     switch (s) {
       case "rascunho": return "Rascunho";
@@ -131,10 +128,7 @@ const Admin = () => {
   };
 
   const handleFecharOrcamento = async (id: string) => {
-    const { error } = await supabase
-      .from("orcamentos")
-      .update({ status: "fechado" })
-      .eq("id", id);
+    const { error } = await supabase.from("orcamentos").update({ status: "fechado" }).eq("id", id);
     if (error) {
       toast.error("Erro ao fechar orçamento");
       return;
@@ -142,6 +136,12 @@ const Admin = () => {
     toast.success("Orçamento marcado como fechado!");
     fetchOrcamentos();
   };
+
+  const importSubTabs = [
+    { key: "produtos" as const, label: "Produtos", description: "Código + descrição", icon: FileSpreadsheet },
+    { key: "precos" as const, label: "Preços", description: "Atualizar preços", icon: DollarSign },
+    { key: "imagens" as const, label: "Imagens", description: "Fotos dos produtos", icon: ImageIcon },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -167,46 +167,48 @@ const Admin = () => {
           <TabsList className="mb-6">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="excecoes">Exceções de Preço</TabsTrigger>
-            <TabsTrigger value="import-produtos">Importar Produtos</TabsTrigger>
-            <TabsTrigger value="import-precos">Importar Preços</TabsTrigger>
+            <TabsTrigger value="importacao">Importação</TabsTrigger>
             <TabsTrigger value="produtos">Produtos</TabsTrigger>
             <TabsTrigger value="colaboradores">Colaboradores</TabsTrigger>
             <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
           </TabsList>
 
-          {/* DASHBOARD */}
           <TabsContent value="dashboard">
             <AdminDashboard orcamentos={orcamentos} />
           </TabsContent>
 
-          {/* EXCEÇÕES DE PREÇO */}
           <TabsContent value="excecoes">
             <AdminExceptions />
           </TabsContent>
 
-          {/* IMPORTAR PRODUTOS */}
-          <TabsContent value="import-produtos">
-            <ImportProdutos />
-          </TabsContent>
+          {/* IMPORTAÇÃO */}
+          <TabsContent value="importacao" className="space-y-6">
+            <div className="flex justify-center gap-4">
+              {importSubTabs.map(({ key, label, description, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setImportSubTab(key)}
+                  className={`flex w-[180px] flex-col items-center gap-2 rounded-xl border p-5 transition-colors ${
+                    importSubTab === key
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-foreground"
+                  }`}
+                >
+                  <Icon className="h-7 w-7" />
+                  <span className="font-semibold text-sm">{label}</span>
+                  <span className="text-xs text-muted-foreground">{description}</span>
+                </button>
+              ))}
+            </div>
 
-          {/* IMPORTAR PREÇOS */}
-          <TabsContent value="import-precos">
-            <ImportPrecos />
+            {importSubTab === "produtos" && <ImportProdutos />}
+            {importSubTab === "precos" && <ImportPrecos />}
+            {importSubTab === "imagens" && <ImportImagens />}
           </TabsContent>
 
           {/* PRODUTOS */}
           <TabsContent value="produtos" className="space-y-6">
-            <div className="flex gap-4 flex-wrap">
-              <div className="flex-shrink-0 w-[220px] rounded-xl border bg-card p-6 flex flex-col items-center justify-center gap-3 text-center">
-                <ImageIcon className="h-8 w-8 text-primary" />
-                <h3 className="font-semibold text-foreground text-sm">Upload de Imagens</h3>
-                <p className="text-xs text-muted-foreground">Envie fotos dos produtos em lote</p>
-                <Button size="sm" className="gap-2" onClick={() => navigate("/admin/upload-imagens")}>
-                  <Upload className="h-4 w-4" /> Upload
-                </Button>
-              </div>
-            </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Search className="h-4 w-4 text-muted-foreground" />
@@ -215,7 +217,7 @@ const Admin = () => {
               <div className="rounded-xl border overflow-hidden">
                 <Table>
                   <TableHeader>
-                     <TableRow>
+                    <TableRow>
                       <TableHead>Código</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead className="text-right">Preço Tabela</TableHead>
@@ -223,12 +225,12 @@ const Admin = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                     {loadingProdutos ? (
+                    {loadingProdutos ? (
                       <TableRow><TableCell colSpan={4} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Buscando...</TableCell></TableRow>
-                    ) : displayProdutos.length === 0 ? (
+                    ) : produtos.length === 0 ? (
                       <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
                     ) : (
-                      displayProdutos.map((p) => (
+                      produtos.map((p) => (
                         <TableRow key={p.id}>
                           <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
                           <TableCell>{p.descricao}</TableCell>
@@ -240,7 +242,7 @@ const Admin = () => {
                   </TableBody>
                 </Table>
                 <p className="text-xs text-muted-foreground text-center py-2">
-                  Mostrando {displayProdutos.length} de {totalProdutos} produtos
+                  Mostrando {produtos.length} de {totalProdutos} produtos
                 </p>
               </div>
             </div>
@@ -289,10 +291,10 @@ const Admin = () => {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Projeto</TableHead>
                     <TableHead>Colaborador</TableHead>
-                     <TableHead>Valor</TableHead>
-                     <TableHead>Status</TableHead>
-                     <TableHead className="w-20">Ações</TableHead>
-                   </TableRow>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-20">Ações</TableHead>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
                   {orcamentos.map((o) => (
@@ -307,11 +309,7 @@ const Admin = () => {
                       </TableCell>
                       <TableCell>
                         {o.status === "aprovado" && (
-                          <button
-                            className="p-1 rounded hover:bg-green-100 transition-colors"
-                            title="Marcar como Fechado"
-                            onClick={() => handleFecharOrcamento(o.id)}
-                          >
+                          <button className="p-1 rounded hover:bg-green-100 transition-colors" title="Marcar como Fechado" onClick={() => handleFecharOrcamento(o.id)}>
                             <CheckCircle className="h-4 w-4 text-green-600" />
                           </button>
                         )}

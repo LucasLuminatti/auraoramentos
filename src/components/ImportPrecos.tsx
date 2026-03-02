@@ -8,22 +8,36 @@ const fields: ImportField[] = [
   { name: "preco_minimo", label: "Preço Mínimo", required: false },
 ];
 
-const parsePreco = (val: any): number => {
-  if (typeof val === "number") return val;
-  if (!val) return 0;
-  const str = String(val).replace("R$", "").replace(/\s/g, "").replace(",", ".").replace("-", "0");
-  return parseFloat(str) || 0;
+const parsePreco = (val: any): number | undefined => {
+  if (typeof val === "number" && val > 0) return val;
+  if (!val) return undefined;
+  const str = String(val).replace("R$", "").replace(/\s/g, "").replace(",", ".");
+  if (str === "-" || str === "" || str === "0") return undefined;
+  const num = parseFloat(str);
+  return num > 0 ? num : undefined;
 };
 
 const BATCH_SIZE = 500;
 
 const ImportPrecos = () => {
   const handleImport = async (rows: Record<string, any>[], onProgress: (processed: number, total: number) => void) => {
-    const precos = rows.map((r) => ({
-      codigo: String(r.codigo).trim(),
-      preco_tabela: parsePreco(r.preco_tabela),
-      preco_minimo: parsePreco(r.preco_minimo),
-    }));
+    const precos = rows
+      .map((r) => {
+        const preco_tabela = parsePreco(r.preco_tabela);
+        const preco_minimo = parsePreco(r.preco_minimo);
+        if (preco_tabela === undefined && preco_minimo === undefined) return null;
+        return {
+          codigo: String(r.codigo).trim(),
+          ...(preco_tabela !== undefined && { preco_tabela }),
+          ...(preco_minimo !== undefined && { preco_minimo }),
+        };
+      })
+      .filter(Boolean) as { codigo: string; preco_tabela?: number; preco_minimo?: number }[];
+
+    if (precos.length === 0) {
+      toast.error("Nenhum registro com preços válidos encontrado.");
+      return;
+    }
 
     let totalUpdated = 0;
     for (let i = 0; i < precos.length; i += BATCH_SIZE) {
