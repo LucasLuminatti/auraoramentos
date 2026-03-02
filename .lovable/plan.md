@@ -1,38 +1,60 @@
 
-# Adicionar etapa "Analise" no fluxo de importacao de Produtos e Precos
+# Melhorias na Revisao e Inputs Numericos
 
-## O que sera feito
+## 1. Remover botao de e-mail e destacar botao de PDF (Step3Revisao.tsx)
 
-### 1. Renomear "Pre-analise" para "Analise" em ImportImagens.tsx
-- Linha 228: mudar o titulo de "Pre-analise" para "Analise"
+- Remover o botao "Enviar por E-mail" da secao de acoes (linhas 469-471)
+- Remover a importacao do icone `Mail` (linha 7)
+- Remover a funcao `handleEmail` (linha 228)
+- Transformar o botao "Gerar PDF" de `variant="outline"` para o estilo primario (sem variant ou com classe de destaque), tornando-o o botao principal da pagina
 
-### 2. Adicionar secao "Analise" no ImportMapper.tsx (usado por Produtos e Precos)
+## 2. Corrigir inputs numericos para aceitar digitacao direta
 
-Apos o mapeamento de colunas e antes do botao de importar, adicionar um card "Analise" no mesmo estilo do ImportImagens, mostrando:
+O problema atual: quando o usuario apaga o conteudo de um campo numerico para digitar um novo valor, o `|| 0` ou `|| 1` no onChange forca o valor de volta para 0/1 imediatamente, impedindo que o campo fique vazio temporariamente.
 
-- Total de linhas encontradas na planilha
-- Quantas linhas estao validas (todos os campos obrigatorios preenchidos) - com indicador verde
-- Quantas linhas serao ignoradas por campos obrigatorios vazios - com indicador vermelho/amarelo e lista expansivel das linhas com problema
-- Amostra das primeiras 5 linhas mapeadas (a tabela de preview atual sera movida para dentro deste card)
+### Solucao
 
-O card tera a mesma estrutura visual do ImportImagens:
-- Titulo "Analise" com subtitulo "X linhas analisadas"
-- Bloco verde: "X prontos para importacao"
-- Bloco vermelho (se houver): "X linhas com campos obrigatorios vazios" (expansivel para ver detalhes)
-- Tabela de amostra com as primeiras linhas validas
-- Botao de importar dentro do card
+Em todos os inputs numericos do AmbienteCard e do PrecoInput, mudar a logica para:
+- Usar `value={valor}` sem o fallback `|| ""` que impede o zero de aparecer
+- No onChange, permitir string vazia temporariamente usando estado local ou removendo o fallback `|| 0`
+- Aplicar o valor default (0 ou 1) apenas no `onBlur`, quando o usuario sai do campo
+
+**Arquivos afetados:**
+- `src/components/AmbienteCard.tsx`: Todos os inputs de quantidade, metragem, passadas, W/M, rolo
+- `src/components/Step3Revisao.tsx`: O `numInput` da edicao inline (linha 254-262)
 
 ### Detalhes tecnicos
 
-**Arquivos modificados:**
+Para cada Input numerico, a mudanca sera:
+```typescript
+// ANTES
+value={item.quantidade}
+onChange={(e) => update(i, { ...item, quantidade: parseInt(e.target.value) || 1 })}
 
-1. `src/components/ImportImagens.tsx` - Renomear "Pre-analise" para "Analise" (1 linha)
+// DEPOIS  
+value={item.quantidade}
+onChange={(e) => {
+  const raw = e.target.value;
+  update(i, { ...item, quantidade: raw === "" ? 0 : (parseInt(raw) || 0) });
+}}
+```
 
-2. `src/components/ImportMapper.tsx` - Substituir a secao "Preview" atual por um card "Analise" completo:
-   - Calcular `totalInvalid` (linhas com campos obrigatorios vazios)
-   - Coletar as linhas invalidas com motivo (qual campo esta vazio)
-   - Exibir card com contadores verde/vermelho
-   - Secao expansivel (Collapsible) para linhas invalidas
-   - Manter a tabela de preview das primeiras linhas validas dentro do card
-   - Botao de importar dentro do card
-   - Importar `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` do radix-ui
+Para o `PrecoInput`, ajustar para que `value={value}` (sem `|| ""`) e no onChange usar `parseFloat(e.target.value)` com fallback para 0 apenas se o campo ficar vazio no blur.
+
+No `Step3Revisao.numInput` (linha 259):
+```typescript
+// ANTES
+onChange={(e) => setEditValues((v) => ({ ...v, [field]: parseFloat(e.target.value) || 0 }))}
+
+// DEPOIS
+onChange={(e) => {
+  const raw = e.target.value;
+  setEditValues((v) => ({ ...v, [field]: raw === "" ? 0 : (parseFloat(raw) || 0) }));
+}}
+```
+
+### Resumo das alteracoes
+
+1. **Step3Revisao.tsx**: Remover botao de e-mail, funcao handleEmail, importacao Mail. Destacar botao PDF como primario.
+2. **AmbienteCard.tsx**: Ajustar onChange de todos os inputs numericos para permitir digitacao direta.
+3. **Step3Revisao.tsx**: Ajustar numInput para permitir digitacao direta.
