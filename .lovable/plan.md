@@ -1,82 +1,38 @@
 
-# Correcao do Relatorio de Erros na Importacao de Precos
+# Adicionar etapa "Analise" no fluxo de importacao de Produtos e Precos
 
-## Problema Identificado
+## O que sera feito
 
-O card de resultado (com contagem de erros e botao de download) nao aparece porque o `ImportMapper.handleImport` tem um bloco `try/finally` **sem `catch`**. Quando a edge function retorna um erro HTTP ou o `data` vem nulo, o acesso a `data.updated` lanca uma excecao nao tratada, o `setImportResult` nunca e chamado, e a UI volta silenciosamente ao estado inicial.
+### 1. Renomear "Pre-analise" para "Analise" em ImportImagens.tsx
+- Linha 228: mudar o titulo de "Pre-analise" para "Analise"
 
-## Correcoes
+### 2. Adicionar secao "Analise" no ImportMapper.tsx (usado por Produtos e Precos)
 
-### 1. ImportMapper.tsx - Adicionar catch com fallback
+Apos o mapeamento de colunas e antes do botao de importar, adicionar um card "Analise" no mesmo estilo do ImportImagens, mostrando:
 
-Adicionar um bloco `catch` no `handleImport` que cria um `ImportResult` de fallback com a mensagem de erro, garantindo que o card de resultado SEMPRE apareca:
+- Total de linhas encontradas na planilha
+- Quantas linhas estao validas (todos os campos obrigatorios preenchidos) - com indicador verde
+- Quantas linhas serao ignoradas por campos obrigatorios vazios - com indicador vermelho/amarelo e lista expansivel das linhas com problema
+- Amostra das primeiras 5 linhas mapeadas (a tabela de preview atual sera movida para dentro deste card)
 
-```typescript
-try {
-  // ... existing code ...
-  const result = await onImport(mappedData, onProgress);
-  setImportResult(result);
-} catch (err: any) {
-  setImportResult({
-    totalProcessed: 0,
-    totalSuccess: 0,
-    failed: [{ _erro: err?.message || "Erro desconhecido durante a importacao" }],
-  });
-} finally {
-  setImporting(false);
-}
-```
+O card tera a mesma estrutura visual do ImportImagens:
+- Titulo "Analise" com subtitulo "X linhas analisadas"
+- Bloco verde: "X prontos para importacao"
+- Bloco vermelho (se houver): "X linhas com campos obrigatorios vazios" (expansivel para ver detalhes)
+- Tabela de amostra com as primeiras linhas validas
+- Botao de importar dentro do card
 
-### 2. ImportMapper.tsx - Melhorar visibilidade do botao de download
+### Detalhes tecnicos
 
-Substituir o botao simples de download por um bloco mais destacado com texto explicativo ao lado:
+**Arquivos modificados:**
 
-```text
-+--------------------------------------------------------------+
-| [!] Alguns registros nao foram importados                    |
-|                                                              |
-| Baixe a planilha abaixo para ver quais linhas falharam      |
-| e o motivo de cada erro. Corrija os dados na planilha       |
-| e importe novamente.                                         |
-|                                                              |
-| [ Download icon ] Baixar planilha com erros (20 linhas)      |
-| Contém as linhas que nao foram importadas com o motivo       |
-| do erro e sugestao de correcao para cada registro.           |
-+--------------------------------------------------------------+
-```
+1. `src/components/ImportImagens.tsx` - Renomear "Pre-analise" para "Analise" (1 linha)
 
-O botao tera:
-- Um card com fundo destacado (bg-destructive/10 ou similar) envolvendo o botao
-- Texto descritivo ABAIXO do botao explicando que a planilha contem as linhas que nao subiram para a base de dados, com motivo do erro e sugestao de correcao
-- Icone mais visivel
-
-### 3. ImportPrecos.tsx - Proteger acesso a data nula
-
-Adicionar verificacao defensiva para o caso de `data` ser nulo mesmo sem `error`:
-
-```typescript
-if (error) {
-  // ... push all to failed ...
-} else if (!data) {
-  for (const item of batch) {
-    allFailed.push({ ...item, _erro: "Resposta vazia do servidor" });
-  }
-} else {
-  totalUpdated += data.updated ?? 0;
-  // ... rest ...
-}
-```
-
-## Detalhes Tecnicos
-
-### Arquivos modificados
-
-1. **`src/components/ImportMapper.tsx`**:
-   - Adicionar `catch` no `handleImport` para capturar excecoes e exibir resultado de erro
-   - Redesenhar a secao de download: envolver em card destacado com borda colorida (destructive), adicionar texto descritivo abaixo do botao explicando que e uma planilha com as linhas que nao foram importadas para a base de dados, com motivo do erro e sugestao de correcao
-
-2. **`src/components/ImportPrecos.tsx`**:
-   - Adicionar verificacao `else if (!data)` para tratar resposta nula do servidor sem lancar excecao
-
-3. **`src/components/ImportProdutos.tsx`**:
-   - Mesma verificacao defensiva de `data` nulo para consistencia
+2. `src/components/ImportMapper.tsx` - Substituir a secao "Preview" atual por um card "Analise" completo:
+   - Calcular `totalInvalid` (linhas com campos obrigatorios vazios)
+   - Coletar as linhas invalidas com motivo (qual campo esta vazio)
+   - Exibir card com contadores verde/vermelho
+   - Secao expansivel (Collapsible) para linhas invalidas
+   - Manter a tabela de preview das primeiras linhas validas dentro do card
+   - Botao de importar dentro do card
+   - Importar `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` do radix-ui
