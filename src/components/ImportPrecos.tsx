@@ -15,23 +15,31 @@ const parsePreco = (val: any): number => {
   return parseFloat(str) || 0;
 };
 
+const BATCH_SIZE = 500;
+
 const ImportPrecos = () => {
-  const handleImport = async (rows: Record<string, any>[]) => {
+  const handleImport = async (rows: Record<string, any>[], onProgress: (processed: number, total: number) => void) => {
     const precos = rows.map((r) => ({
       codigo: String(r.codigo).trim(),
       preco_tabela: parsePreco(r.preco_tabela),
       preco_minimo: parsePreco(r.preco_minimo),
     }));
 
-    const { data, error } = await supabase.functions.invoke("import-precos", {
-      body: { precos },
-    });
+    let totalUpdated = 0;
+    for (let i = 0; i < precos.length; i += BATCH_SIZE) {
+      const batch = precos.slice(i, i + BATCH_SIZE);
+      const { data, error } = await supabase.functions.invoke("import-precos", {
+        body: { precos: batch },
+      });
 
-    if (error) {
-      toast.error(error.message || "Erro na importação de preços");
-      return;
+      if (error) {
+        toast.error(error.message || "Erro na importação de preços");
+        return;
+      }
+      totalUpdated += data.updated;
+      onProgress(Math.min(i + BATCH_SIZE, precos.length), precos.length);
     }
-    toast.success(`${data.updated} preços atualizados com sucesso!`);
+    toast.success(`${totalUpdated} preços atualizados com sucesso!`);
   };
 
   return (

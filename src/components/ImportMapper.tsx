@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, Loader2, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 export interface ImportField {
   name: string;
@@ -13,7 +14,7 @@ export interface ImportField {
 
 interface ImportMapperProps {
   fields: ImportField[];
-  onImport: (mappedRows: Record<string, any>[]) => Promise<void>;
+  onImport: (mappedRows: Record<string, any>[], onProgress: (processed: number, total: number) => void) => Promise<void>;
   importLabel?: string;
 }
 
@@ -25,6 +26,8 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
   const [rawRows, setRawRows] = useState<any[][]>([]);
   const [importing, setImporting] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,6 +85,8 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
 
   const handleImport = async () => {
     setImporting(true);
+    setProgress(0);
+    setProgressLabel("");
     try {
       const headerIndexMap: Record<string, number> = {};
       headers.forEach((h, i) => (headerIndexMap[h] = i));
@@ -99,7 +104,12 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
         })
         .filter((row) => fields.every((f) => !f.required || row[f.name]));
 
-      await onImport(mappedData);
+      const onProgress = (processed: number, total: number) => {
+        setProgress(Math.round((processed / total) * 100));
+        setProgressLabel(`${processed} de ${total} registros processados`);
+      };
+
+      await onImport(mappedData, onProgress);
     } finally {
       setImporting(false);
     }
@@ -188,11 +198,18 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
         </div>
       )}
 
-      {/* Import button */}
+      {/* Import button / progress */}
       {allRequiredMapped && rawRows.length > 0 && (
-        <Button className="gap-2" disabled={importing || totalValid === 0} onClick={handleImport}>
-          {importing ? <><Loader2 className="h-4 w-4 animate-spin" /> Importando...</> : `${importLabel} ${totalValid} registros`}
-        </Button>
+        importing ? (
+          <div className="space-y-2">
+            <Progress value={progress} className="h-3" />
+            <p className="text-sm text-muted-foreground">{progressLabel || "Iniciando..."}</p>
+          </div>
+        ) : (
+          <Button className="gap-2" disabled={totalValid === 0} onClick={handleImport}>
+            {`${importLabel} ${totalValid} registros`}
+          </Button>
+        )
       )}
     </div>
   );
