@@ -225,7 +225,7 @@ const ImportImagens = () => {
       {(phase === "ready" || phase === "uploading" || phase === "done") && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Pré-análise</CardTitle>
+            <CardTitle className="text-base">Análise</CardTitle>
             <CardDescription>{validFiles.length + noMatchFiles.length + invalidFiles.length} arquivos analisados</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
