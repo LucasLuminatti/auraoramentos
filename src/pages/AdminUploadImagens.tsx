@@ -14,7 +14,7 @@ const AdminUploadImagens = () => {
       <header className="border-b bg-card shadow-sm">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="Logo" className="h-12 w-auto" />
+            <img src={logo} alt="Logo" className="h-12 w-auto cursor-pointer" onClick={() => navigate("/")} />
             <span className="text-lg font-semibold text-foreground">Upload de Imagens</span>
           </div>
           <div className="flex items-center gap-2">
