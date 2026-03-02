@@ -1,22 +1,60 @@
 
-# Substituir logo da Aura por versao em alta qualidade
 
-## O que sera feito
+# Anexar Arquivos aos Clientes
 
-Copiar a imagem enviada (`logotipo_aura_azul_RGB.jpg`) para `src/assets/logo.png`, substituindo o arquivo atual. Como todos os 7 arquivos que usam o logo importam de `@/assets/logo.png`, a troca sera automatica em todo o app:
+## Objetivo
+Adicionar a capacidade de anexar arquivos (PDF, DWG, SketchUp, notas de reuniao, etc.) a cada cliente, transformando o app em um organizador de relacionamento com clientes.
 
-- Pagina inicial (Index.tsx)
-- Pagina de login (Auth.tsx)
-- Pagina de esqueci senha (ForgotPassword.tsx)
-- Pagina de redefinir senha (ResetPassword.tsx)
-- Pagina de solicitar acesso (RequestAccess.tsx)
-- Painel Admin (Admin.tsx)
-- Upload de imagens (AdminUploadImagens.tsx)
-- PDF gerado (via base64 no Step3Revisao.tsx)
+## 1. Banco de Dados
+
+Criar tabela `cliente_arquivos` para armazenar metadados dos arquivos:
+
+```text
+cliente_arquivos
+- id (uuid, PK)
+- cliente_id (uuid, FK -> clientes.id, ON DELETE CASCADE)
+- nome (text) -- nome original do arquivo
+- descricao (text, nullable) -- descricao opcional / notas
+- categoria (text) -- ex: "planta", "reuniao", "geral"
+- arquivo_path (text) -- caminho no storage bucket
+- arquivo_url (text) -- URL publica do arquivo
+- tamanho (integer) -- tamanho em bytes
+- created_at (timestamptz)
+```
+
+RLS: usuarios autenticados podem ler, inserir e deletar arquivos.
+
+## 2. Storage
+
+Criar bucket `cliente-arquivos` (publico) para armazenar os arquivos enviados. Arquivos organizados por pasta do cliente: `{cliente_id}/{nome_arquivo}`.
+
+## 3. Interface (ClienteList.tsx)
+
+Quando o cliente estiver expandido, adicionar uma secao "Arquivos" abaixo dos projetos:
+
+- Botao "Anexar Arquivo" que abre um dialog com:
+  - Input de arquivo (aceita PDF, DWG, SKP, imagens, etc.)
+  - Select de categoria: Planta, Reuniao, Geral
+  - Campo opcional de descricao/notas
+- Lista dos arquivos ja anexados com:
+  - Icone por tipo de arquivo
+  - Nome, categoria, data de upload
+  - Botao para abrir/baixar o arquivo
+  - Botao para excluir
+
+## 4. Componente ClienteArquivos
+
+Criar componente separado `ClienteArquivos.tsx` para manter o codigo organizado:
+- Recebe `clienteId` como prop
+- Gerencia upload via Supabase Storage
+- Lista arquivos do cliente consultando `cliente_arquivos`
+- Permite download e exclusao
 
 ## Detalhes tecnicos
 
-1. Copiar `user-uploads://logotipo_aura_azul_RGB.jpg` para `src/assets/logo.png` (sobrescreve o arquivo existente)
-2. Nenhum codigo precisa ser alterado - todos os imports ja apontam para `@/assets/logo.png`
+- Upload: `supabase.storage.from('cliente-arquivos').upload(path, file)`
+- URL publica: `supabase.storage.from('cliente-arquivos').getPublicUrl(path)`
+- Categorias pre-definidas: "Planta", "Reuniao", "Documento", "Geral"
+- Tipos aceitos: `.pdf, .dwg, .skp, .jpg, .jpeg, .png, .doc, .docx, .xls, .xlsx`
+- Limite visual: mostrar tamanho formatado (KB/MB)
 
-**Observacao:** A imagem tem fundo branco. Nos locais onde o fundo da pagina tambem e branco/claro, isso sera imperceptivel. No PDF, o header tambem tem fundo claro (cream), entao ficara harmonioso.
