@@ -14,6 +14,7 @@ import Admin from "./pages/Admin";
 import RequestAccess from "./pages/RequestAccess";
 import NotFound from "./pages/NotFound";
 import AdminUploadImagens from "./pages/AdminUploadImagens";
+import Drive from "./pages/Drive";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/admin/upload-imagens" element={<AdminRoute><AdminUploadImagens /></AdminRoute>} />
+          <Route path="/drive" element={<ProtectedRoute><Drive /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
