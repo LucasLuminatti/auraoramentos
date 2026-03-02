@@ -1,56 +1,73 @@
 
+# Importacao Dinamica de Produtos e Precos
 
-## Ajustes no PDF: Informacoes Importantes + Header de Tabela Mais Leve
+## Problema Atual
+A importacao atual exige que a planilha tenha colunas com nomes exatos ("N do item", "PRECO TABELA V2", etc.), o que e fragil e confuso para o usuario.
 
-### Resumo
+## Solucao
 
-Duas alteracoes no arquivo `src/lib/gerarPdfHtml.ts`:
+### 1. Duas novas abas no Admin
+- **Importar Produtos**: importa codigo + descricao (cadastro base)
+- **Importar Precos**: importa codigo + preco_tabela + preco_minimo (atualiza precos de produtos ja cadastrados)
 
-1. **Header das tabelas mais leve** — Trocar o fundo escuro (`--gray-900` / `#1a1f2e`) por um tom claro e suave, mantendo legibilidade.
-2. **Secao "Informacoes Importantes"** — Adicionar um bloco completo com todos os termos e condicoes fornecidos, posicionado entre a secao de info-cards e o footer.
+A aba "Produtos" existente continua apenas para visualizacao/busca (sem o bloco de importacao).
 
----
+### 2. Sistema de Mapeamento Dinamico de Colunas
 
-### 1. Header das tabelas — cor mais leve
+Fluxo em cada aba de importacao:
 
-**Antes:** `thead tr { background: var(--gray-900) }` (fundo quase preto)
-**Depois:** `thead tr { background: var(--gray-100) }` (cinza claro `#f4f6f8`) com texto em `var(--gray-600)` ao inves de branco
+1. Usuario faz upload do arquivo Excel/CSV
+2. O sistema le os headers da planilha e mostra uma **preview das primeiras 5 linhas**
+3. Para cada campo do banco (ex: "Codigo", "Descricao"), o usuario seleciona qual coluna da planilha corresponde usando um **dropdown com os headers detectados**
+4. O sistema aplica o mapeamento e importa
 
-Isso torna a barra de cabecalho das tabelas mais discreta e integrada ao design, sem perder a separacao visual.
+```text
++------------------------------------------+
+|  Campo do Sistema    |  Coluna da Planilha |
+|----------------------|---------------------|
+|  Codigo (obrigatorio)|  [v] "N do item"    |
+|  Descricao (obrig.)  |  [v] "Desc do item" |
++------------------------------------------+
+|  Preview dos dados mapeados (5 linhas)    |
++------------------------------------------+
+|  [ Importar X produtos ]                  |
++------------------------------------------+
+```
 
----
+### 3. Componente Reutilizavel: `ImportMapper`
 
-### 2. Secao "Informacoes Importantes"
+Novo componente `src/components/ImportMapper.tsx` que recebe:
+- `fields`: lista de campos alvo (nome, label, obrigatorio)
+- `onImport(mappedRows)`: callback com os dados ja mapeados
 
-Novo bloco HTML inserido apos a `info-section` e antes do `footer`, com:
+Estados internos:
+- `headers`: headers detectados da planilha
+- `mapping`: objeto `{ campo_sistema: coluna_planilha }`
+- `previewRows`: primeiras 5 linhas para visualizacao
+- `rawRows`: todas as linhas para envio
 
-- Titulo "INFORMACOES IMPORTANTES" em estilo section-header (com numero decorativo ou icone)
-- Lista com marcadores (bullet points) contendo todos os itens fornecidos:
-  - Proposta de aplicacao como sugestao particular
-  - Garantia aplicada apenas ao funcionamento
-  - Recomendacao de profissionais capacitados
-  - Acompanhamento/suporte nao inclusos
-  - Limite de 3 alteracoes em projetos luminotecnicos
-  - Politica de nao devolucao
-  - Projetos luminotecnicos nao enviados antes do pedido
-  - Conferencia no recebimento (quantidade, estado fisico, lacres)
-  - Garantia de 1 ano
-  - Mensagem de agradecimento
+### 4. Novas paginas/componentes
 
-**Estilo visual:**
-- Fundo `var(--gray-100)` com borda `var(--gray-200)`, border-radius 10px
-- Titulo em uppercase com letter-spacing, cor `var(--blue)`
-- Itens em fonte 10px, cor `var(--gray-600)`, line-height confortavel
-- Marcadores customizados (pequenos circulos azuis ou tracinhos)
+- **`src/components/ImportProdutos.tsx`**: usa `ImportMapper` com campos `codigo` (obrig.) e `descricao` (obrig.). Chama a edge function `import-produtos` apenas com esses campos.
+- **`src/components/ImportPrecos.tsx`**: usa `ImportMapper` com campos `codigo` (obrig.), `preco_tabela` e `preco_minimo`. Chama uma nova edge function `import-precos` que faz UPDATE nos produtos existentes pelo codigo.
 
----
+### 5. Nova Edge Function: `import-precos`
 
-### Arquivo modificado
+`supabase/functions/import-precos/index.ts`
 
-**`src/lib/gerarPdfHtml.ts`**
+Recebe um array de `{ codigo, preco_tabela, preco_minimo }` e faz upsert na tabela `produtos` atualizando apenas os campos de preco (sem sobrescrever descricao).
 
-Alteracoes:
-- CSS: `thead tr` background de `var(--gray-900)` para `var(--gray-100)`, cor do texto de branco para `var(--gray-600)`
-- CSS: Novas classes `.terms-section`, `.terms-title`, `.terms-list`, `.terms-list li`
-- HTML: Novo bloco `terms-section` inserido apos `.info-section` (dentro de `.body`), antes do fechamento de `.body`
+### 6. Alteracoes no Admin.tsx
 
+- Adicionar duas novas `TabsTrigger`: "Importar Produtos" e "Importar Precos"
+- Remover o bloco de importacao da aba "Produtos" (manter apenas busca/listagem e o botao de upload de imagens)
+- Cada nova aba renderiza o respectivo componente de importacao
+
+## Detalhes Tecnicos
+
+- Leitura do Excel continua com a lib `xlsx` ja instalada
+- O `ImportMapper` usa `XLSX.utils.sheet_to_json` com `{ header: 1 }` para extrair headers da primeira linha
+- Os dropdowns de mapeamento usam o componente `Select` do shadcn/ui
+- A preview usa o componente `Table` existente
+- A edge function `import-precos` usa `upsert` com `onConflict: 'codigo'` e envia apenas os campos de preco, preservando `descricao`
+- Adicionar `[functions.import-precos]` com `verify_jwt = false` no `config.toml`
