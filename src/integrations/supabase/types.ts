@@ -65,6 +65,55 @@ export type Database = {
         }
         Relationships: []
       }
+      arquivo_pastas: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          id: string
+          nome: string
+          pasta_pai_id: string | null
+          projeto_id: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          id?: string
+          nome: string
+          pasta_pai_id?: string | null
+          projeto_id?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          pasta_pai_id?: string | null
+          projeto_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arquivo_pastas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arquivo_pastas_pasta_pai_id_fkey"
+            columns: ["pasta_pai_id"]
+            isOneToOne: false
+            referencedRelation: "arquivo_pastas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arquivo_pastas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_arquivos: {
         Row: {
           arquivo_path: string
@@ -75,6 +124,8 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          pasta_id: string | null
+          projeto_id: string | null
           tamanho: number
         }
         Insert: {
@@ -86,6 +137,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          pasta_id?: string | null
+          projeto_id?: string | null
           tamanho?: number
         }
         Update: {
@@ -97,6 +150,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          pasta_id?: string | null
+          projeto_id?: string | null
           tamanho?: number
         }
         Relationships: [
@@ -105,6 +160,20 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_arquivos_pasta_id_fkey"
+            columns: ["pasta_id"]
+            isOneToOne: false
+            referencedRelation: "arquivo_pastas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_arquivos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
             referencedColumns: ["id"]
           },
         ]

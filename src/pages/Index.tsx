@@ -11,7 +11,7 @@ import { useColaborador } from "@/hooks/useColaborador";
 import { useUserRole } from "@/hooks/useUserRole";
 import { getSaudacao } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LogOut, Plus, User, FolderOpen, ChevronRight, Shield } from "lucide-react";
+import { LogOut, Plus, User, FolderOpen, ChevronRight, Shield, HardDrive } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -106,6 +106,9 @@ const Index = () => {
                 Voltar à lista
               </Button>
             )}
+            <Button variant="outline" size="sm" onClick={() => navigate("/drive")} className="gap-1.5">
+              <HardDrive className="h-4 w-4" /> Drive
+            </Button>
             {isAdmin && (
               <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="gap-1.5">
                 <Shield className="h-4 w-4" /> Admin
