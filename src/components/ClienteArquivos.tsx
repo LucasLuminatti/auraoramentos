@@ -25,7 +25,7 @@ interface ClienteArquivosProps {
   clienteId: string;
 }
 
-const CATEGORIAS = ["Planta", "Reunião", "Documento", "Geral"];
+const CATEGORIAS = ["Planta", "Reunião", "Geral"];
 const ACCEPT = ".pdf,.dwg,.skp,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx";
 
 function formatSize(bytes: number) {
@@ -49,6 +49,8 @@ const ClienteArquivos = ({ clienteId }: ClienteArquivosProps) => {
   const [categoria, setCategoria] = useState("Geral");
   const [descricao, setDescricao] = useState("");
   const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
+  const [projetos, setProjetos] = useState<{ id: string; nome: string }[]>([]);
+  const [projetoId, setProjetoId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchArquivos = async () => {
@@ -63,6 +65,9 @@ const ClienteArquivos = ({ clienteId }: ClienteArquivosProps) => {
 
   useEffect(() => {
     fetchArquivos();
+    supabase.from("projetos").select("id, nome").eq("cliente_id", clienteId).then(({ data }) => {
+      setProjetos(data || []);
+    });
   }, [clienteId]);
 
   const handleUpload = async () => {
@@ -94,6 +99,7 @@ const ClienteArquivos = ({ clienteId }: ClienteArquivosProps) => {
       arquivo_path: path,
       arquivo_url: urlData.publicUrl,
       tamanho: selectedFile.size,
+      projeto_id: projetoId,
     });
 
     if (insertError) {
@@ -107,6 +113,7 @@ const ClienteArquivos = ({ clienteId }: ClienteArquivosProps) => {
     setSelectedFile(null);
     setDescricao("");
     setCategoria("Geral");
+    setProjetoId(null);
     setUploading(false);
     fetchArquivos();
   };
@@ -221,6 +228,17 @@ const ClienteArquivos = ({ clienteId }: ClienteArquivosProps) => {
                 PDF, DWG, SketchUp, imagens, Word, Excel
               </p>
             </div>
+            <Select value={projetoId || "none"} onValueChange={(v) => setProjetoId(v === "none" ? null : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Projeto (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum projeto (geral)</SelectItem>
+                {projetos.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={categoria} onValueChange={setCategoria}>
               <SelectTrigger>
                 <SelectValue placeholder="Categoria" />
