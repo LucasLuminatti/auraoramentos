@@ -26,26 +26,27 @@ serve(async (req) => {
       });
     }
 
-    const batchSize = 500;
     let updated = 0;
 
-    for (let i = 0; i < precos.length; i += batchSize) {
-      const batch = precos.slice(i, i + batchSize);
-
-      // Update each product's prices by codigo
-      for (const item of batch) {
+    // Process all items in parallel using Promise.all
+    const results = await Promise.all(
+      precos.map(async (item) => {
         const updateData: Record<string, any> = {};
-        if (item.preco_tabela !== undefined) updateData.preco_tabela = item.preco_tabela;
-        if (item.preco_minimo !== undefined) updateData.preco_minimo = item.preco_minimo;
+        if (item.preco_tabela !== undefined && item.preco_tabela !== null) updateData.preco_tabela = item.preco_tabela;
+        if (item.preco_minimo !== undefined && item.preco_minimo !== null) updateData.preco_minimo = item.preco_minimo;
+
+        if (Object.keys(updateData).length === 0) return false;
 
         const { error } = await supabase
           .from('produtos')
           .update(updateData)
           .eq('codigo', item.codigo);
 
-        if (!error) updated++;
-      }
-    }
+        return !error;
+      })
+    );
+
+    updated = results.filter(Boolean).length;
 
     return new Response(JSON.stringify({ success: true, updated }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
