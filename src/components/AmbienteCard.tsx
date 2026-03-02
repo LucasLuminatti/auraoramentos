@@ -18,11 +18,8 @@ interface AmbienteCardProps {
 
 function PrecoInput({ value, min, onChange }: { value: number; min: number; onChange: (v: number) => void }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = parseFloat(e.target.value) || 0;
-    onChange(v);
-  };
-  const handleBlur = () => {
-    // Apenas alerta visual, sem bloquear o valor
+    const raw = e.target.value;
+    onChange(raw === "" ? 0 : (parseFloat(raw) || 0));
   };
   const isAbaixoTabela = min > 0 && value < min;
   return (
@@ -30,9 +27,8 @@ function PrecoInput({ value, min, onChange }: { value: number; min: number; onCh
       type="number"
       min={0}
       step={0.10}
-      value={value || ""}
+      value={value}
       onChange={handleChange}
-      onBlur={handleBlur}
       className={cn("w-28", isAbaixoTabela && "border-destructive text-destructive")}
     />
   );
@@ -141,7 +137,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground whitespace-nowrap">Qtd:</span>
-                        <Input type="number" min={1} value={item.quantidade} onChange={(e) => updateLuminaria(i, { ...item, quantidade: parseInt(e.target.value) || 1 })} className="w-20" />
+                        <Input type="number" min={1} value={item.quantidade} onChange={(e) => { const raw = e.target.value; updateLuminaria(i, { ...item, quantidade: raw === "" ? 0 : (parseInt(raw) || 0) }); }} className="w-20" />
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
@@ -173,11 +169,11 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground">Metragem:</span>
-                        <Input type="number" min={0} step={1} value={item.metragem} onChange={(e) => updatePerfil(i, { ...item, metragem: parseFloat(e.target.value) || 0 })} className="w-24" />
+                        <Input type="number" min={0} step={1} value={item.metragem} onChange={(e) => { const raw = e.target.value; updatePerfil(i, { ...item, metragem: raw === "" ? 0 : (parseFloat(raw) || 0) }); }} className="w-24" />
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground">Qtd:</span>
-                        <Input type="number" min={1} value={item.quantidade} onChange={(e) => updatePerfil(i, { ...item, quantidade: parseInt(e.target.value) || 1 })} className="w-20" />
+                        <Input type="number" min={1} value={item.quantidade} onChange={(e) => { const raw = e.target.value; updatePerfil(i, { ...item, quantidade: raw === "" ? 0 : (parseInt(raw) || 0) }); }} className="w-20" />
                       </div>
                       <div className="rounded-md bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
                         Total: {calcularMetragemTotal(item).toFixed(2)}m
@@ -214,15 +210,15 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground">Passadas:</span>
-                        <Input type="number" min={0} step={1} value={item.passadas} onChange={(e) => updateFita(i, { ...item, passadas: parseFloat(e.target.value) || 0 })} className="w-24" />
+                        <Input type="number" min={0} step={1} value={item.passadas} onChange={(e) => { const raw = e.target.value; updateFita(i, { ...item, passadas: raw === "" ? 0 : (parseFloat(raw) || 0) }); }} className="w-24" />
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground">W/M:</span>
-                        <Input type="number" min={0} step={1} value={item.wm} onChange={(e) => updateFita(i, { ...item, wm: parseFloat(e.target.value) || 0 })} className="w-24" />
+                        <Input type="number" min={0} step={1} value={item.wm} onChange={(e) => { const raw = e.target.value; updateFita(i, { ...item, wm: raw === "" ? 0 : (parseFloat(raw) || 0) }); }} className="w-24" />
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground">Rolo (m):</span>
-                        <Input type="number" min={1} step={1} value={item.metragemRolo} onChange={(e) => updateFita(i, { ...item, metragemRolo: parseFloat(e.target.value) || 5 })} className="w-24" />
+                        <Input type="number" min={1} step={1} value={item.metragemRolo} onChange={(e) => { const raw = e.target.value; updateFita(i, { ...item, metragemRolo: raw === "" ? 0 : (parseFloat(raw) || 0) }); }} className="w-24" />
                       </div>
                     </div>
                     <div className="flex gap-3 flex-wrap">

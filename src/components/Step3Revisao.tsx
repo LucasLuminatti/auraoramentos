@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Mail, FileDown, Pencil, Check, X, AlertTriangle, MessageSquare } from "lucide-react";
+import { ArrowLeft, FileDown, Pencil, Check, X, AlertTriangle, MessageSquare } from "lucide-react";
 import type { Orcamento, Ambiente, ItemLuminaria, ItemPerfil, ItemFitaLED } from "@/types/orcamento";
 import { calcularMetragemTotal, calcularWTotal, calcularQtdRolos, calcularSubtotalLuminaria, calcularSubtotalPerfil, calcularSubtotalFita, calcularTotalAmbiente, calcularTotalGeral, formatarMoeda } from "@/types/orcamento";
 import { toast } from "sonner";
@@ -225,7 +225,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
   const isEditing = (ambienteId: string, tipo: string, itemId: string) =>
     editing?.ambienteId === ambienteId && editing?.tipo === tipo && editing?.itemId === itemId;
 
-  const handleEmail = () => { toast.info("Funcionalidade de e-mail será implementada em breve"); };
+  
 
   const handlePDF = async () => {
     let logoBase64: string | undefined;
@@ -256,7 +256,10 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
       type="number"
       className={`h-7 w-20 text-right ${className ?? ""}`}
       value={editValues[field] ?? ""}
-      onChange={(e) => setEditValues((v) => ({ ...v, [field]: parseFloat(e.target.value) || 0 }))}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setEditValues((v) => ({ ...v, [field]: raw === "" ? 0 : (parseFloat(raw) || 0) }));
+      }}
       onKeyDown={(e) => e.key === "Enter" && confirmEdit()}
     />
   );
@@ -462,14 +465,9 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
         <Button variant="outline" onClick={onPrev} className="gap-2 print:hidden">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handlePDF} className="gap-2 print:hidden" disabled={hasUnresolved} title={hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : ""}>
-            <FileDown className="h-4 w-4" /> Gerar PDF
-          </Button>
-          <Button onClick={handleEmail} className="gap-2 print:hidden" disabled={hasUnresolved} title={hasUnresolved ? "Resolva as violações de preço antes de enviar" : ""}>
-            <Mail className="h-4 w-4" /> Enviar por E-mail
-          </Button>
-        </div>
+        <Button onClick={handlePDF} className="gap-2 print:hidden" disabled={hasUnresolved} title={hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : ""}>
+          <FileDown className="h-4 w-4" /> Gerar PDF
+        </Button>
       </div>
 
       {/* Chat dialog */}
