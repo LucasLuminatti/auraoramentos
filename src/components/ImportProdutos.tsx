@@ -7,22 +7,30 @@ const fields: ImportField[] = [
   { name: "descricao", label: "Descrição", required: true },
 ];
 
+const BATCH_SIZE = 500;
+
 const ImportProdutos = () => {
-  const handleImport = async (rows: Record<string, any>[]) => {
+  const handleImport = async (rows: Record<string, any>[], onProgress: (processed: number, total: number) => void) => {
     const produtos = rows.map((r) => ({
       codigo: String(r.codigo).trim(),
       descricao: String(r.descricao).trim(),
     }));
 
-    const { data, error } = await supabase.functions.invoke("import-produtos", {
-      body: { produtos },
-    });
+    let totalInserted = 0;
+    for (let i = 0; i < produtos.length; i += BATCH_SIZE) {
+      const batch = produtos.slice(i, i + BATCH_SIZE);
+      const { data, error } = await supabase.functions.invoke("import-produtos", {
+        body: { produtos: batch },
+      });
 
-    if (error) {
-      toast.error(error.message || "Erro na importação");
-      return;
+      if (error) {
+        toast.error(error.message || "Erro na importação");
+        return;
+      }
+      totalInserted += data.inserted;
+      onProgress(Math.min(i + BATCH_SIZE, produtos.length), produtos.length);
     }
-    toast.success(`${data.inserted} produtos importados com sucesso!`);
+    toast.success(`${totalInserted} produtos importados com sucesso!`);
   };
 
   return (
