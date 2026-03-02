@@ -52,6 +52,10 @@ const ImportPrecos = () => {
         for (const item of batch) {
           allFailed.push({ ...item, _erro: error.message || "Erro desconhecido no servidor" });
         }
+      } else if (!data) {
+        for (const item of batch) {
+          allFailed.push({ ...item, _erro: "Resposta vazia do servidor" });
+        }
       } else {
         totalUpdated += data.updated ?? 0;
         if (data.failed?.length) {

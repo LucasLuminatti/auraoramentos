@@ -120,6 +120,12 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
 
       const result = await onImport(mappedData, onProgress);
       setImportResult(result);
+    } catch (err: any) {
+      setImportResult({
+        totalProcessed: 0,
+        totalSuccess: 0,
+        failed: [{ _erro: err?.message || "Erro desconhecido durante a importação" }],
+      });
     } finally {
       setImporting(false);
     }
@@ -296,10 +302,22 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
                   </ul>
                 </div>
 
-                <Button variant="outline" className="gap-2" onClick={downloadFailedExcel}>
-                  <Download className="h-4 w-4" />
-                  Baixar planilha com erros ({importResult.failed.length} linhas)
-                </Button>
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    Alguns registros não foram importados
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Baixe a planilha abaixo para ver quais linhas falharam e o motivo de cada erro. Corrija os dados na planilha e importe novamente.
+                  </p>
+                  <Button variant="outline" className="gap-2" onClick={downloadFailedExcel}>
+                    <Download className="h-5 w-5" />
+                    Baixar planilha com erros ({importResult.failed.length} linhas)
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Contém as linhas que não foram importadas para a base de dados, com o motivo do erro e sugestão de correção para cada registro.
+                  </p>
+                </div>
               </>
             )}
 
