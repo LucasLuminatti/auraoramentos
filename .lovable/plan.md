@@ -1,120 +1,82 @@
 
+# Correcao do Relatorio de Erros na Importacao de Precos
 
-# Relatorio de Erros na Importacao e Download de Falhas
+## Problema Identificado
 
-## Problema
+O card de resultado (com contagem de erros e botao de download) nao aparece porque o `ImportMapper.handleImport` tem um bloco `try/finally` **sem `catch`**. Quando a edge function retorna um erro HTTP ou o `data` vem nulo, o acesso a `data.updated` lanca uma excecao nao tratada, o `setImportResult` nunca e chamado, e a UI volta silenciosamente ao estado inicial.
 
-As edge functions atuais falham silenciosamente ou abortam no primeiro erro de lote, sem informar quais linhas especificas falharam, o motivo, ou como corrigir. O usuario precisa de visibilidade total sobre o resultado da importacao.
+## Correcoes
 
-## Solucao
+### 1. ImportMapper.tsx - Adicionar catch com fallback
 
-### 1. Edge Functions - Retornar resultados por linha
+Adicionar um bloco `catch` no `handleImport` que cria um `ImportResult` de fallback com a mensagem de erro, garantindo que o card de resultado SEMPRE apareca:
 
-**`import-produtos`**: Em vez de abortar no primeiro erro de lote, processar cada produto individualmente dentro do lote e coletar erros por linha. Retornar:
-```json
-{
-  "success": true,
-  "inserted": 480,
-  "failed": [
-    { "codigo": "ABC123", "descricao": "Prod X", "erro": "Codigo duplicado ou campo vazio" },
-    { "codigo": "", "descricao": "Sem codigo", "erro": "Campo codigo obrigatorio" }
-  ]
-}
-```
-
-**`import-precos`**: Mesmo padrao. Cada update individual ja e feito separado, entao capturar o erro de cada um e retornar quais codigos nao foram atualizados e por que (ex: "codigo nao encontrado na base").
-
-Para o `import-precos`, alem de verificar se o update deu erro no Supabase, tambem verificar se o update afetou 0 linhas (codigo nao existe). Isso sera feito usando `.select()` apos o update para checar se retornou dados, ou fazendo um select previo dos codigos existentes.
-
-### 2. Frontend - Coletar e exibir erros
-
-**`ImportMapper.tsx`**: Mudar a interface `onImport` para retornar um objeto de resultado:
 ```typescript
-interface ImportResult {
-  totalProcessed: number;
-  totalSuccess: number;
-  failed: Array<Record<string, any> & { _erro: string }>;
+try {
+  // ... existing code ...
+  const result = await onImport(mappedData, onProgress);
+  setImportResult(result);
+} catch (err: any) {
+  setImportResult({
+    totalProcessed: 0,
+    totalSuccess: 0,
+    failed: [{ _erro: err?.message || "Erro desconhecido durante a importacao" }],
+  });
+} finally {
+  setImporting(false);
 }
 ```
 
-Apos a importacao, se houver falhas:
-- Mostrar um card de resumo: "X registros importados com sucesso, Y falharam"
-- Listar os motivos dos erros agrupados (ex: "15 registros com codigo nao encontrado", "3 com campo vazio")
-- Mostrar instrucoes claras do que o usuario precisa fazer para corrigir
-- Botao "Baixar planilha com erros" que gera um Excel com as linhas que falharam + coluna extra "Motivo do Erro"
+### 2. ImportMapper.tsx - Melhorar visibilidade do botao de download
 
-**`ImportProdutos.tsx`**: Acumular os `failed` de cada lote e retornar o resultado consolidado.
+Substituir o botao simples de download por um bloco mais destacado com texto explicativo ao lado:
 
-**`ImportPrecos.tsx`**: Mesma logica - acumular falhas de cada lote.
+```text
++--------------------------------------------------------------+
+| [!] Alguns registros nao foram importados                    |
+|                                                              |
+| Baixe a planilha abaixo para ver quais linhas falharam      |
+| e o motivo de cada erro. Corrija os dados na planilha       |
+| e importe novamente.                                         |
+|                                                              |
+| [ Download icon ] Baixar planilha com erros (20 linhas)      |
+| Contém as linhas que nao foram importadas com o motivo       |
+| do erro e sugestao de correcao para cada registro.           |
++--------------------------------------------------------------+
+```
 
-### 3. Download da planilha de erros
+O botao tera:
+- Um card com fundo destacado (bg-destructive/10 ou similar) envolvendo o botao
+- Texto descritivo ABAIXO do botao explicando que a planilha contem as linhas que nao subiram para a base de dados, com motivo do erro e sugestao de correcao
+- Icone mais visivel
 
-Usar a lib `xlsx` (ja instalada) para gerar um arquivo Excel no navegador com:
-- Todas as colunas originais do registro que falhou
-- Uma coluna adicional "Motivo do Erro"
-- Uma coluna "Sugestao" com orientacao de correcao
+### 3. ImportPrecos.tsx - Proteger acesso a data nula
 
-O download sera disparado por um botao que aparece apenas quando ha erros.
+Adicionar verificacao defensiva para o caso de `data` ser nulo mesmo sem `error`:
 
-### 4. Logica de atualizacao de precos
-
-A logica de atualizacao de precos ja existe no `ImportPrecos.tsx` (aba "Precos" dentro de "Importacao"). O problema atual e que a edge function `import-precos` faz update por codigo mas nao informa quais codigos nao existem na base. A correcao e:
-- Na edge function, antes de atualizar, buscar todos os codigos existentes na base
-- Marcar como falha os registros cujo codigo nao foi encontrado com mensagem "Codigo nao cadastrado - importe o produto primeiro"
-- Retornar a lista de falhas para o frontend
+```typescript
+if (error) {
+  // ... push all to failed ...
+} else if (!data) {
+  for (const item of batch) {
+    allFailed.push({ ...item, _erro: "Resposta vazia do servidor" });
+  }
+} else {
+  totalUpdated += data.updated ?? 0;
+  // ... rest ...
+}
+```
 
 ## Detalhes Tecnicos
 
 ### Arquivos modificados
 
-1. **`supabase/functions/import-produtos/index.ts`**
-   - Processar cada item individualmente com try/catch
-   - Validar campos antes do insert (codigo vazio, descricao vazia)
-   - Coletar erros por item
-   - Retornar `{ inserted, failed: [{...dados, erro: "motivo"}] }`
+1. **`src/components/ImportMapper.tsx`**:
+   - Adicionar `catch` no `handleImport` para capturar excecoes e exibir resultado de erro
+   - Redesenhar a secao de download: envolver em card destacado com borda colorida (destructive), adicionar texto descritivo abaixo do botao explicando que e uma planilha com as linhas que nao foram importadas para a base de dados, com motivo do erro e sugestao de correcao
 
-2. **`supabase/functions/import-precos/index.ts`**
-   - Buscar lista de codigos existentes antes de processar (`SELECT codigo FROM produtos WHERE codigo IN (...)`)
-   - Marcar como falha itens com codigo nao encontrado
-   - Coletar erros de update do Supabase
-   - Retornar `{ updated, failed: [{...dados, erro: "motivo"}] }`
+2. **`src/components/ImportPrecos.tsx`**:
+   - Adicionar verificacao `else if (!data)` para tratar resposta nula do servidor sem lancar excecao
 
-3. **`src/components/ImportMapper.tsx`**
-   - Nova interface `ImportResult` com `totalSuccess`, `totalProcessed`, `failed`
-   - Mudar assinatura de `onImport` para retornar `Promise<ImportResult>`
-   - Novo estado `importResult` para armazenar o resultado
-   - Apos importacao, exibir card de resumo com contagem de sucesso/falha
-   - Botao "Baixar planilha com erros" usando `XLSX.writeFile`
-   - Instrucoes de correcao exibidas em um alert/card
-
-4. **`src/components/ImportProdutos.tsx`**
-   - Acumular `failed` de cada batch
-   - Retornar `ImportResult` consolidado
-
-5. **`src/components/ImportPrecos.tsx`**
-   - Acumular `failed` de cada batch
-   - Retornar `ImportResult` consolidado
-
-### Fluxo do usuario apos importacao com erros
-
-```text
-+--------------------------------------------+
-|  Resultado da Importacao                   |
-|                                            |
-|  [check] 480 registros importados          |
-|  [x] 20 registros com erro                 |
-|                                            |
-|  Motivos:                                  |
-|  - 15x "Codigo nao encontrado na base"    |
-|  - 5x "Campo descricao vazio"             |
-|                                            |
-|  O que fazer:                              |
-|  - Codigos nao encontrados: importe os    |
-|    produtos primeiro na aba "Produtos"     |
-|  - Campos vazios: preencha os dados       |
-|    obrigatorios na planilha                |
-|                                            |
-|  [ Baixar planilha com erros ]             |
-+--------------------------------------------+
-```
-
+3. **`src/components/ImportProdutos.tsx`**:
+   - Mesma verificacao defensiva de `data` nulo para consistencia
