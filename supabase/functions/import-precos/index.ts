@@ -26,29 +26,51 @@ serve(async (req) => {
       });
     }
 
-    let updated = 0;
+    // Fetch existing codes to identify missing ones
+    const allCodigos = precos.map((p) => String(p.codigo).trim());
+    const { data: existingRows } = await supabase
+      .from('produtos')
+      .select('codigo')
+      .in('codigo', allCodigos);
 
-    // Process all items in parallel using Promise.all
+    const existingCodigos = new Set((existingRows ?? []).map((r: any) => r.codigo));
+
+    let updated = 0;
+    const failed: Array<Record<string, any>> = [];
+
+    // Process all items in parallel
     const results = await Promise.all(
       precos.map(async (item) => {
+        const codigo = String(item.codigo).trim();
+
+        if (!existingCodigos.has(codigo)) {
+          failed.push({ ...item, erro: 'Código não cadastrado na base - importe o produto primeiro na aba "Produtos"' });
+          return;
+        }
+
         const updateData: Record<string, any> = {};
         if (item.preco_tabela !== undefined && item.preco_tabela !== null) updateData.preco_tabela = item.preco_tabela;
         if (item.preco_minimo !== undefined && item.preco_minimo !== null) updateData.preco_minimo = item.preco_minimo;
 
-        if (Object.keys(updateData).length === 0) return false;
+        if (Object.keys(updateData).length === 0) {
+          failed.push({ ...item, erro: 'Nenhum preço válido informado (tabela ou mínimo)' });
+          return;
+        }
 
         const { error } = await supabase
           .from('produtos')
           .update(updateData)
-          .eq('codigo', item.codigo);
+          .eq('codigo', codigo);
 
-        return !error;
+        if (error) {
+          failed.push({ ...item, erro: error.message });
+        } else {
+          updated++;
+        }
       })
     );
 
-    updated = results.filter(Boolean).length;
-
-    return new Response(JSON.stringify({ success: true, updated }), {
+    return new Response(JSON.stringify({ success: true, updated, failed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
