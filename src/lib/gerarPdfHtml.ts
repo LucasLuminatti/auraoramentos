@@ -142,7 +142,7 @@ export function gerarOrcamentoHtml(params: PdfParams): string {
   const total = splitMoeda(totalGeral);
 
   const logoHtml = logoBase64
-    ? `<img src="${logoBase64}" alt="Aura" style="height:68px;width:auto" />`
+    ? `<img src="${logoBase64}" alt="Aura" style="height:100px;width:auto" />`
     : `<span style="font-family:'Playfair Display',serif;font-size:32px;font-weight:500;color:#2E78A6">AURA</span>`;
 
   const logoFooter = logoBase64
@@ -251,16 +251,16 @@ td.c{text-align:center}
 .warranty-badge{font-family:'Playfair Display',serif;font-size:22px;color:var(--blue);font-weight:400;line-height:1}
 .warranty-text{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray-400);font-weight:500;line-height:1.3}
 
-.terms-section{margin-top:40px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:10px;padding:28px 32px}
-.terms-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.terms-section{margin-top:40px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:10px;padding:20px 24px}
+.terms-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .terms-icon{width:32px;height:32px;border-radius:8px;background:var(--blue-pale);border:1px solid var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
 .terms-title{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--blue);font-weight:600}
 .terms-list{list-style:none;padding:0;margin:0}
-.terms-list li{position:relative;padding:6px 0 6px 18px;font-size:10px;color:var(--gray-600);line-height:1.65;font-weight:300}
+.terms-list li{position:relative;padding:3px 0 3px 18px;font-size:10px;color:var(--gray-600);line-height:1.65;font-weight:300}
 .terms-list li::before{content:'';position:absolute;left:0;top:13px;width:5px;height:5px;border-radius:50%;background:var(--blue-soft)}
 .terms-list li.sub{padding-left:36px;font-size:9.5px}
 .terms-list li.sub::before{left:18px;width:4px;height:4px;background:var(--gray-400)}
-.terms-list li.thanks{margin-top:10px;font-style:italic;color:var(--blue);font-weight:400}
+.terms-list li.thanks{margin-top:6px;font-style:italic;color:var(--blue);font-weight:400}
 .terms-list li.thanks::before{background:var(--orange)}
 
 .no-print-btn{background:var(--blue);color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:500;letter-spacing:.02em}
@@ -341,7 +341,7 @@ td.c{text-align:center}
     <!-- TERMOS -->
     <div class="terms-section">
       <div class="terms-header">
-        <div class="terms-icon">⚖</div>
+        <div class="terms-icon">✓</div>
         <div class="terms-title">Informações Importantes</div>
       </div>
       <ul class="terms-list">
