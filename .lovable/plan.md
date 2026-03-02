@@ -1,41 +1,58 @@
 
-# Barra de Progresso nas Importacoes
 
-## Abordagem
+# Correcao da Importacao de Precos e Reorganizacao do Admin
 
-Atualmente, a importacao envia todos os dados de uma vez para a edge function e aguarda a resposta. Para mostrar progresso real, vamos dividir o envio em lotes no frontend e atualizar a barra a cada lote concluido.
+## 1. Correcao da Importacao de Precos
 
-## Alteracoes
+### Edge Function `import-precos`
+- Paralelizar os updates usando `Promise.all` em vez de loop sequencial (causa timeout com muitos registros)
 
-### 1. ImportMapper.tsx
-- Adicionar estados `progress` (0-100) e `progressLabel` ("150 de 3000 registros")
-- Mudar a interface `onImport` para aceitar um callback de progresso: `onImport(rows, onProgress)` onde `onProgress(processed, total)` e chamado a cada lote
-- Importar e exibir o componente `Progress` do shadcn/ui durante a importacao
-- Mostrar o texto de progresso abaixo da barra (ex: "150 de 3000 registros processados")
+### Frontend `ImportPrecos.tsx`
+- Filtrar registros onde tanto `preco_tabela` quanto `preco_minimo` sao zero/vazios (evita sobrescrever precos validos com 0)
+- Melhorar `parsePreco` para retornar `undefined` em vez de `0` quando o valor e vazio/traco, e enviar apenas campos com valor real
 
-### 2. ImportProdutos.tsx
-- Dividir o array de produtos em lotes de 500
-- Para cada lote, chamar `supabase.functions.invoke("import-produtos")` separadamente
-- Apos cada lote, chamar `onProgress(processados, total)` para atualizar a barra
+## 2. Reorganizacao das Abas do Admin
 
-### 3. ImportPrecos.tsx
-- Mesma logica de lotes de 500
-- Chamar `supabase.functions.invoke("import-precos")` por lote
-- Atualizar progresso a cada lote concluido
+Substituir as abas separadas "Importar Produtos" e "Importar Precos" por uma unica aba **"Importacao"** com sub-navegacao interna via cards:
+
+```text
+Abas: Dashboard | Excecoes | Importacao | Produtos | Colaboradores | Orcamentos | Clientes
+
+Dentro de "Importacao":
++------------------+  +------------------+  +------------------+
+|   Produtos       |  |   Precos         |  |   Imagens        |
+|   (codigo+desc)  |  |   (atualizar)    |  |   (fotos)        |
++------------------+  +------------------+  +------------------+
+
+(componente selecionado aparece abaixo dos cards)
+```
+
+## 3. Importacao de Imagens Inline
+
+Extrair a logica de `AdminUploadImagens.tsx` para um componente `ImportImagens.tsx` (sem header/navegacao propria) que pode ser renderizado dentro da aba "Importacao". O componente mantem toda a logica existente:
+- Nome do arquivo = codigo do produto (ex: `LM2439.jpg`)
+- Pre-analise: valida formato, tamanho, e verifica se o codigo existe na base
+- Upload em lotes com barra de progresso
+- Atualiza `imagem_url` na tabela `produtos`
+
+A rota `/admin/upload-imagens` continua funcionando como fallback.
 
 ## Detalhes Tecnicos
 
-A assinatura do `onImport` muda de:
-```
-onImport: (rows: Record<string, any>[]) => Promise<void>
-```
-para:
-```
-onImport: (rows: Record<string, any>[], onProgress: (processed: number, total: number) => void) => Promise<void>
-```
+### Arquivos modificados
 
-A barra de progresso aparece apenas durante a importacao, substituindo o botao, mostrando:
-- Barra visual com percentual
-- Texto "X de Y registros processados"
+1. **`supabase/functions/import-precos/index.ts`** -- substituir loop sequencial por `Promise.all` para paralelizar updates dentro de cada lote
 
-As edge functions permanecem inalteradas -- o controle de lotes e feito no frontend.
+2. **`src/components/ImportPrecos.tsx`** -- `parsePreco` retorna `undefined` para valores vazios; filtrar campos undefined antes de enviar
+
+3. **`src/components/ImportImagens.tsx`** -- novo componente extraido de `AdminUploadImagens.tsx`, apenas o conteudo (sem header/layout de pagina)
+
+4. **`src/pages/AdminUploadImagens.tsx`** -- refatorar para usar `ImportImagens` internamente
+
+5. **`src/pages/Admin.tsx`**:
+   - Remover `TabsTrigger` "Importar Produtos" e "Importar Precos"
+   - Adicionar `TabsTrigger` "Importacao"
+   - Estado local `importSubTab` controla qual sub-secao esta ativa (produtos/precos/imagens)
+   - Renderizar 3 cards clicaveis + componente selecionado abaixo
+   - Remover card "Upload de Imagens" da aba Produtos
+
