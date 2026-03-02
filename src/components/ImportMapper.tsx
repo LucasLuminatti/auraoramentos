@@ -3,9 +3,11 @@ import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Loader2, AlertCircle, CheckCircle2, XCircle, Download } from "lucide-react";
+import { Upload, Loader2, AlertCircle, CheckCircle2, XCircle, Download, ChevronDown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 export interface ImportField {
   name: string;
@@ -36,6 +38,7 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [showInvalidRows, setShowInvalidRows] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,15 +167,34 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
   };
 
   const mappedPreview = getMappedPreview();
+  const headerIndexMap: Record<string, number> = {};
+  headers.forEach((h, i) => (headerIndexMap[h] = i));
+
   const totalValid = rawRows.filter((row) => {
-    const headerIndexMap: Record<string, number> = {};
-    headers.forEach((h, i) => (headerIndexMap[h] = i));
     return fields.every((f) => {
       if (!f.required) return true;
       const col = mapping[f.name];
       return col && row[headerIndexMap[col]];
     });
   }).length;
+
+  const totalInvalid = rawRows.length - totalValid;
+
+  const invalidRows = rawRows
+    .map((row, idx) => {
+      const missingFields = fields
+        .filter((f) => {
+          if (!f.required) return true;
+          const col = mapping[f.name];
+          return !(col && row[headerIndexMap[col]]);
+        })
+        .filter((f) => f.required)
+        .map((f) => f.label);
+      if (missingFields.length === 0) return null;
+      return { linha: idx + 2, campos: missingFields };
+    })
+    .filter(Boolean) as { linha: number; campos: string[] }[];
+
 
   return (
     <div className="space-y-6">
@@ -219,45 +241,85 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
         </div>
       )}
 
-      {/* Preview */}
-      {allRequiredMapped && mappedPreview.length > 0 && !importResult && (
-        <div className="rounded-xl border overflow-hidden">
-          <div className="bg-card px-4 py-3 border-b">
-            <h3 className="font-semibold text-foreground text-sm">Preview (primeiras {mappedPreview.length} linhas)</h3>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {fields.filter((f) => mapping[f.name]).map((f) => (
-                  <TableHead key={f.name}>{f.label}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mappedPreview.map((row, i) => (
-                <TableRow key={i}>
-                  {fields.filter((f) => mapping[f.name]).map((f) => (
-                    <TableCell key={f.name} className="text-sm">{String(row[f.name] ?? "")}</TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Import button / progress */}
+      {/* Análise */}
       {allRequiredMapped && rawRows.length > 0 && !importResult && (
-        importing ? (
-          <div className="space-y-2">
-            <Progress value={progress} className="h-3" />
-            <p className="text-sm text-muted-foreground">{progressLabel || "Iniciando..."}</p>
-          </div>
-        ) : (
-          <Button className="gap-2" disabled={totalValid === 0} onClick={handleImport}>
-            {`${importLabel} ${totalValid} registros`}
-          </Button>
-        )
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Análise</CardTitle>
+            <CardDescription>{rawRows.length} linhas analisadas</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
+              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+              <span className="text-sm font-medium text-green-700">{totalValid} prontos para importação</span>
+            </div>
+
+            {totalInvalid > 0 && (
+              <Collapsible open={showInvalidRows} onOpenChange={setShowInvalidRows}>
+                <CollapsibleTrigger asChild>
+                  <button className="flex w-full items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 hover:bg-destructive/15 transition-colors">
+                    <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+                    <span className="text-sm font-medium text-destructive flex-1 text-left">{totalInvalid} linhas com campos obrigatórios vazios</span>
+                    <ChevronDown className={cn("h-4 w-4 text-destructive transition-transform", showInvalidRows && "rotate-180")} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 max-h-48 overflow-auto rounded-lg border bg-muted/30 p-3 space-y-1">
+                    {invalidRows.slice(0, 50).map((r, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                        <span className="font-mono text-xs">Linha {r.linha}</span>
+                        <span className="text-muted-foreground">— faltando: {r.campos.join(", ")}</span>
+                      </div>
+                    ))}
+                    {invalidRows.length > 50 && (
+                      <p className="text-xs text-muted-foreground pt-1">...e mais {invalidRows.length - 50} linhas</p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Amostra */}
+            {mappedPreview.length > 0 && (
+              <div className="rounded-lg border overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 border-b">
+                  <p className="text-xs font-medium text-muted-foreground">Amostra das primeiras {mappedPreview.length} linhas</p>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {fields.filter((f) => mapping[f.name]).map((f) => (
+                        <TableHead key={f.name}>{f.label}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mappedPreview.map((row, i) => (
+                      <TableRow key={i}>
+                        {fields.filter((f) => mapping[f.name]).map((f) => (
+                          <TableCell key={f.name} className="text-sm">{String(row[f.name] ?? "")}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* Import button / progress */}
+            {importing ? (
+              <div className="space-y-2">
+                <Progress value={progress} className="h-3" />
+                <p className="text-sm text-muted-foreground">{progressLabel || "Iniciando..."}</p>
+              </div>
+            ) : (
+              <Button className="gap-2 w-full" disabled={totalValid === 0} onClick={handleImport}>
+                {`${importLabel} ${totalValid} registros`}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Import Result */}
