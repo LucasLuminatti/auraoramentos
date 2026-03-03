@@ -17,8 +17,7 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
       id: crypto.randomUUID(),
       nome: `Ambiente ${ambientes.length + 1}`,
       luminarias: [],
-      perfis: [],
-      fitasLed: [],
+      sistemas: [],
     };
     onChange([...ambientes, novo]);
   };

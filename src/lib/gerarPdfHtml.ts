@@ -1,12 +1,14 @@
-import type { Ambiente } from "@/types/orcamento";
+import type { Ambiente, SistemaPerfil } from "@/types/orcamento";
 import {
   calcularMetragemTotal,
-  calcularWTotal,
-  calcularQtdRolos,
+  calcularDemandaFita,
+  calcularConsumoW,
+  calcularQtdDrivers,
   calcularSubtotalLuminaria,
-  calcularSubtotalPerfil,
-  calcularSubtotalFita,
-  calcularTotalAmbiente,
+  calcularSubtotalPerfilSistema,
+  calcularSubtotalDriverSistema,
+  calcularTotalAmbienteSemFita,
+  calcularRolosPorGrupo,
   calcularTotalGeral,
   formatarMoeda,
 } from "@/types/orcamento";
@@ -23,11 +25,7 @@ export interface PdfParams {
 /* ── helpers ── */
 
 function formatarData(): string {
-  return new Date().toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  return new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
 function pad(n: number): string {
@@ -49,85 +47,100 @@ function imgCell(url?: string): string {
 function tabelaLuminarias(items: Ambiente["luminarias"]): string {
   if (!items.length) return "";
   const hasImg = items.some((i) => i.imagemUrl);
-  const rows = items
-    .map(
-      (i) => `<tr>
-      ${hasImg ? imgCell(i.imagemUrl) : ""}
-      <td><span class="code-tag">RV${i.codigo}</span></td>
-      <td><span class="desc-main">${i.descricao}</span></td>
-      <td class="c"><span class="qty-circle">${i.quantidade}</span></td>
-      <td class="r"><span class="price-unit">${formatarMoeda(i.precoUnitario)}</span></td>
-      <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalLuminaria(i))}</span></td>
-    </tr>`
-    )
-    .join("");
-  return `
-  <div class="table-container" style="margin-bottom:10px">
+  const rows = items.map((i) => `<tr>
+    ${hasImg ? imgCell(i.imagemUrl) : ""}
+    <td><span class="code-tag">RV${i.codigo}</span></td>
+    <td><span class="desc-main">${i.descricao}</span></td>
+    <td class="c"><span class="qty-circle">${i.quantidade}</span></td>
+    <td class="r"><span class="price-unit">${formatarMoeda(i.precoUnitario)}</span></td>
+    <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalLuminaria(i))}</span></td>
+  </tr>`).join("");
+  return `<div class="table-container" style="margin-bottom:10px">
     <table>
-      <thead><tr>
-        ${hasImg ? '<th style="width:44px"></th>' : ""}
-        <th>Código</th><th>Descrição</th><th class="c">Qtd</th><th class="r">Preço Un.</th><th class="r">Subtotal</th>
-      </tr></thead>
+      <thead><tr>${hasImg ? '<th style="width:44px"></th>' : ""}<th>Código</th><th>Descrição</th><th class="c">Qtd</th><th class="r">Preço Un.</th><th class="r">Subtotal</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>`;
 }
 
-function tabelaPerfis(items: Ambiente["perfis"]): string {
-  if (!items.length) return "";
-  const hasImg = items.some((i) => i.imagemUrl);
-  const rows = items
-    .map(
-      (i) => `<tr>
-      ${hasImg ? imgCell(i.imagemUrl) : ""}
-      <td><span class="code-tag">RV${i.codigo}</span></td>
-      <td><span class="desc-main">${i.descricao}</span></td>
-      <td class="r"><span class="price-unit">${i.metragem}</span></td>
-      <td class="c"><span class="qty-circle">${i.quantidade}</span></td>
-      <td class="r"><span class="price-total">${calcularMetragemTotal(i).toFixed(2)}</span></td>
-      <td class="r"><span class="price-unit">${formatarMoeda(i.precoUnitario)}</span></td>
-      <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalPerfil(i))}</span></td>
-    </tr>`
-    )
-    .join("");
-  return `
-  <div class="table-container" style="margin-bottom:10px">
+function tabelaSistemas(sistemas: SistemaPerfil[]): string {
+  if (!sistemas.length) return "";
+  const rows = sistemas.map((sis) => {
+    const metragem = calcularMetragemTotal(sis.perfil);
+    const demanda = calcularDemandaFita(sis.perfil);
+    const consumo = sis.fita ? calcularConsumoW(sis.perfil, sis.fita) : 0;
+    const qtdDrv = sis.fita && sis.driver ? calcularQtdDrivers(sis.perfil, sis.fita, sis.driver) : 0;
+
+    let html = `<tr>
+      <td><span class="code-tag" style="background:#e0ecf5;color:#2E78A6;border-color:rgba(46,120,166,.18)">Perfil</span></td>
+      <td><span class="code-tag">RV${sis.perfil.codigo}</span></td>
+      <td><span class="desc-main">${sis.perfil.descricao}</span></td>
+      <td class="r"><span class="price-unit">${sis.perfil.comprimentoPeca}m × ${sis.perfil.quantidade} = ${metragem}m</span></td>
+      <td class="r"><span class="price-unit">${formatarMoeda(sis.perfil.precoUnitario)}</span></td>
+      <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalPerfilSistema(sis))}</span></td>
+    </tr>`;
+
+    if (sis.fita) {
+      html += `<tr>
+        <td><span class="code-tag" style="background:#fff4e0;color:#E68601;border-color:rgba(230,134,1,.18)">Fita</span></td>
+        <td><span class="code-tag">RV${sis.fita.codigo}</span></td>
+        <td><span class="desc-main">${sis.fita.descricao}</span></td>
+        <td class="r"><span class="price-unit">${demanda}m | ${sis.fita.wm}W/m | ${consumo.toFixed(1)}W</span></td>
+        <td class="r"><span class="price-unit">${formatarMoeda(sis.fita.precoUnitario)}</span></td>
+        <td class="r"><span class="price-unit" style="font-style:italic;color:#9aa3b0">Global →</span></td>
+      </tr>`;
+    }
+
+    if (sis.driver) {
+      html += `<tr>
+        <td><span class="code-tag" style="background:#e8ecf0;color:#5a6475;border-color:rgba(90,100,117,.18)">Driver</span></td>
+        <td><span class="code-tag">RV${sis.driver.codigo}</span></td>
+        <td><span class="desc-main">${sis.driver.descricao}</span></td>
+        <td class="r"><span class="price-unit">${sis.driver.potencia}W | ${sis.driver.voltagem}V | ×${qtdDrv}</span></td>
+        <td class="r"><span class="price-unit">${formatarMoeda(sis.driver.precoUnitario)}</span></td>
+        <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalDriverSistema(sis))}</span></td>
+      </tr>`;
+    }
+
+    return html;
+  }).join('<tr><td colspan="6" style="padding:2px;background:#f4f6f8"></td></tr>');
+
+  return `<div class="table-container" style="margin-bottom:10px">
     <table>
-      <thead><tr>
-        ${hasImg ? '<th style="width:44px"></th>' : ""}
-        <th>Código</th><th>Descrição</th><th class="r">Metragem</th><th class="c">Qtd</th><th class="r">Total (m)</th><th class="r">Preço Un.</th><th class="r">Subtotal</th>
-      </tr></thead>
+      <thead><tr><th>Comp.</th><th>Código</th><th>Descrição</th><th class="r">Detalhe</th><th class="r">Preço Un.</th><th class="r">Subtotal</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>`;
 }
 
-function tabelaFitas(items: Ambiente["fitasLed"]): string {
-  if (!items.length) return "";
-  const hasImg = items.some((i) => i.imagemUrl);
-  const rows = items
-    .map(
-      (i) => `<tr>
-      ${hasImg ? imgCell(i.imagemUrl) : ""}
-      <td><span class="code-tag">RV${i.codigo}</span></td>
-      <td><span class="desc-main">${i.descricao}</span></td>
-      <td class="r"><span class="price-unit">${i.passadas}</span></td>
-      <td class="r"><span class="price-unit">${i.wm}</span></td>
-      <td class="r"><span class="price-total">${calcularWTotal(i).toFixed(1)}</span></td>
-      <td class="r"><span class="price-unit">${i.metragemRolo}</span></td>
-      <td class="c"><span class="qty-circle">${calcularQtdRolos(i)}</span></td>
-      <td class="r"><span class="price-unit">${formatarMoeda(i.precoUnitario)}</span></td>
-      <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalFita(i))}</span></td>
-    </tr>`
-    )
-    .join("");
+function tabelaResumoFitas(ambientes: Ambiente[]): string {
+  const grupos = calcularRolosPorGrupo(ambientes);
+  if (!grupos.length) return "";
+  const totalFitas = grupos.reduce((s, g) => s + g.subtotal, 0);
+  const rows = grupos.map((g) => {
+    const rolosStr = g.rolos.map((r) => `${r.quantidade}×${r.tamanho}m`).join(" + ");
+    return `<tr>
+      <td><span class="code-tag">RV${g.codigo}</span></td>
+      <td><span class="desc-main">${g.descricao}</span></td>
+      <td class="r"><span class="price-unit">${g.demandaTotal}m</span></td>
+      <td class="r"><span class="price-unit">${rolosStr} (${g.qtdRolosTotal} rolos)</span></td>
+      <td class="r"><span class="price-unit">${formatarMoeda(g.precoUnitario)}</span></td>
+      <td class="r"><span class="price-total">${formatarMoeda(g.subtotal)}</span></td>
+    </tr>`;
+  }).join("");
+
   return `
+  <div class="section-header">
+    <span class="section-num" style="font-size:28px">⚡</span>
+    <div class="section-info">
+      <div class="section-title">Resumo de Fitas LED</div>
+      <div class="section-sub">Subtotal Fitas: ${formatarMoeda(totalFitas)}</div>
+    </div>
+    <div class="section-line"></div>
+  </div>
   <div class="table-container" style="margin-bottom:10px">
     <table>
-      <thead><tr>
-        ${hasImg ? '<th style="width:44px"></th>' : ""}
-        <th>Código</th><th>Descrição</th><th class="r">Passadas</th><th class="r">W/M</th><th class="r">W Total</th><th class="r">Rolo (m)</th><th class="c">Rolos</th><th class="r">Preço Un.</th><th class="r">Subtotal</th>
-      </tr></thead>
+      <thead><tr><th>Código</th><th>Descrição</th><th class="r">Demanda</th><th class="r">Rolos</th><th class="r">Preço Un.</th><th class="r">Subtotal</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>`;
@@ -152,24 +165,24 @@ export function gerarOrcamentoHtml(params: PdfParams): string {
   const ambientesHtml = ambientes
     .map((amb, idx) => {
       const num = pad(idx + 1);
-      const subtotal = formatarMoeda(calcularTotalAmbiente(amb));
-      const empty =
-        !amb.luminarias.length && !amb.perfis.length && !amb.fitasLed.length;
+      const subtotal = formatarMoeda(calcularTotalAmbienteSemFita(amb));
+      const empty = !amb.luminarias.length && !amb.sistemas.length;
       return `
       <div class="section-header">
         <span class="section-num">${num}</span>
         <div class="section-info">
           <div class="section-title">${amb.nome}</div>
-          <div class="section-sub">Subtotal: ${subtotal}</div>
+          <div class="section-sub">Subtotal (s/ fita): ${subtotal}</div>
         </div>
         <div class="section-line"></div>
       </div>
       ${tabelaLuminarias(amb.luminarias)}
-      ${tabelaPerfis(amb.perfis)}
-      ${tabelaFitas(amb.fitasLed)}
+      ${tabelaSistemas(amb.sistemas)}
       ${empty ? '<p style="color:#9aa3b0;font-style:italic;font-size:12px;margin-bottom:16px">Nenhum item neste ambiente.</p>' : ""}`;
     })
     .join("");
+
+  const resumoFitasHtml = tabelaResumoFitas(ambientes);
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -304,6 +317,7 @@ td.c{text-align:center}
   <!-- BODY -->
   <div class="body">
     ${ambientesHtml}
+    ${resumoFitasHtml}
 
     <!-- TOTAL -->
     <div class="total-area">
