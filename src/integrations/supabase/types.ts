@@ -270,7 +270,10 @@ export type Database = {
           colaborador_id: string
           created_at: string
           data: string
+          fechado_at: string | null
           id: string
+          motivo_perda: string | null
+          motivo_perda_detalhe: string | null
           projeto_id: string | null
           status: string
           valor: number
@@ -280,7 +283,10 @@ export type Database = {
           colaborador_id: string
           created_at?: string
           data?: string
+          fechado_at?: string | null
           id?: string
+          motivo_perda?: string | null
+          motivo_perda_detalhe?: string | null
           projeto_id?: string | null
           status?: string
           valor?: number
@@ -290,7 +296,10 @@ export type Database = {
           colaborador_id?: string
           created_at?: string
           data?: string
+          fechado_at?: string | null
           id?: string
+          motivo_perda?: string | null
+          motivo_perda_detalhe?: string | null
           projeto_id?: string | null
           status?: string
           valor?: number

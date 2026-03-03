@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, Target, BarChart3, Clock, Trophy } from "lucide-react";
-import { differenceInDays, subMonths, subDays, startOfMonth, format, isAfter } from "date-fns";
+import { DollarSign, TrendingUp, Target, BarChart3, Clock, Trophy, ThumbsDown } from "lucide-react";
+import { differenceInDays, subDays, startOfMonth, subMonths, format, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -17,6 +17,8 @@ interface Orcamento {
   created_at: string;
   data: string;
   projeto_id: string | null;
+  fechado_at?: string | null;
+  motivo_perda?: string | null;
   clientes?: { nome: string } | null;
 }
 
@@ -32,7 +34,18 @@ const PIE_COLORS = [
   "hsl(45, 93%, 47%)",
   "hsl(217, 91%, 60%)",
   "hsl(142, 71%, 45%)",
+  "hsl(0, 72%, 51%)",
 ];
+
+const MOTIVO_LABELS: Record<string, string> = {
+  preco: "Preço",
+  concorrencia: "Concorrência",
+  prazo: "Prazo",
+  sem_retorno: "Sem retorno",
+  outro: "Outro",
+};
+
+const MOTIVO_COLORS = ["hsl(0,72%,51%)", "hsl(25,95%,53%)", "hsl(45,93%,47%)", "hsl(217,91%,60%)", "hsl(var(--muted-foreground))"];
 
 const PERIOD_OPTIONS = [
   { value: "30", label: "Últimos 30 dias" },
@@ -53,6 +66,7 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
 
   const kpis = useMemo(() => {
     const fechados = filtered.filter((o) => o.status === "fechado");
+    const perdidos = filtered.filter((o) => o.status === "perdido");
     const aprovados = filtered.filter((o) => o.status === "aprovado");
     const enviados = filtered.filter((o) => o.status === "enviado");
 
@@ -75,16 +89,23 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
           ) / projetoMap.size
         : 0;
 
-    const convertidos = fechados.length + aprovados.length;
+    // Conversão corrigida: ganhos / (ganhos + perdidos)
     const taxaConversao =
-      convertidos + enviados.length > 0
-        ? (convertidos / (convertidos + enviados.length)) * 100
+      fechados.length + perdidos.length > 0
+        ? (fechados.length / (fechados.length + perdidos.length)) * 100
         : 0;
 
-    const ciclos = [...fechados, ...aprovados].map((o) =>
-      Math.abs(differenceInDays(new Date(o.data), new Date(o.created_at)))
+    // Ciclo médio corrigido: usar fechado_at quando disponível
+    const encerrados = [...fechados, ...perdidos].filter((o) => (o as any).fechado_at);
+    const ciclos = encerrados.map((o) =>
+      Math.abs(differenceInDays(new Date((o as any).fechado_at), new Date(o.created_at)))
     );
-    const cicloMedio = ciclos.length > 0 ? ciclos.reduce((a, b) => a + b, 0) / ciclos.length : 0;
+    // Fallback para orçamentos sem fechado_at
+    const ciclosFallback = [...fechados, ...perdidos]
+      .filter((o) => !(o as any).fechado_at)
+      .map((o) => Math.abs(differenceInDays(new Date(o.data), new Date(o.created_at))));
+    const allCiclos = [...ciclos, ...ciclosFallback];
+    const cicloMedio = allCiclos.length > 0 ? allCiclos.reduce((a, b) => a + b, 0) / allCiclos.length : 0;
 
     return { receitaEfetiva, receitaPrevista, pipeline, ticketMedio, taxaConversao, cicloMedio };
   }, [filtered]);
@@ -127,9 +148,9 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
     });
   }, [filtered, period]);
 
-  // Distribuição por status
+  // Distribuição por status (inclui perdido)
   const statusData = useMemo(() => {
-    const counts = { rascunho: 0, enviado: 0, aprovado: 0, fechado: 0 };
+    const counts = { rascunho: 0, enviado: 0, aprovado: 0, fechado: 0, perdido: 0 };
     filtered.forEach((o) => {
       if (o.status in counts) counts[o.status as keyof typeof counts]++;
     });
@@ -138,7 +159,22 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
       { name: "Enviado", value: counts.enviado },
       { name: "Aprovado", value: counts.aprovado },
       { name: "Fechado", value: counts.fechado },
+      { name: "Perdido", value: counts.perdido },
     ].filter((d) => d.value > 0);
+  }, [filtered]);
+
+  // Motivos de perda
+  const motivosData = useMemo(() => {
+    const counts = new Map<string, number>();
+    filtered
+      .filter((o) => o.status === "perdido" && (o as any).motivo_perda)
+      .forEach((o) => {
+        const m = (o as any).motivo_perda as string;
+        counts.set(m, (counts.get(m) || 0) + 1);
+      });
+    return [...counts.entries()]
+      .map(([key, value]) => ({ name: MOTIVO_LABELS[key] || key, value }))
+      .sort((a, b) => b.value - a.value);
   }, [filtered]);
 
   const cards = [
@@ -222,6 +258,33 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Motivos de Perda */}
+      {motivosData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ThumbsDown className="h-4 w-4 text-red-500" />
+              Motivos de Perda
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={motivosData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis dataKey="name" type="category" width={120} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip />
+                <Bar dataKey="value" name="Ocorrências" radius={[0, 4, 4, 0]}>
+                  {motivosData.map((_, i) => (
+                    <Cell key={i} fill={MOTIVO_COLORS[i % MOTIVO_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Top 5 Clientes */}
       {topClientes.length > 0 && (

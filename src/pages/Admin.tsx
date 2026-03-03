@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Loader2, CheckCircle, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Flag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
@@ -17,6 +17,7 @@ import AdminExceptions from "@/components/AdminExceptions";
 import ImportProdutos from "@/components/ImportProdutos";
 import ImportPrecos from "@/components/ImportPrecos";
 import ImportImagens from "@/components/ImportImagens";
+import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -40,6 +41,10 @@ const Admin = () => {
   const [clientes, setClientes] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null);
+
+  // Encerrar negociação
+  const [encerrarOpen, setEncerrarOpen] = useState(false);
+  const [encerrarOrcId, setEncerrarOrcId] = useState("");
 
   useEffect(() => {
     fetchProdutos("");
@@ -114,6 +119,7 @@ const Admin = () => {
       case "enviado": return "Enviado";
       case "aprovado": return "Aprovado";
       case "fechado": return "Fechado";
+      case "perdido": return "Perdido";
       default: return s;
     }
   };
@@ -123,19 +129,12 @@ const Admin = () => {
       case "enviado": return "bg-yellow-100 text-yellow-800";
       case "aprovado": return "bg-blue-100 text-blue-800";
       case "fechado": return "bg-green-100 text-green-800";
+      case "perdido": return "bg-red-100 text-red-800";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
-  const handleFecharOrcamento = async (id: string) => {
-    const { error } = await supabase.from("orcamentos").update({ status: "fechado" }).eq("id", id);
-    if (error) {
-      toast.error("Erro ao fechar orçamento");
-      return;
-    }
-    toast.success("Orçamento marcado como fechado!");
-    fetchOrcamentos();
-  };
+  const canEncerrar = (status: string) => status === "enviado" || status === "aprovado";
 
   const importSubTabs = [
     { key: "produtos" as const, label: "Produtos", description: "Código + descrição", icon: FileSpreadsheet },
@@ -308,9 +307,16 @@ const Admin = () => {
                         <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusClass(o.status)}`}>{statusLabel(o.status)}</span>
                       </TableCell>
                       <TableCell>
-                        {o.status === "aprovado" && (
-                          <button className="p-1 rounded hover:bg-green-100 transition-colors" title="Marcar como Fechado" onClick={() => handleFecharOrcamento(o.id)}>
-                            <CheckCircle className="h-4 w-4 text-green-600" />
+                        {canEncerrar(o.status) && (
+                          <button
+                            className="p-1 rounded hover:bg-muted transition-colors"
+                            title="Encerrar negociação"
+                            onClick={() => {
+                              setEncerrarOrcId(o.id);
+                              setEncerrarOpen(true);
+                            }}
+                          >
+                            <Flag className="h-4 w-4 text-muted-foreground" />
                           </button>
                         )}
                       </TableCell>
@@ -373,6 +379,13 @@ const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EncerrarNegociacaoModal
+        open={encerrarOpen}
+        onOpenChange={setEncerrarOpen}
+        orcamentoId={encerrarOrcId}
+        onSuccess={fetchOrcamentos}
+      />
     </div>
   );
 };
