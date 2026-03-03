@@ -1,75 +1,107 @@
 
 
-# Fluxo de Encerramento de Negociacao
+# Remodelagem: Cadeia Perfil-Fita-Driver + Calculo Global de Fita
 
-## Problema
-Nao existe status "perdido" nem campos para registrar data de fechamento ou motivo de perda. O dashboard calcula metricas incorretamente.
+## Mudanca principal vs plano anterior
 
-## 1. Banco de Dados
+O documento esclarece que a **fita LED e um insumo continuo**, nao um produto por ambiente. A logica correta e:
 
-Adicionar 3 colunas na tabela `orcamentos`:
-- `fechado_at` (timestamptz, nullable) — data real do encerramento (ganho ou perdido)
-- `motivo_perda` (text, nullable) — opcao pre-definida: "preco", "concorrencia", "prazo", "sem_retorno", "outro"
-- `motivo_perda_detalhe` (text, nullable) — campo livre opcional
+1. Calcular a demanda exata de cada ambiente (sem arredondar)
+2. Agrupar por codigo de fita em todo o projeto
+3. Escolher rolos (5m, 10m, 15m) que cubram a demanda total com minimo desperdicio
+4. Arredondar **uma unica vez** no final
 
-Novo status permitido: **"perdido"** (alem dos existentes: rascunho, enviado, aprovado, fechado)
+Isso muda fundamentalmente a arquitetura: o calculo de rolos sai do nivel ambiente e vai para o nivel orcamento.
 
-## 2. UX — Modal de Encerramento
+---
 
-Substituir o botao de check simples por um botao "Encerrar" que abre um **dialog modal** com duas opcoes:
+## 1. Tipos (`src/types/orcamento.ts`)
+
+### SistemaPerfil (agrupa perfil + fita + driver)
 
 ```text
-┌─────────────────────────────────┐
-│  Encerrar Negociacao            │
-│                                 │
-│  [✓ Ganho]     [✗ Perdido]      │
-│                                 │
-│  (se Perdido):                  │
-│  Motivo: [select obrigatorio]   │
-│  - Preco                        │
-│  - Concorrencia                 │
-│  - Prazo                        │
-│  - Sem retorno do cliente       │
-│  - Outro                        │
-│                                 │
-│  Observacao: [textarea opcional]│
-│                                 │
-│  [Cancelar]  [Confirmar]        │
-└─────────────────────────────────┘
+SistemaPerfil {
+  id, perfil: ItemPerfil, fita: ItemFitaLED | null, driver: ItemDriver | null
+}
 ```
 
-- **Ganho**: seta status = "fechado", fechado_at = now()
-- **Perdido**: seta status = "perdido", fechado_at = now(), motivo_perda, motivo_perda_detalhe
-- O botao aparece para orcamentos com status "enviado" ou "aprovado" (tanto no ClienteList quanto no Admin)
-- Feedback via toast de sucesso com icone diferenciado
+**ItemPerfil** reformulado:
+- `comprimentoPeca` (1, 2 ou 3m), `quantidade`, `passadas` (1, 2 ou 3)
+- Calculado: `metragemTotal = comprimentoPeca × quantidade`
+- Calculado: `demandaFita = metragemTotal × passadas` (metragem real de fita necessaria)
 
-### Estados visuais
-- Rascunho: cinza (existente)
-- Enviado: amarelo (existente)
-- Aprovado: azul (existente)
-- Fechado/Ganho: verde (existente)
-- **Perdido: vermelho** (novo)
+**ItemFitaLED** reformulado:
+- Remove `passadas` (vem do perfil)
+- Mantem `wm`, `metragemRolo` (padrao 5, opcoes 5/10/15)
+- A demanda vem do perfil pai
 
-## 3. Dashboard — Correcao das Metricas
+**ItemDriver** (novo):
+- `potencia` (W), `voltagem` (12 ou 24)
+- Calculados: `qtdDrivers = max(ceil(consumoW / potencia), ceil(demandaFita / limite))` onde limite = 5m p/ 12V, 10m p/ 24V
 
-**Taxa de Conversao** (corrigida):
+### Ambiente reformulado
+
+```text
+Ambiente {
+  luminarias: ItemLuminaria[]  // inalterado
+  sistemas: SistemaPerfil[]     // substitui perfis[] e fitasLed[]
+}
 ```
-ganhos / (ganhos + perdidos)
+
+### Funcoes de calculo global de fita
+
+Nova funcao `calcularRolosPorGrupo(ambientes)`:
+1. Percorre todos os sistemas de todos os ambientes
+2. Agrupa por `fita.codigo`
+3. Para cada grupo: soma `demandaFita` de todos os sistemas
+4. Algoritmo guloso para escolher rolos: comeca pelo maior (15m), depois 10m, depois 5m, cobrindo a demanda sem ficar abaixo
+
+```text
+Exemplo: demanda 23m
+→ 1x15m (resta 8m) → 1x10m (resta -2m, coberto)
+→ Total: 1x15m + 1x10m = 25m, sobra 2m
 ```
-Apenas orcamentos efetivamente encerrados, nao mais "enviados" no denominador.
 
-**Ciclo Medio de Vendas** (corrigido):
-```
-media( fechado_at - created_at ) para status "fechado" ou "perdido" onde fechado_at IS NOT NULL
-```
-Usar `fechado_at` real em vez da coluna `data`.
+## 2. UX — AmbienteCard reformulado
 
-**Novo KPI — Motivos de Perda**: adicionar um mini-grafico ou lista mostrando distribuicao dos motivos de perda.
+Duas tabs: **Luminarias** e **Sistemas de Perfil**
 
-## 4. Arquivos alterados
+Cada sistema e um card agrupado com 3 secoes visuais (Perfil → Fita → Driver):
+- Perfil: autocomplete codigo, select comprimento (1/2/3m), qtd, select passadas (1/2/3), badges automaticos de metragem
+- Fita: autocomplete codigo, W/m, badges de consumo total
+- Driver: autocomplete codigo, potencia, select voltagem (12V/24V), badge de qtd drivers
+- Precos individuais para cada componente com validacao de minimo
+- Subtotal do sistema automatico
 
-- **Migracao SQL**: adicionar colunas `fechado_at`, `motivo_perda`, `motivo_perda_detalhe` na tabela `orcamentos`
-- **`src/components/ClienteList.tsx`**: substituir botao de check por botao "Encerrar" + modal, adicionar status "perdido" nos labels/classes
-- **`src/pages/Admin.tsx`**: mesma logica de encerramento na tab Orcamentos, adicionar status "perdido"
-- **`src/components/AdminDashboard.tsx`**: corrigir calculo de conversao e ciclo medio, usar `fechado_at`, adicionar "perdido" no pie chart e cores
+**Importante**: na tab de fita, os campos de rolos e qtd rolos NAO aparecem por sistema. O calculo de rolos aparece apenas no Step3 (revisao), pois e global.
+
+## 3. Step3 Revisao
+
+### Tabelas por ambiente
+- Luminarias: inalterado
+- Sistemas: tabela agrupada mostrando perfil + fita + driver de cada sistema, com subtotal
+
+### Resumo global de fitas (NOVO)
+Secao dedicada apos os ambientes mostrando:
+- Tabela agrupada por codigo de fita
+- Colunas: Codigo | Descricao | Demanda Total (m) | Rolos sugeridos | Preco un. | Subtotal
+- O subtotal da fita e calculado aqui (preco × qtd rolos), nao por ambiente
+
+### Total geral
+- Soma de luminarias (por ambiente) + perfis (por ambiente) + drivers (por ambiente) + fitas (global)
+
+## 4. PDF (`gerarPdfHtml.ts`)
+
+- Adaptar para o novo formato de sistemas
+- Adicionar secao "Resumo de Fitas LED" com a tabela global de rolos
+- Subtotais de ambiente mostram apenas luminarias + perfis + drivers
+- Total de fitas aparece como secao separada antes do total geral
+
+## 5. Arquivos a alterar
+
+1. **`src/types/orcamento.ts`** — Novos tipos, funcoes de calculo encadeado, algoritmo de rolos global
+2. **`src/components/AmbienteCard.tsx`** — Reescrever com 2 tabs, UI de sistema agrupado
+3. **`src/components/Step2Ambientes.tsx`** — Ajuste minimo (usa `sistemas` em vez de `perfis`/`fitasLed`)
+4. **`src/components/Step3Revisao.tsx`** — Tabelas de sistema + secao global de fitas
+5. **`src/lib/gerarPdfHtml.ts`** — PDF com novo formato
 
