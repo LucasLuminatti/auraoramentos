@@ -1,6 +1,5 @@
-import type { Ambiente, SistemaPerfil } from "@/types/orcamento";
+import type { Ambiente, SistemaIluminacao } from "@/types/orcamento";
 import {
-  calcularMetragemTotal,
   calcularDemandaFita,
   calcularConsumoW,
   calcularQtdDrivers,
@@ -63,44 +62,45 @@ function tabelaLuminarias(items: Ambiente["luminarias"]): string {
   </div>`;
 }
 
-function tabelaSistemas(sistemas: SistemaPerfil[]): string {
+function tabelaSistemas(sistemas: SistemaIluminacao[]): string {
   if (!sistemas.length) return "";
   const rows = sistemas.map((sis) => {
-    const metragem = calcularMetragemTotal(sis.perfil);
-    const demanda = calcularDemandaFita(sis.perfil);
-    const consumo = sis.fita ? calcularConsumoW(sis.perfil, sis.fita) : 0;
-    const qtdDrv = sis.fita && sis.driver ? calcularQtdDrivers(sis.perfil, sis.fita, sis.driver) : 0;
+    const demanda = calcularDemandaFita(sis);
+    const consumo = calcularConsumoW(sis);
+    const qtdDrv = calcularQtdDrivers(sis);
 
+    // Fita row (always present)
     let html = `<tr>
-      <td><span class="code-tag" style="background:#e0ecf5;color:#2E78A6;border-color:rgba(46,120,166,.18)">Perfil</span></td>
-      <td><span class="code-tag">RV${sis.perfil.codigo}</span></td>
-      <td><span class="desc-main">${sis.perfil.descricao}</span></td>
-      <td class="r"><span class="price-unit">${sis.perfil.comprimentoPeca}m × ${sis.perfil.quantidade} = ${metragem}m</span></td>
-      <td class="r"><span class="price-unit">${formatarMoeda(sis.perfil.precoUnitario)}</span></td>
-      <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalPerfilSistema(sis))}</span></td>
+      <td><span class="code-tag" style="background:#fff4e0;color:#E68601;border-color:rgba(230,134,1,.18)">Fita</span></td>
+      <td><span class="code-tag">RV${sis.fita.codigo}</span></td>
+      <td><span class="desc-main">${sis.fita.descricao}</span></td>
+      <td class="r"><span class="price-unit">${demanda}m | ${sis.fita.wm}W/m | ${consumo.toFixed(1)}W</span></td>
+      <td class="r"><span class="price-unit">${formatarMoeda(sis.fita.precoUnitario)}</span></td>
+      <td class="r"><span class="price-unit" style="font-style:italic;color:#9aa3b0">Global →</span></td>
     </tr>`;
 
-    if (sis.fita) {
+    // Perfil row (optional)
+    if (sis.perfil) {
+      const metragem = sis.perfil.comprimentoPeca * sis.perfil.quantidade;
       html += `<tr>
-        <td><span class="code-tag" style="background:#fff4e0;color:#E68601;border-color:rgba(230,134,1,.18)">Fita</span></td>
-        <td><span class="code-tag">RV${sis.fita.codigo}</span></td>
-        <td><span class="desc-main">${sis.fita.descricao}</span></td>
-        <td class="r"><span class="price-unit">${demanda}m | ${sis.fita.wm}W/m | ${consumo.toFixed(1)}W</span></td>
-        <td class="r"><span class="price-unit">${formatarMoeda(sis.fita.precoUnitario)}</span></td>
-        <td class="r"><span class="price-unit" style="font-style:italic;color:#9aa3b0">Global →</span></td>
+        <td><span class="code-tag" style="background:#e0ecf5;color:#2E78A6;border-color:rgba(46,120,166,.18)">Perfil</span></td>
+        <td><span class="code-tag">RV${sis.perfil.codigo}</span></td>
+        <td><span class="desc-main">${sis.perfil.descricao}</span></td>
+        <td class="r"><span class="price-unit">${sis.perfil.comprimentoPeca}m × ${sis.perfil.quantidade} = ${metragem}m | ${sis.perfil.passadas} passada(s)</span></td>
+        <td class="r"><span class="price-unit">${formatarMoeda(sis.perfil.precoUnitario)}</span></td>
+        <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalPerfilSistema(sis))}</span></td>
       </tr>`;
     }
 
-    if (sis.driver) {
-      html += `<tr>
-        <td><span class="code-tag" style="background:#e8ecf0;color:#5a6475;border-color:rgba(90,100,117,.18)">Driver</span></td>
-        <td><span class="code-tag">RV${sis.driver.codigo}</span></td>
-        <td><span class="desc-main">${sis.driver.descricao}</span></td>
-        <td class="r"><span class="price-unit">${sis.driver.potencia}W | ${sis.driver.voltagem}V | ×${qtdDrv}</span></td>
-        <td class="r"><span class="price-unit">${formatarMoeda(sis.driver.precoUnitario)}</span></td>
-        <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalDriverSistema(sis))}</span></td>
-      </tr>`;
-    }
+    // Driver row (always present)
+    html += `<tr>
+      <td><span class="code-tag" style="background:#e8ecf0;color:#5a6475;border-color:rgba(90,100,117,.18)">Driver</span></td>
+      <td><span class="code-tag">RV${sis.driver.codigo}</span></td>
+      <td><span class="desc-main">${sis.driver.descricao}</span></td>
+      <td class="r"><span class="price-unit">${sis.driver.potencia}W | ${sis.driver.voltagem}V | ×${qtdDrv}</span></td>
+      <td class="r"><span class="price-unit">${formatarMoeda(sis.driver.precoUnitario)}</span></td>
+      <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalDriverSistema(sis))}</span></td>
+    </tr>`;
 
     return html;
   }).join('<tr><td colspan="6" style="padding:2px;background:#f4f6f8"></td></tr>');
