@@ -1,107 +1,88 @@
 
 
-# Remodelagem: Cadeia Perfil-Fita-Driver + Calculo Global de Fita
+# Refatoracao: Perfil Opcional no Sistema Fita+Driver
 
-## Mudanca principal vs plano anterior
+## Problema atual
 
-O documento esclarece que a **fita LED e um insumo continuo**, nao um produto por ambiente. A logica correta e:
+O modelo atual (`SistemaPerfil`) trata o **perfil como obrigatorio** e fita/driver como opcionais. A realidade do negocio e o inverso:
 
-1. Calcular a demanda exata de cada ambiente (sem arredondar)
-2. Agrupar por codigo de fita em todo o projeto
-3. Escolher rolos (5m, 10m, 15m) que cubram a demanda total com minimo desperdicio
-4. Arredondar **uma unica vez** no final
+- **Fita LED e o elemento central** — sempre presente
+- **Driver sempre acompanha a fita** — obrigatorio se ha fita
+- **Perfil e opcional** — nem toda fita precisa de perfil
 
-Isso muda fundamentalmente a arquitetura: o calculo de rolos sai do nivel ambiente e vai para o nivel orcamento.
+Quando nao ha perfil, o usuario precisa informar a metragem manualmente.
 
----
+## Mudancas
 
-## 1. Tipos (`src/types/orcamento.ts`)
+### 1. Tipos (`src/types/orcamento.ts`)
 
-### SistemaPerfil (agrupa perfil + fita + driver)
+Renomear `SistemaPerfil` para `SistemaIluminacao` e inverter a obrigatoriedade:
 
 ```text
-SistemaPerfil {
-  id, perfil: ItemPerfil, fita: ItemFitaLED | null, driver: ItemDriver | null
+SistemaIluminacao {
+  id: string;
+  perfil: ItemPerfil | null;     // OPCIONAL (era obrigatorio)
+  fita: ItemFitaLED;             // OBRIGATORIO (era opcional)
+  driver: ItemDriver;            // OBRIGATORIO (era opcional)
+  metragemManual: number | null; // novo: usado quando nao ha perfil
 }
 ```
 
-**ItemPerfil** reformulado:
-- `comprimentoPeca` (1, 2 ou 3m), `quantidade`, `passadas` (1, 2 ou 3)
-- Calculado: `metragemTotal = comprimentoPeca × quantidade`
-- Calculado: `demandaFita = metragemTotal × passadas` (metragem real de fita necessaria)
+Adicionar campo `metragemManual` ao sistema. Se `perfil` existe, a metragem vem do calculo (`comprimentoPeca * quantidade`). Se nao, vem de `metragemManual`.
 
-**ItemFitaLED** reformulado:
-- Remove `passadas` (vem do perfil)
-- Mantem `wm`, `metragemRolo` (padrao 5, opcoes 5/10/15)
-- A demanda vem do perfil pai
+Adicionar campo `passadasManual: 1|2|3` ao sistema (usado quando nao ha perfil, pois `passadas` hoje vive no ItemPerfil).
 
-**ItemDriver** (novo):
-- `potencia` (W), `voltagem` (12 ou 24)
-- Calculados: `qtdDrivers = max(ceil(consumoW / potencia), ceil(demandaFita / limite))` onde limite = 5m p/ 12V, 10m p/ 24V
+Atualizar funcoes de calculo:
+- `calcularDemandaFita(sistema)` — usa perfil se existir, senao `metragemManual * passadasManual`
+- `calcularConsumoW(sistema)` — idem
+- `calcularQtdDrivers(sistema)` — idem
+- `calcularSubtotalSistema(sistema)` — perfil so entra se existir
+- `calcularRolosPorGrupo` — adaptar para usar a nova assinatura
 
-### Ambiente reformulado
+### 2. UX — AmbienteCard (`src/components/AmbienteCard.tsx`)
 
-```text
-Ambiente {
-  luminarias: ItemLuminaria[]  // inalterado
-  sistemas: SistemaPerfil[]     // substitui perfis[] e fitasLed[]
-}
-```
+Renomear tab "Sistemas de Perfil" para "Sistemas de Iluminacao".
 
-### Funcoes de calculo global de fita
+Ao criar novo sistema: fita e driver ja vem inicializados (vazios mas presentes), perfil = null.
 
-Nova funcao `calcularRolosPorGrupo(ambientes)`:
-1. Percorre todos os sistemas de todos os ambientes
-2. Agrupa por `fita.codigo`
-3. Para cada grupo: soma `demandaFita` de todos os sistemas
-4. Algoritmo guloso para escolher rolos: comeca pelo maior (15m), depois 10m, depois 5m, cobrindo a demanda sem ficar abaixo
+Layout do card de sistema:
 
 ```text
-Exemplo: demanda 23m
-→ 1x15m (resta 8m) → 1x10m (resta -2m, coberto)
-→ Total: 1x15m + 1x10m = 25m, sobra 2m
+┌─ FITA LED (obrigatoria) ──────────────────┐
+│ [Autocomplete codigo]  [Descricao]        │
+│ W/m: [__]   Rolo: [5/10/15m]             │
+│ Preco Un.: [__]                           │
+├─ PERFIL (opcional) ───────────────────────┤
+│ [+ Vincular Perfil]  OU                   │
+│ [Autocomplete codigo]  [Descricao]        │
+│ Comprimento: [1/2/3m]  Qtd: [__]         │
+│ Preco Un.: [__]                           │
+│ → Metragem total: 6m                      │
+├─ SEM PERFIL ──────────────────────────────┤
+│ (se perfil = null):                       │
+│ Metragem (m): [__]    Passadas: [1/2/3]   │
+│ → Demanda fita: Xm                        │
+├─ DRIVER (obrigatorio) ────────────────────┤
+│ [Autocomplete codigo]  [Descricao]        │
+│ Potencia: [__W]  Voltagem: [12V/24V]     │
+│ → Qtd drivers: X                          │
+│ Preco Un.: [__]                           │
+├───────────────────────────────────────────┤
+│ Badges: Consumo Xw | Demanda Xm          │
+│ SUBTOTAL (s/ fita): R$ xxx               │
+└───────────────────────────────────────────┘
 ```
 
-## 2. UX — AmbienteCard reformulado
+Se o usuario vincula perfil, os campos metragemManual/passadasManual somem (valores vem do perfil). Se remove perfil, aparecem metragemManual/passadasManual.
 
-Duas tabs: **Luminarias** e **Sistemas de Perfil**
+### 3. Step3Revisao e PDF
 
-Cada sistema e um card agrupado com 3 secoes visuais (Perfil → Fita → Driver):
-- Perfil: autocomplete codigo, select comprimento (1/2/3m), qtd, select passadas (1/2/3), badges automaticos de metragem
-- Fita: autocomplete codigo, W/m, badges de consumo total
-- Driver: autocomplete codigo, potencia, select voltagem (12V/24V), badge de qtd drivers
-- Precos individuais para cada componente com validacao de minimo
-- Subtotal do sistema automatico
+Adaptar referencias de `SistemaPerfil` para `SistemaIluminacao`. Coluna de perfil mostra "—" quando nao ha perfil. Metragem sempre aparece (vinda do perfil ou manual).
 
-**Importante**: na tab de fita, os campos de rolos e qtd rolos NAO aparecem por sistema. O calculo de rolos aparece apenas no Step3 (revisao), pois e global.
+### 4. Arquivos a alterar
 
-## 3. Step3 Revisao
-
-### Tabelas por ambiente
-- Luminarias: inalterado
-- Sistemas: tabela agrupada mostrando perfil + fita + driver de cada sistema, com subtotal
-
-### Resumo global de fitas (NOVO)
-Secao dedicada apos os ambientes mostrando:
-- Tabela agrupada por codigo de fita
-- Colunas: Codigo | Descricao | Demanda Total (m) | Rolos sugeridos | Preco un. | Subtotal
-- O subtotal da fita e calculado aqui (preco × qtd rolos), nao por ambiente
-
-### Total geral
-- Soma de luminarias (por ambiente) + perfis (por ambiente) + drivers (por ambiente) + fitas (global)
-
-## 4. PDF (`gerarPdfHtml.ts`)
-
-- Adaptar para o novo formato de sistemas
-- Adicionar secao "Resumo de Fitas LED" com a tabela global de rolos
-- Subtotais de ambiente mostram apenas luminarias + perfis + drivers
-- Total de fitas aparece como secao separada antes do total geral
-
-## 5. Arquivos a alterar
-
-1. **`src/types/orcamento.ts`** — Novos tipos, funcoes de calculo encadeado, algoritmo de rolos global
-2. **`src/components/AmbienteCard.tsx`** — Reescrever com 2 tabs, UI de sistema agrupado
-3. **`src/components/Step2Ambientes.tsx`** — Ajuste minimo (usa `sistemas` em vez de `perfis`/`fitasLed`)
-4. **`src/components/Step3Revisao.tsx`** — Tabelas de sistema + secao global de fitas
-5. **`src/lib/gerarPdfHtml.ts`** — PDF com novo formato
+1. `src/types/orcamento.ts` — renomear tipo, inverter obrigatoriedade, adicionar metragemManual/passadasManual, adaptar funcoes de calculo
+2. `src/components/AmbienteCard.tsx` — novo layout com fita e driver sempre presentes, perfil como secao opcional
+3. `src/components/Step3Revisao.tsx` — adaptar nome do tipo e renderizacao condicional do perfil
+4. `src/lib/gerarPdfHtml.ts` — idem para PDF
 
