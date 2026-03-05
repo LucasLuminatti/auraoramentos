@@ -51,18 +51,24 @@ export interface ItemDriver {
   imagemUrl?: string;
 }
 
-export interface SistemaPerfil {
+/** Sistema de Iluminação: fita + driver obrigatórios, perfil opcional */
+export interface SistemaIluminacao {
   id: string;
-  perfil: ItemPerfil;
-  fita: ItemFitaLED | null;
-  driver: ItemDriver | null;
+  perfil: ItemPerfil | null;
+  fita: ItemFitaLED;
+  driver: ItemDriver;
+  metragemManual: number | null;   // usado quando perfil = null
+  passadasManual: 1 | 2 | 3;       // usado quando perfil = null
 }
+
+/** @deprecated Use SistemaIluminacao */
+export type SistemaPerfil = SistemaIluminacao;
 
 export interface Ambiente {
   id: string;
   nome: string;
   luminarias: ItemLuminaria[];
-  sistemas: SistemaPerfil[];
+  sistemas: SistemaIluminacao[];
 }
 
 export interface DadosOrcamento {
@@ -75,48 +81,87 @@ export interface Orcamento {
   ambientes: Ambiente[];
 }
 
-// ─── Cálculos do Sistema Perfil→Fita→Driver ───
+// ─── Cálculos do Sistema Fita→Driver (com perfil opcional) ───
 
+/** Metragem total do perfil (se existir) */
 export function calcularMetragemTotal(perfil: ItemPerfil): number {
   return perfil.comprimentoPeca * perfil.quantidade;
 }
 
-export function calcularDemandaFita(perfil: ItemPerfil): number {
+/** Metragem de fita necessária para o sistema */
+export function calcularDemandaFita(sistema: SistemaIluminacao): number;
+export function calcularDemandaFita(perfil: ItemPerfil): number;
+export function calcularDemandaFita(arg: SistemaIluminacao | ItemPerfil): number {
+  if ('fita' in arg) {
+    // SistemaIluminacao
+    const sis = arg as SistemaIluminacao;
+    if (sis.perfil) {
+      return calcularMetragemTotal(sis.perfil) * sis.perfil.passadas;
+    }
+    return (sis.metragemManual || 0) * (sis.passadasManual || 1);
+  }
+  // Legacy: ItemPerfil diretamente
+  const perfil = arg as ItemPerfil;
   return calcularMetragemTotal(perfil) * perfil.passadas;
 }
 
-export function calcularConsumoW(perfil: ItemPerfil, fita: ItemFitaLED): number {
+/** Consumo em Watts do sistema */
+export function calcularConsumoW(sistema: SistemaIluminacao): number;
+export function calcularConsumoW(perfil: ItemPerfil, fita: ItemFitaLED): number;
+export function calcularConsumoW(arg1: SistemaIluminacao | ItemPerfil, arg2?: ItemFitaLED): number {
+  if ('fita' in arg1 && !arg2) {
+    const sis = arg1 as SistemaIluminacao;
+    return calcularDemandaFita(sis) * sis.fita.wm;
+  }
+  const perfil = arg1 as ItemPerfil;
+  const fita = arg2!;
   return calcularDemandaFita(perfil) * fita.wm;
 }
 
-export function calcularQtdDrivers(perfil: ItemPerfil, fita: ItemFitaLED, driver: ItemDriver): number {
-  const demanda = calcularDemandaFita(perfil);
-  const consumo = calcularConsumoW(perfil, fita);
+/** Quantidade de drivers necessários */
+export function calcularQtdDrivers(sistema: SistemaIluminacao): number;
+export function calcularQtdDrivers(perfil: ItemPerfil, fita: ItemFitaLED, driver: ItemDriver): number;
+export function calcularQtdDrivers(arg1: SistemaIluminacao | ItemPerfil, arg2?: ItemFitaLED, arg3?: ItemDriver): number {
+  let demanda: number;
+  let consumo: number;
+  let driver: ItemDriver;
+
+  if ('fita' in arg1 && !arg2) {
+    const sis = arg1 as SistemaIluminacao;
+    demanda = calcularDemandaFita(sis);
+    consumo = calcularConsumoW(sis);
+    driver = sis.driver;
+  } else {
+    const perfil = arg1 as ItemPerfil;
+    const fita = arg2!;
+    driver = arg3!;
+    demanda = calcularDemandaFita(perfil);
+    consumo = calcularConsumoW(perfil, fita);
+  }
+
   if (driver.potencia <= 0) return 0;
   const limiteMetros = driver.voltagem === 12 ? 5 : 10;
-  const qtdByPotencia = Math.ceil(consumo / driver.potencia);
-  const qtdByComprimento = Math.ceil(demanda / limiteMetros);
-  return Math.max(qtdByPotencia, qtdByComprimento);
+  return Math.max(Math.ceil(consumo / driver.potencia), Math.ceil(demanda / limiteMetros));
 }
 
-// ─── Subtotais por sistema (perfil + driver, sem fita que é global) ───
+// ─── Subtotais por sistema ───
 
 export function calcularSubtotalLuminaria(item: ItemLuminaria): number {
   return item.precoUnitario * item.quantidade;
 }
 
-export function calcularSubtotalPerfilSistema(sistema: SistemaPerfil): number {
+export function calcularSubtotalPerfilSistema(sistema: SistemaIluminacao): number {
+  if (!sistema.perfil) return 0;
   return sistema.perfil.precoUnitario * sistema.perfil.quantidade;
 }
 
-export function calcularSubtotalDriverSistema(sistema: SistemaPerfil): number {
-  if (!sistema.fita || !sistema.driver) return 0;
-  const qtd = calcularQtdDrivers(sistema.perfil, sistema.fita, sistema.driver);
+export function calcularSubtotalDriverSistema(sistema: SistemaIluminacao): number {
+  const qtd = calcularQtdDrivers(sistema);
   return sistema.driver.precoUnitario * qtd;
 }
 
 /** Subtotal do sistema SEM fita (perfil + driver apenas) */
-export function calcularSubtotalSistemaSemFita(sistema: SistemaPerfil): number {
+export function calcularSubtotalSistemaSemFita(sistema: SistemaIluminacao): number {
   return calcularSubtotalPerfilSistema(sistema) + calcularSubtotalDriverSistema(sistema);
 }
 
@@ -139,9 +184,9 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
 
   for (const amb of ambientes) {
     for (const sis of amb.sistemas) {
-      if (!sis.fita) continue;
       const key = sis.fita.codigo;
-      const demanda = calcularDemandaFita(sis.perfil);
+      if (!key) continue;
+      const demanda = calcularDemandaFita(sis);
       const existing = grupos.get(key);
       if (existing) {
         existing.demanda += demanda;
@@ -171,7 +216,6 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
         restante -= qtd * tam;
       }
     }
-    // Sobrou fração → 1 rolo do menor tamanho que cubra
     if (restante > 0) {
       const melhorTam = tamanhosDisponiveis.find(t => t >= restante) || 5;
       const existente = rolos.find(r => r.tamanho === melhorTam);

@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileDown, Pencil, Check, X, AlertTriangle, MessageSquare } from "lucide-react";
-import type { Orcamento, Ambiente, ItemLuminaria, SistemaPerfil, GrupoFita } from "@/types/orcamento";
+import { ArrowLeft, FileDown, AlertTriangle, MessageSquare } from "lucide-react";
+import type { Orcamento, Ambiente, SistemaIluminacao, GrupoFita } from "@/types/orcamento";
 import {
-  calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers,
+  calcularDemandaFita, calcularConsumoW, calcularQtdDrivers,
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
   calcularSubtotalSistemaSemFita, calcularTotalAmbienteSemFita, calcularRolosPorGrupo,
   calcularTotalGeral, formatarMoeda
@@ -63,7 +62,6 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
   const [chatViolacao, setChatViolacao] = useState<Violacao | null>(null);
   const [chatExceptionId, setChatExceptionId] = useState("");
 
-  // Global fita summary
   const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes), [ambientes]);
   const totalGeral = calcularTotalGeral(ambientes);
 
@@ -77,13 +75,13 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
         }
       });
       amb.sistemas.forEach((sis) => {
-        if (sis.perfil.precoMinimo > 0 && sis.perfil.precoUnitario < sis.perfil.precoMinimo) {
+        if (sis.perfil && sis.perfil.precoMinimo > 0 && sis.perfil.precoUnitario < sis.perfil.precoMinimo) {
           v.push({ ambienteId: amb.id, ambienteNome: amb.nome, tipo: "perfil", itemId: sis.perfil.id, codigo: sis.perfil.codigo, descricao: sis.perfil.descricao, precoUnitario: sis.perfil.precoUnitario, precoMinimo: sis.perfil.precoMinimo });
         }
-        if (sis.fita && sis.fita.precoMinimo > 0 && sis.fita.precoUnitario < sis.fita.precoMinimo) {
+        if (sis.fita.precoMinimo > 0 && sis.fita.precoUnitario < sis.fita.precoMinimo) {
           v.push({ ambienteId: amb.id, ambienteNome: amb.nome, tipo: "fita", itemId: sis.fita.id, codigo: sis.fita.codigo, descricao: sis.fita.descricao, precoUnitario: sis.fita.precoUnitario, precoMinimo: sis.fita.precoMinimo });
         }
-        if (sis.driver && sis.driver.precoMinimo > 0 && sis.driver.precoUnitario < sis.driver.precoMinimo) {
+        if (sis.driver.precoMinimo > 0 && sis.driver.precoUnitario < sis.driver.precoMinimo) {
           v.push({ ambienteId: amb.id, ambienteNome: amb.nome, tipo: "driver", itemId: sis.driver.id, codigo: sis.driver.codigo, descricao: sis.driver.descricao, precoUnitario: sis.driver.precoUnitario, precoMinimo: sis.driver.precoMinimo });
         }
       });
@@ -96,7 +94,6 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
   );
   const hasUnresolved = unresolvedViolacoes.length > 0;
 
-  // Check existing exceptions on mount
   useEffect(() => {
     if (!user) return;
     const fetchExceptions = async () => {
@@ -146,9 +143,9 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
       return {
         ...amb,
         sistemas: amb.sistemas.map((sis) => {
-          if (v.tipo === "perfil" && sis.perfil.id === v.itemId) return { ...sis, perfil: { ...sis.perfil, precoUnitario: sis.perfil.precoMinimo } };
-          if (v.tipo === "fita" && sis.fita?.id === v.itemId) return { ...sis, fita: { ...sis.fita!, precoUnitario: sis.fita!.precoMinimo } };
-          if (v.tipo === "driver" && sis.driver?.id === v.itemId) return { ...sis, driver: { ...sis.driver!, precoUnitario: sis.driver!.precoMinimo } };
+          if (v.tipo === "perfil" && sis.perfil?.id === v.itemId) return { ...sis, perfil: { ...sis.perfil, precoUnitario: sis.perfil.precoMinimo } };
+          if (v.tipo === "fita" && sis.fita.id === v.itemId) return { ...sis, fita: { ...sis.fita, precoUnitario: sis.fita.precoMinimo } };
+          if (v.tipo === "driver" && sis.driver.id === v.itemId) return { ...sis, driver: { ...sis.driver, precoUnitario: sis.driver.precoMinimo } };
           return sis;
         }),
       };
@@ -279,7 +276,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
             {/* Sistemas */}
             {amb.sistemas.length > 0 && (
               <div>
-                <h4 className="mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Sistemas de Perfil</h4>
+                <h4 className="mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Sistemas de Iluminação</h4>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -293,41 +290,41 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
                   </TableHeader>
                   <TableBody>
                     {amb.sistemas.map((sis, si) => {
-                      const metragem = calcularMetragemTotal(sis.perfil);
-                      const demanda = calcularDemandaFita(sis.perfil);
-                      const consumo = sis.fita ? calcularConsumoW(sis.perfil, sis.fita) : 0;
-                      const qtdDrv = sis.fita && sis.driver ? calcularQtdDrivers(sis.perfil, sis.fita, sis.driver) : 0;
+                      const demanda = calcularDemandaFita(sis);
+                      const consumo = calcularConsumoW(sis);
+                      const qtdDrv = calcularQtdDrivers(sis);
                       return (
                         <React.Fragment key={sis.id}>
                           {si > 0 && <TableRow><TableCell colSpan={6} className="py-1 bg-muted/30" /></TableRow>}
+                          {/* Fita */}
                           <TableRow>
-                            <TableCell><Badge variant="outline" className="text-xs">Perfil</Badge></TableCell>
-                            <TableCell className="font-mono">{sis.perfil.codigo}</TableCell>
-                            <TableCell>{sis.perfil.descricao}</TableCell>
-                            <TableCell className="text-right text-xs text-muted-foreground">{sis.perfil.comprimentoPeca}m × {sis.perfil.quantidade} = {metragem}m | {sis.perfil.passadas} passada(s)</TableCell>
-                            <TableCell className="text-right">{formatarMoeda(sis.perfil.precoUnitario)}{violacaoIndicator(sis.perfil.codigo, sis.perfil.precoUnitario, sis.perfil.precoMinimo)}</TableCell>
-                            <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalPerfilSistema(sis))}</TableCell>
+                            <TableCell><Badge variant="outline" className="text-xs bg-yellow-50">Fita</Badge></TableCell>
+                            <TableCell className="font-mono">{sis.fita.codigo}</TableCell>
+                            <TableCell>{sis.fita.descricao}</TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground">{demanda}m | {sis.fita.wm}W/m | {consumo.toFixed(1)}W</TableCell>
+                            <TableCell className="text-right">{formatarMoeda(sis.fita.precoUnitario)}{violacaoIndicator(sis.fita.codigo, sis.fita.precoUnitario, sis.fita.precoMinimo)}</TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground italic">Global →</TableCell>
                           </TableRow>
-                          {sis.fita && (
+                          {/* Perfil (se existir) */}
+                          {sis.perfil && (
                             <TableRow>
-                              <TableCell><Badge variant="outline" className="text-xs">Fita</Badge></TableCell>
-                              <TableCell className="font-mono">{sis.fita.codigo}</TableCell>
-                              <TableCell>{sis.fita.descricao}</TableCell>
-                              <TableCell className="text-right text-xs text-muted-foreground">{demanda}m | {sis.fita.wm}W/m | {consumo.toFixed(1)}W</TableCell>
-                              <TableCell className="text-right">{formatarMoeda(sis.fita.precoUnitario)}{violacaoIndicator(sis.fita.codigo, sis.fita.precoUnitario, sis.fita.precoMinimo)}</TableCell>
-                              <TableCell className="text-right text-xs text-muted-foreground italic">Global →</TableCell>
+                              <TableCell><Badge variant="outline" className="text-xs">Perfil</Badge></TableCell>
+                              <TableCell className="font-mono">{sis.perfil.codigo}</TableCell>
+                              <TableCell>{sis.perfil.descricao}</TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">{sis.perfil.comprimentoPeca}m × {sis.perfil.quantidade} = {sis.perfil.comprimentoPeca * sis.perfil.quantidade}m | {sis.perfil.passadas} passada(s)</TableCell>
+                              <TableCell className="text-right">{formatarMoeda(sis.perfil.precoUnitario)}{violacaoIndicator(sis.perfil.codigo, sis.perfil.precoUnitario, sis.perfil.precoMinimo)}</TableCell>
+                              <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalPerfilSistema(sis))}</TableCell>
                             </TableRow>
                           )}
-                          {sis.driver && (
-                            <TableRow>
-                              <TableCell><Badge variant="outline" className="text-xs">Driver</Badge></TableCell>
-                              <TableCell className="font-mono">{sis.driver.codigo}</TableCell>
-                              <TableCell>{sis.driver.descricao}</TableCell>
-                              <TableCell className="text-right text-xs text-muted-foreground">{sis.driver.potencia}W | {sis.driver.voltagem}V | ×{qtdDrv}</TableCell>
-                              <TableCell className="text-right">{formatarMoeda(sis.driver.precoUnitario)}{violacaoIndicator(sis.driver.codigo, sis.driver.precoUnitario, sis.driver.precoMinimo)}</TableCell>
-                              <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalDriverSistema(sis))}</TableCell>
-                            </TableRow>
-                          )}
+                          {/* Driver */}
+                          <TableRow>
+                            <TableCell><Badge variant="outline" className="text-xs">Driver</Badge></TableCell>
+                            <TableCell className="font-mono">{sis.driver.codigo}</TableCell>
+                            <TableCell>{sis.driver.descricao}</TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground">{sis.driver.potencia}W | {sis.driver.voltagem}V | ×{qtdDrv}</TableCell>
+                            <TableCell className="text-right">{formatarMoeda(sis.driver.precoUnitario)}{violacaoIndicator(sis.driver.codigo, sis.driver.precoUnitario, sis.driver.precoMinimo)}</TableCell>
+                            <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalDriverSistema(sis))}</TableCell>
+                          </TableRow>
                         </React.Fragment>
                       );
                     })}
