@@ -383,31 +383,73 @@ export type Database = {
       }
       produtos: {
         Row: {
+          ativo: boolean | null
+          categoria: string | null
           codigo: string
           created_at: string
           descricao: string
+          driver_potencia_w: number | null
+          driver_restr_max_w: number | null
+          driver_restr_tipo: string | null
+          driver_tipo: string | null
+          familia_perfil: string | null
+          fita_compativel: string | null
+          grupo: string | null
           id: string
           imagem_url: string | null
+          is_baby: boolean | null
+          passadas: number | null
           preco_minimo: number
           preco_tabela: number
+          sistema_magnetico: string | null
+          voltagem: number | null
+          wm: number | null
         }
         Insert: {
+          ativo?: boolean | null
+          categoria?: string | null
           codigo: string
           created_at?: string
           descricao: string
+          driver_potencia_w?: number | null
+          driver_restr_max_w?: number | null
+          driver_restr_tipo?: string | null
+          driver_tipo?: string | null
+          familia_perfil?: string | null
+          fita_compativel?: string | null
+          grupo?: string | null
           id?: string
           imagem_url?: string | null
+          is_baby?: boolean | null
+          passadas?: number | null
           preco_minimo?: number
           preco_tabela?: number
+          sistema_magnetico?: string | null
+          voltagem?: number | null
+          wm?: number | null
         }
         Update: {
+          ativo?: boolean | null
+          categoria?: string | null
           codigo?: string
           created_at?: string
           descricao?: string
+          driver_potencia_w?: number | null
+          driver_restr_max_w?: number | null
+          driver_restr_tipo?: string | null
+          driver_tipo?: string | null
+          familia_perfil?: string | null
+          fita_compativel?: string | null
+          grupo?: string | null
           id?: string
           imagem_url?: string | null
+          is_baby?: boolean | null
+          passadas?: number | null
           preco_minimo?: number
           preco_tabela?: number
+          sistema_magnetico?: string | null
+          voltagem?: number | null
+          wm?: number | null
         }
         Relationships: []
       }
