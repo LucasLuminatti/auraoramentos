@@ -6,6 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ALLOWED_FIELDS = new Set([
+  "codigo", "descricao", "grupo", "categoria",
+  "preco_tabela", "preco_minimo", "wm", "voltagem", "passadas",
+  "familia_perfil", "fita_compativel",
+  "driver_potencia_w", "driver_tipo", "driver_restr_tipo", "driver_restr_max_w",
+  "sistema_magnetico", "is_baby",
+]);
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -29,8 +37,7 @@ serve(async (req) => {
     let inserted = 0;
     const failed: Array<Record<string, any>> = [];
 
-    // Validate and collect valid items
-    const validItems: Array<{ codigo: string; descricao: string }> = [];
+    const validItems: Array<Record<string, any>> = [];
     for (const item of produtos) {
       const codigo = String(item.codigo ?? '').trim();
       const descricao = String(item.descricao ?? '').trim();
@@ -43,10 +50,18 @@ serve(async (req) => {
         failed.push({ ...item, erro: 'Campo "descrição" está vazio ou ausente' });
         continue;
       }
-      validItems.push({ codigo, descricao });
+
+      const clean: Record<string, any> = { codigo, descricao };
+      for (const [key, value] of Object.entries(item)) {
+        if (key === 'codigo' || key === 'descricao') continue;
+        if (!ALLOWED_FIELDS.has(key)) continue;
+        if (value === null || value === undefined || value === '') continue;
+        clean[key] = value;
+      }
+
+      validItems.push(clean);
     }
 
-    // Upsert valid items in batches of 500
     const batchSize = 500;
     for (let i = 0; i < validItems.length; i += batchSize) {
       const batch = validItems.slice(i, i + batchSize);
@@ -55,7 +70,6 @@ serve(async (req) => {
         .upsert(batch, { onConflict: 'codigo' });
 
       if (error) {
-        // If batch fails, try individually to identify which ones failed
         for (const item of batch) {
           const { error: itemError } = await supabase
             .from('produtos')
