@@ -10,6 +10,11 @@ import { cn } from "@/lib/utils";
 import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
 import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda } from "@/types/orcamento";
+import { useValidarSistemas } from "@/hooks/useValidarSistemas";
+import ValidacaoPanel from "./ValidacaoPanel";
+
+// dentro de AmbienteCard, logo após o uid():
+const { validacoes } = useValidarSistemas(ambiente.sistemas);
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -74,21 +79,59 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
     updateLuminaria(index, { ...ambiente.luminarias[index], codigo: produto.codigo, descricao: produto.descricao, precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100, precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100, imagemUrl: imgUrl });
   };
 
-  const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
-    const sis = ambiente.sistemas[sistemaIndex];
-    const imgUrl = produto.imagem_url || undefined;
-    const preco = Math.round((produto.preco_tabela || 0) * 100) / 100;
-    const precoMin = Math.round((produto.preco_minimo || 0) * 100) / 100;
+// Substitui a função handleSelectProdutoSistema em AmbienteCard.tsx
+// Adiciona validação de tensão fita x driver (Regra #1 — CRÍTICO)
 
-    if (component === 'perfil') {
-      const base: ItemPerfil = sis.perfil || { id: uid(), codigo: "", descricao: "", comprimentoPeca: 1 as const, quantidade: 1, passadas: 1 as const, precoUnitario: 0, precoMinimo: 0 };
-      updateSistema(sistemaIndex, { ...sis, perfil: { ...base, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl } });
-    } else if (component === 'fita') {
-      updateSistema(sistemaIndex, { ...sis, fita: { ...sis.fita, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl } });
-    } else {
-      updateSistema(sistemaIndex, { ...sis, driver: { ...sis.driver, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl } });
+const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
+  const sis = ambiente.sistemas[sistemaIndex];
+  const imgUrl = produto.imagem_url || undefined;
+  const preco = Math.round((produto.preco_tabela || 0) * 100) / 100;
+  const precoMin = Math.round((produto.preco_minimo || 0) * 100) / 100;
+
+  // ── VALIDAÇÃO DE TENSÃO (Regra #1 — CRÍTICO) ──────────────────────────
+  if (component === 'driver' && produto.voltagem && sis.fita.voltagem) {
+    if (produto.voltagem !== sis.fita.voltagem) {
+      toast.error(
+        `⚠️ Tensão incompatível! A fita é ${sis.fita.voltagem}V e este driver é ${produto.voltagem}V. ` +
+        `Selecione um driver de ${sis.fita.voltagem}V.`,
+        { duration: 6000 }
+      );
+      return; // bloqueia a seleção
     }
-  };
+  }
+
+  if (component === 'fita' && produto.voltagem && sis.driver.voltagem) {
+    if (produto.voltagem !== sis.driver.voltagem) {
+      toast.error(
+        `⚠️ Tensão incompatível! O driver é ${sis.driver.voltagem}V e esta fita é ${produto.voltagem}V. ` +
+        `Selecione uma fita de ${sis.driver.voltagem}V.`,
+        { duration: 6000 }
+      );
+      return; // bloqueia a seleção
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────
+
+  if (component === 'perfil') {
+    const base: ItemPerfil = sis.perfil || { id: uid(), codigo: "", descricao: "", comprimentoPeca: 1 as const, quantidade: 1, passadas: 1 as const, precoUnitario: 0, precoMinimo: 0 };
+    // Aplica passadas automáticas do banco se disponível
+    const passadasAuto = produto.passadas ? produto.passadas as 1 | 2 | 3 : base.passadas;
+    updateSistema(sistemaIndex, {
+      ...sis,
+      perfil: { ...base, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl, passadas: passadasAuto }
+    });
+  } else if (component === 'fita') {
+    updateSistema(sistemaIndex, {
+      ...sis,
+      fita: { ...sis.fita, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl, voltagem: produto.voltagem ?? sis.fita.voltagem, wm: produto.wm ?? sis.fita.wm }
+    });
+  } else {
+    updateSistema(sistemaIndex, {
+      ...sis,
+      driver: { ...sis.driver, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl, voltagem: (produto.voltagem ?? sis.driver.voltagem) as 12 | 24, potencia: produto.driver_potencia_w ?? sis.driver.potencia }
+    });
+  }
+};
 
   const vincularPerfil = (si: number) => {
     const sis = ambiente.sistemas[si];

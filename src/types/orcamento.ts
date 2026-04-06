@@ -5,8 +5,20 @@ export interface Produto {
   preco_tabela: number;
   preco_minimo: number;
   imagem_url?: string | null;
+  // Campos técnicos (vindos do banco)
+  voltagem?: number | null;
+  wm?: number | null;
+  passadas?: number | null;
+  familia_perfil?: string | null;
+  driver_tipo?: string | null;
+  driver_potencia_w?: number | null;
+  driver_restr_tipo?: string | null;
+  driver_restr_max_w?: number | null;
+  sistema_magnetico?: string | null;
+  is_baby?: boolean | null;
+  tipo_produto?: string | null;
+  subtipo?: string | null;
 }
-
 export interface ItemLuminaria {
   id: string;
   codigo: string;

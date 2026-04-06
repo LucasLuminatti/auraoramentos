@@ -12,7 +12,11 @@ export function useProdutoSearch(query: string) {
       try {
         let queryBuilder = supabase
           .from("produtos")
-          .select("id, codigo, descricao, preco_tabela, preco_minimo, imagem_url");
+          .select(
+            "id, codigo, descricao, preco_tabela, preco_minimo, imagem_url, " +
+            "voltagem, wm, passadas, familia_perfil, driver_tipo, driver_potencia_w, " +
+            "driver_restr_tipo, driver_restr_max_w, sistema_magnetico, is_baby, tipo_produto, subtipo"
+          );
 
         if (query.trim().length >= 2) {
           queryBuilder = queryBuilder.or(`codigo.ilike.%${query}%,descricao.ilike.%${query}%`);
