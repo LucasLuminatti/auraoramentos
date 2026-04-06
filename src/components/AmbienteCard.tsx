@@ -7,14 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, Trash2, Plus, Pencil, Check, ArrowDown, Link, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import ProdutoAutocomplete from "./ProdutoAutocomplete";
+import ValidacaoPanel from "./ValidacaoPanel";
+import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
 import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda } from "@/types/orcamento";
-import { useValidarSistemas } from "@/hooks/useValidarSistemas";
-import ValidacaoPanel from "./ValidacaoPanel";
-
-// dentro de AmbienteCard, logo após o uid():
-const { validacoes } = useValidarSistemas(ambiente.sistemas);
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -46,6 +44,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
   const [tempName, setTempName] = useState(ambiente.nome);
 
   const uid = () => crypto.randomUUID();
+  const { validacoes } = useValidarSistemas(ambiente.sistemas);
 
   // ─── Luminárias ───
   const addLuminaria = () => {
@@ -61,7 +60,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
 
   // ─── Sistemas ───
   const addSistema = () => {
-    const novaFita: ItemFitaLED = { id: uid(), codigo: "", descricao: "", wm: 0, metragemRolo: 5, precoUnitario: 0, precoMinimo: 0 };
+    const novaFita: ItemFitaLED = { id: uid(), codigo: "", descricao: "", wm: 0, voltagem: 24, metragemRolo: 5, precoUnitario: 0, precoMinimo: 0 };
     const novoDriver: ItemDriver = { id: uid(), codigo: "", descricao: "", potencia: 0, voltagem: 24, precoUnitario: 0, precoMinimo: 0 };
     const novoSistema: SistemaIluminacao = { id: uid(), perfil: null, fita: novaFita, driver: novoDriver, metragemManual: null, passadasManual: 1 };
     onChange({ ...ambiente, sistemas: [...ambiente.sistemas, novoSistema] });
@@ -79,59 +78,105 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
     updateLuminaria(index, { ...ambiente.luminarias[index], codigo: produto.codigo, descricao: produto.descricao, precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100, precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100, imagemUrl: imgUrl });
   };
 
-// Substitui a função handleSelectProdutoSistema em AmbienteCard.tsx
-// Adiciona validação de tensão fita x driver (Regra #1 — CRÍTICO)
+  const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
+    const sis = ambiente.sistemas[sistemaIndex];
+    const imgUrl = produto.imagem_url || undefined;
+    const preco = Math.round((produto.preco_tabela || 0) * 100) / 100;
+    const precoMin = Math.round((produto.preco_minimo || 0) * 100) / 100;
 
-const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
-  const sis = ambiente.sistemas[sistemaIndex];
-  const imgUrl = produto.imagem_url || undefined;
-  const preco = Math.round((produto.preco_tabela || 0) * 100) / 100;
-  const precoMin = Math.round((produto.preco_minimo || 0) * 100) / 100;
-
-  // ── VALIDAÇÃO DE TENSÃO (Regra #1 — CRÍTICO) ──────────────────────────
-  if (component === 'driver' && produto.voltagem && sis.fita.voltagem) {
-    if (produto.voltagem !== sis.fita.voltagem) {
-      toast.error(
-        `⚠️ Tensão incompatível! A fita é ${sis.fita.voltagem}V e este driver é ${produto.voltagem}V. ` +
-        `Selecione um driver de ${sis.fita.voltagem}V.`,
-        { duration: 6000 }
-      );
-      return; // bloqueia a seleção
+    // ── REGRA #1: Validação de Tensão (CRÍTICO) ──────────────────────────
+    if (component === 'driver' && produto.voltagem && sis.fita.voltagem) {
+      if (produto.voltagem !== sis.fita.voltagem) {
+        toast.error(
+          `⚠️ Tensão incompatível! A fita é ${sis.fita.voltagem}V e este driver é ${produto.voltagem}V. Selecione um driver de ${sis.fita.voltagem}V.`,
+          { duration: 6000 }
+        );
+        return;
+      }
     }
-  }
-
-  if (component === 'fita' && produto.voltagem && sis.driver.voltagem) {
-    if (produto.voltagem !== sis.driver.voltagem) {
-      toast.error(
-        `⚠️ Tensão incompatível! O driver é ${sis.driver.voltagem}V e esta fita é ${produto.voltagem}V. ` +
-        `Selecione uma fita de ${sis.driver.voltagem}V.`,
-        { duration: 6000 }
-      );
-      return; // bloqueia a seleção
+    if (component === 'fita' && produto.voltagem && sis.driver.voltagem) {
+      if (produto.voltagem !== sis.driver.voltagem) {
+        toast.error(
+          `⚠️ Tensão incompatível! O driver é ${sis.driver.voltagem}V e esta fita é ${produto.voltagem}V. Selecione uma fita de ${sis.driver.voltagem}V.`,
+          { duration: 6000 }
+        );
+        return;
+      }
     }
-  }
-  // ──────────────────────────────────────────────────────────────────────
 
-  if (component === 'perfil') {
-    const base: ItemPerfil = sis.perfil || { id: uid(), codigo: "", descricao: "", comprimentoPeca: 1 as const, quantidade: 1, passadas: 1 as const, precoUnitario: 0, precoMinimo: 0 };
-    // Aplica passadas automáticas do banco se disponível
-    const passadasAuto = produto.passadas ? produto.passadas as 1 | 2 | 3 : base.passadas;
-    updateSistema(sistemaIndex, {
-      ...sis,
-      perfil: { ...base, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl, passadas: passadasAuto }
-    });
-  } else if (component === 'fita') {
-    updateSistema(sistemaIndex, {
-      ...sis,
-      fita: { ...sis.fita, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl, voltagem: produto.voltagem ?? sis.fita.voltagem, wm: produto.wm ?? sis.fita.wm }
-    });
-  } else {
-    updateSistema(sistemaIndex, {
-      ...sis,
-      driver: { ...sis.driver, codigo: produto.codigo, descricao: produto.descricao, precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl, voltagem: (produto.voltagem ?? sis.driver.voltagem) as 12 | 24, potencia: produto.driver_potencia_w ?? sis.driver.potencia }
-    });
-  }
-};
+    // ── REGRA #9: Alerta produto magnético ───────────────────────────────
+    if (component === 'perfil' && produto.sistema_magnetico) {
+      toast.warning(
+        `⚡ Atenção: Este produto requer driver externo ${produto.sistema_magnetico === '48v' ? '48V' : '24V'}. Certifique-se de incluí-lo no orçamento.`,
+        { duration: 7000 }
+      );
+    }
+
+    if (component === 'perfil') {
+      const base: ItemPerfil = sis.perfil || { id: uid(), codigo: "", descricao: "", comprimentoPeca: 1 as const, quantidade: 1, passadas: 1 as const, precoUnitario: 0, precoMinimo: 0 };
+      const passadasAuto = (produto.passadas ?? base.passadas) as 1 | 2 | 3;
+      updateSistema(sistemaIndex, {
+        ...sis,
+        perfil: {
+          ...base,
+          codigo: produto.codigo,
+          descricao: produto.descricao,
+          precoUnitario: preco,
+          precoMinimo: precoMin,
+          imagemUrl: imgUrl,
+          passadas: passadasAuto,
+          familia_perfil: produto.familia_perfil,
+          driver_restr_tipo: produto.driver_restr_tipo,
+          driver_restr_max_w: produto.driver_restr_max_w,
+        },
+      });
+    } else if (component === 'fita') {
+      updateSistema(sistemaIndex, {
+        ...sis,
+        fita: {
+          ...sis.fita,
+          codigo: produto.codigo,
+          descricao: produto.descricao,
+          precoUnitario: preco,
+          precoMinimo: precoMin,
+          imagemUrl: imgUrl,
+          voltagem: (produto.voltagem ?? sis.fita.voltagem) as 12 | 24 | 48,
+          wm: produto.wm ?? sis.fita.wm,
+          is_baby: produto.is_baby,
+        },
+      });
+    } else {
+      // ── REGRA #10/#11: Driver restrito por perfil ────────────────────────
+      if (sis.perfil?.driver_restr_tipo === 'slim' && produto.driver_tipo !== 'slim') {
+        toast.error(
+          `🚫 Este perfil aceita SOMENTE Driver Slim. O driver selecionado não é compatível.`,
+          { duration: 6000 }
+        );
+        return;
+      }
+      if (sis.perfil?.driver_restr_max_w && produto.driver_potencia_w && produto.driver_potencia_w > sis.perfil.driver_restr_max_w) {
+        toast.error(
+          `🚫 Driver de ${produto.driver_potencia_w}W não cabe fisicamente neste perfil. Máximo: ${sis.perfil.driver_restr_max_w}W.`,
+          { duration: 6000 }
+        );
+        return;
+      }
+      updateSistema(sistemaIndex, {
+        ...sis,
+        driver: {
+          ...sis.driver,
+          codigo: produto.codigo,
+          descricao: produto.descricao,
+          precoUnitario: preco,
+          precoMinimo: precoMin,
+          imagemUrl: imgUrl,
+          voltagem: (produto.voltagem ?? sis.driver.voltagem) as 12 | 24 | 48,
+          potencia: produto.driver_potencia_w ?? sis.driver.potencia,
+          driver_tipo: produto.driver_tipo,
+        },
+      });
+    }
+  };
 
   const vincularPerfil = (si: number) => {
     const sis = ambiente.sistemas[si];
@@ -141,7 +186,6 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
 
   const desvincularPerfil = (si: number) => {
     const sis = ambiente.sistemas[si];
-    // Transfer metragem from perfil to manual before removing
     const metragem = sis.perfil ? calcularMetragemTotal(sis.perfil) : 0;
     const passadas = sis.perfil?.passadas || 1;
     updateSistema(si, { ...sis, perfil: null, metragemManual: metragem || null, passadasManual: passadas });
@@ -226,7 +270,6 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
 
                 return (
                   <div key={sis.id} className="rounded-lg border bg-muted/20 overflow-hidden">
-                    {/* Header do sistema */}
                     <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
                       <span className="text-sm font-semibold text-foreground">Sistema {si + 1}</span>
                       <div className="flex items-center gap-2">
@@ -238,7 +281,8 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
                     </div>
 
                     <div className="p-4 space-y-3">
-                      {/* ── FITA LED (obrigatória) ── */}
+
+                      {/* ── FITA LED ── */}
                       <div className="space-y-2">
                         <span className="text-xs font-semibold text-primary uppercase tracking-wide">Fita LED</span>
                         <ProdutoAutocomplete value={sis.fita.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'fita')} placeholder="Código da fita" />
@@ -265,6 +309,7 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
+                          {sis.fita.voltagem && <Badge variant="outline" className="text-xs">{sis.fita.voltagem}V</Badge>}
                           {consumoW > 0 && <Badge variant="secondary" className="text-xs">Consumo: {consumoW.toFixed(1)}W</Badge>}
                           {demandaFita > 0 && <Badge variant="secondary" className="text-xs">Demanda: {demandaFita}m</Badge>}
                         </div>
@@ -309,14 +354,7 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
                               </div>
                               <div className="flex items-center gap-1">
                                 <span className="text-xs text-muted-foreground">Passadas:</span>
-                                <Select value={String(sis.perfil.passadas)} onValueChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, passadas: Number(v) as 1 | 2 | 3 } })}>
-                                  <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="1">1</SelectItem>
-                                    <SelectItem value="2">2</SelectItem>
-                                    <SelectItem value="3">3</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                <Badge variant="secondary" className="text-xs">{sis.perfil.passadas}× (auto)</Badge>
                               </div>
                             </div>
                             <div className="flex items-center gap-3 flex-wrap">
@@ -328,7 +366,6 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
                             </div>
                           </>
                         ) : (
-                          /* Sem perfil: metragem e passadas manuais */
                           <div className="flex items-center gap-3 flex-wrap rounded-md border border-dashed p-3 bg-muted/30">
                             <div className="flex items-center gap-1">
                               <span className="text-xs text-muted-foreground">Metragem (m):</span>
@@ -352,7 +389,7 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
 
                       <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground" /></div>
 
-                      {/* ── DRIVER (obrigatório) ── */}
+                      {/* ── DRIVER ── */}
                       <div className="space-y-2">
                         <span className="text-xs font-semibold text-primary uppercase tracking-wide">Driver</span>
                         <ProdutoAutocomplete value={sis.driver.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'driver')} placeholder="Código do driver" />
@@ -381,6 +418,10 @@ const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, comp
                           </div>
                         </div>
                       </div>
+
+                      {/* ── PAINEL DE VALIDAÇÃO ── */}
+                      <ValidacaoPanel validacao={validacoes[sis.id]} />
+
                     </div>
                   </div>
                 );
