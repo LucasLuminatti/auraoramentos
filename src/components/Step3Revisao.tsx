@@ -9,7 +9,7 @@ import {
   calcularDemandaFita, calcularConsumoW, calcularQtdDrivers,
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
   calcularSubtotalSistemaSemFita, calcularTotalAmbienteSemFita, calcularRolosPorGrupo,
-  calcularTotalGeral, formatarMoeda
+  calcularDriversPorProjeto, calcularTotalGeral, formatarMoeda
 } from "@/types/orcamento";
 import { toast } from "sonner";
 import { gerarOrcamentoHtml } from "@/lib/gerarPdfHtml";
@@ -63,6 +63,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
   const [chatExceptionId, setChatExceptionId] = useState("");
 
   const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes), [ambientes]);
+  const resumoDrivers = useMemo(() => calcularDriversPorProjeto(ambientes), [ambientes]);
   const totalGeral = calcularTotalGeral(ambientes);
 
   // Detect violations
@@ -379,6 +380,57 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
                 ))}
               </TableBody>
             </Table>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Resumo Global de Drivers (Regra 26) ─── */}
+      {resumoDrivers.length > 0 && (
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="bg-accent/30 px-5 py-3 border-b">
+            <h3 className="text-lg font-semibold text-foreground">Resumo Global de Drivers</h3>
+            <p className="text-xs text-muted-foreground">Análise por projeto — soma consumo e extensão de todos os ambientes que usam o mesmo driver</p>
+          </div>
+          <div className="p-5">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Driver</TableHead>
+                  <TableHead className="text-right">Tensão</TableHead>
+                  <TableHead className="text-right">Consumo Total</TableHead>
+                  <TableHead className="text-right">Extensão Total</TableHead>
+                  <TableHead className="text-right">Qtd Global</TableHead>
+                  <TableHead className="text-right">Soma p/ Ambiente</TableHead>
+                  <TableHead className="text-right">Economia Potencial</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {resumoDrivers.map((d) => (
+                  <TableRow key={d.driverCodigo}>
+                    <TableCell>
+                      <div className="font-mono text-xs">{d.driverCodigo}</div>
+                      <div className="text-xs text-muted-foreground">{d.driverDescricao} ({d.potenciaDriverW}W)</div>
+                    </TableCell>
+                    <TableCell className="text-right">{d.voltagem}V</TableCell>
+                    <TableCell className="text-right">{d.totalConsumoW.toFixed(1)}W</TableCell>
+                    <TableCell className="text-right">{d.totalDemandaM}m{d.limiteExtensaoM ? ` / ${d.limiteExtensaoM}m por driver` : ''}</TableCell>
+                    <TableCell className="text-right font-semibold">{d.qtdGlobal}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{d.qtdSomaIndividual}</TableCell>
+                    <TableCell className="text-right">
+                      {d.economiaDrivers > 0 ? (
+                        <Badge variant="secondary" className="text-xs">−{d.economiaDrivers} driver{d.economiaDrivers > 1 ? 's' : ''}</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <p className="text-xs text-muted-foreground mt-3">
+              ⚡ <strong>Qtd Global</strong>: dimensionamento agregado considerando todos os ambientes como um único circuito.
+              Compare com a soma por ambiente para identificar onde dá pra economizar drivers compartilhando entre ambientes adjacentes.
+            </p>
           </div>
         </div>
       )}

@@ -221,6 +221,77 @@ export function calcularSubtotalSistemaSemFita(sistema: SistemaIluminacao): numb
   return calcularSubtotalPerfilSistema(sistema) + calcularSubtotalDriverSistema(sistema);
 }
 
+// ─── Cálculo global de drivers (nível projeto — regra 26) ───
+
+export interface ResumoDriverProjeto {
+  driverCodigo: string;
+  driverDescricao: string;
+  potenciaDriverW: number;
+  voltagem: 12 | 24 | 48;
+  totalConsumoW: number;
+  totalDemandaM: number;
+  limiteExtensaoM: number | null;
+  qtdGlobal: number;
+  qtdSomaIndividual: number;
+  economiaDrivers: number;
+}
+
+export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverProjeto[] {
+  const grupos = new Map<string, {
+    descricao: string;
+    potenciaDriverW: number;
+    voltagem: 12 | 24 | 48;
+    totalConsumoW: number;
+    totalDemandaM: number;
+    qtdSomaIndividual: number;
+  }>();
+
+  for (const amb of ambientes) {
+    for (const sis of amb.sistemas) {
+      const cod = sis.driver.codigo;
+      if (!cod || sis.driver.potencia <= 0 || !sis.fita.wm) continue;
+      const consumo = calcularConsumoW(sis);
+      const demanda = calcularDemandaFita(sis);
+      const existing = grupos.get(cod);
+      if (existing) {
+        existing.totalConsumoW += consumo;
+        existing.totalDemandaM += demanda;
+        existing.qtdSomaIndividual += calcularQtdDrivers(sis);
+      } else {
+        grupos.set(cod, {
+          descricao: sis.driver.descricao,
+          potenciaDriverW: sis.driver.potencia,
+          voltagem: sis.driver.voltagem,
+          totalConsumoW: consumo,
+          totalDemandaM: demanda,
+          qtdSomaIndividual: calcularQtdDrivers(sis),
+        });
+      }
+    }
+  }
+
+  const resultado: ResumoDriverProjeto[] = [];
+  for (const [cod, g] of grupos) {
+    const limite = limiteExtensaoMetros(g.voltagem);
+    const qtdPorPotencia = Math.ceil(g.totalConsumoW / g.potenciaDriverW);
+    const qtdPorExtensao = limite ? Math.ceil(g.totalDemandaM / limite) : 0;
+    const qtdGlobal = Math.max(qtdPorPotencia, qtdPorExtensao);
+    resultado.push({
+      driverCodigo: cod,
+      driverDescricao: g.descricao,
+      potenciaDriverW: g.potenciaDriverW,
+      voltagem: g.voltagem,
+      totalConsumoW: g.totalConsumoW,
+      totalDemandaM: g.totalDemandaM,
+      limiteExtensaoM: limite,
+      qtdGlobal,
+      qtdSomaIndividual: g.qtdSomaIndividual,
+      economiaDrivers: Math.max(0, g.qtdSomaIndividual - qtdGlobal),
+    });
+  }
+  return resultado;
+}
+
 // ─── Cálculo global de fitas (nível orçamento) ───
 
 export interface GrupoFita {
