@@ -28,6 +28,9 @@ export interface ItemLuminaria {
   precoUnitario: number;
   precoMinimo: number;
   imagemUrl?: string;
+  sistema?: string | null;
+  potencia_watts?: number | null;
+  tensao?: number | null;
 }
 
 export interface ItemPerfil {
@@ -219,6 +222,40 @@ export function calcularSubtotalDriverSistema(sistema: SistemaIluminacao): numbe
 /** Subtotal do sistema SEM fita (perfil + driver apenas) */
 export function calcularSubtotalSistemaSemFita(sistema: SistemaIluminacao): number {
   return calcularSubtotalPerfilSistema(sistema) + calcularSubtotalDriverSistema(sistema);
+}
+
+// ─── Sistema 48V magnético (regra 8) ───
+
+export interface ResumoMagneto48V {
+  potenciaTotalW: number;
+  qtdModulos: number;
+  driverRecomendado: 'LM2343 (100W)' | 'LM2344 (200W)' | 'múltiplos drivers';
+  temDriver: boolean;
+  temConector: boolean;
+  avisos: string[];
+}
+
+export function analisarMagneto48V(amb: Ambiente): ResumoMagneto48V | null {
+  const modulos = amb.luminarias.filter(l => l.sistema === 'magneto_48v' && l.potencia_watts && !/TRILHO|CONECTOR|DRIVER|KIT/i.test(l.descricao));
+  if (modulos.length === 0) return null;
+
+  const potenciaTotalW = modulos.reduce((s, m) => s + (m.potencia_watts || 0) * m.quantidade, 0);
+  const qtdModulos = modulos.reduce((s, m) => s + m.quantidade, 0);
+
+  let driverRecomendado: ResumoMagneto48V['driverRecomendado'];
+  if (potenciaTotalW <= 100) driverRecomendado = 'LM2343 (100W)';
+  else if (potenciaTotalW <= 200) driverRecomendado = 'LM2344 (200W)';
+  else driverRecomendado = 'múltiplos drivers';
+
+  const temDriver = amb.luminarias.some(l => /LM2343|LM2344/.test(l.codigo) || /DRIVER.*TRILHO\s+MAGNETICO/i.test(l.descricao));
+  const temConector = amb.luminarias.some(l => /LM2338/.test(l.codigo) || /CONECTOR.*DIRECIONAVEL.*MAGNETICO/i.test(l.descricao));
+
+  const avisos: string[] = [];
+  if (!temConector) avisos.push('Conector de Energia Direcional LM2338 não encontrado no ambiente.');
+  if (!temDriver) avisos.push(`Driver ${driverRecomendado} não encontrado no ambiente.`);
+  if (potenciaTotalW > 200) avisos.push(`Potência total ${potenciaTotalW}W excede 200W — é necessário dividir em múltiplos circuitos/drivers.`);
+
+  return { potenciaTotalW, qtdModulos, driverRecomendado, temDriver, temConector, avisos };
 }
 
 // ─── Cálculo global de drivers (nível projeto — regra 26) ───

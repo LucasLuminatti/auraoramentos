@@ -12,7 +12,7 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V } from "@/types/orcamento";
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -114,7 +114,17 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
       toast.info(`✨ Fita Flexível: considere incluir as Tampas de Vedação (LM2600 — 50 un.) para preservar o IP65 após cortes.`, { duration: 10000 });
     }
 
-    updateLuminaria(index, { ...ambiente.luminarias[index], codigo: produto.codigo, descricao: produto.descricao, precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100, precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100, imagemUrl: imgUrl });
+    updateLuminaria(index, {
+      ...ambiente.luminarias[index],
+      codigo: produto.codigo,
+      descricao: produto.descricao,
+      precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100,
+      precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100,
+      imagemUrl: imgUrl,
+      sistema: produto.sistema_magnetico ?? null,
+      potencia_watts: produto.driver_potencia_w ?? null,
+      tensao: produto.voltagem ?? null,
+    });
   };
 
   const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
@@ -284,6 +294,16 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
 
             {/* ─── Tab Luminárias ─── */}
             <TabsContent value="luminarias" className="space-y-3 mt-4">
+              {(() => {
+                const r = analisarMagneto48V(ambiente);
+                if (!r) return null;
+                return (
+                  <div className="rounded-md border border-blue-400/40 bg-blue-50 px-3 py-2 text-xs text-blue-900 space-y-1">
+                    <div>🧲 <strong>Sistema Magneto 48V:</strong> {r.qtdModulos} módulo{r.qtdModulos > 1 ? 's' : ''} somando <strong>{r.potenciaTotalW}W</strong>. Driver recomendado: <strong>{r.driverRecomendado}</strong>.</div>
+                    {r.avisos.map((a, i) => <div key={i}>⚠️ {a}</div>)}
+                  </div>
+                );
+              })()}
               {ambiente.luminarias.map((item, i) => (
                 <div key={item.id} className="flex items-start gap-2 rounded-lg border p-3 bg-muted/30">
                   <div className="flex-1 space-y-2">
