@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Produto } from "@/types/orcamento";
 
-export function useProdutoSearch(query: string) {
+export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'luminaria' | 'todos';
+
+export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos') {
   const [results, setResults] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -21,6 +23,12 @@ export function useProdutoSearch(query: string) {
             "tipo_produto, subtipo"
           );
 
+        if (filtro === 'fita' || filtro === 'driver' || filtro === 'perfil') {
+          queryBuilder = queryBuilder.eq('tipo_produto', filtro);
+        } else if (filtro === 'luminaria') {
+          queryBuilder = queryBuilder.or('tipo_produto.is.null,tipo_produto.in.(spot,lampada,acessorio,conector,suporte)');
+        }
+
         if (query.trim().length >= 2) {
           queryBuilder = queryBuilder.or(`codigo.ilike.%${query}%,descricao.ilike.%${query}%`);
         }
@@ -37,7 +45,7 @@ export function useProdutoSearch(query: string) {
     }, query.trim().length < 2 ? 0 : 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, filtro]);
 
   return { results, loading };
 }

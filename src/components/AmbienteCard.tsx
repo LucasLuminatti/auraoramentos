@@ -307,7 +307,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
               {ambiente.luminarias.map((item, i) => (
                 <div key={item.id} className="flex items-start gap-2 rounded-lg border p-3 bg-muted/30">
                   <div className="flex-1 space-y-2">
-                    <ProdutoAutocomplete value={item.codigo} onSelect={(p) => handleSelectProdutoLuminaria(p, i)} placeholder="Código do item" />
+                    <ProdutoAutocomplete value={item.codigo} onSelect={(p) => handleSelectProdutoLuminaria(p, i)} placeholder="Código do item" filtro="luminaria" />
                     <Input value={item.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-1">
@@ -361,7 +361,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                       {/* ── FITA LED ── */}
                       <div className="space-y-2">
                         <span className="text-xs font-semibold text-primary uppercase tracking-wide">Fita LED</span>
-                        <ProdutoAutocomplete value={sis.fita.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'fita')} placeholder="Código da fita" />
+                        <ProdutoAutocomplete value={sis.fita.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'fita')} placeholder="Código da fita" filtro="fita" />
                         <Input value={sis.fita.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
                         <div className="flex items-center gap-3 flex-wrap">
                           <div className="flex items-center gap-1">
@@ -410,7 +410,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                         </div>
                         {sis.perfil ? (
                           <>
-                            <ProdutoAutocomplete value={sis.perfil.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'perfil')} placeholder="Código do perfil" />
+                            <ProdutoAutocomplete value={sis.perfil.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'perfil')} placeholder="Código do perfil" filtro="perfil" />
                             <Input value={sis.perfil.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
                             <div className="flex items-center gap-3 flex-wrap">
                               <div className="flex items-center gap-1">
@@ -468,7 +468,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                       {/* ── DRIVER ── */}
                       <div className="space-y-2">
                         <span className="text-xs font-semibold text-primary uppercase tracking-wide">Driver</span>
-                        <ProdutoAutocomplete value={sis.driver.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'driver')} placeholder="Código do driver" />
+                        <ProdutoAutocomplete value={sis.driver.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'driver')} placeholder="Código do driver" filtro="driver" />
                         <Input value={sis.driver.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
                         <div className="flex items-center gap-3 flex-wrap">
                           <div className="flex items-center gap-1">

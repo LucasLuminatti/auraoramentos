@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { useProdutoSearch } from "@/hooks/useProdutoSearch";
+import { useProdutoSearch, type ProdutoFiltro } from "@/hooks/useProdutoSearch";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import type { Produto } from "@/types/orcamento";
@@ -10,12 +10,13 @@ interface ProdutoAutocompleteProps {
   onSelect: (produto: Produto) => void;
   placeholder?: string;
   className?: string;
+  filtro?: ProdutoFiltro;
 }
 
-const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className }: ProdutoAutocompleteProps) => {
+const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className, filtro }: ProdutoAutocompleteProps) => {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
-  const { results, loading } = useProdutoSearch(query);
+  const { results, loading } = useProdutoSearch(query, filtro);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setQuery(value); }, [value]);

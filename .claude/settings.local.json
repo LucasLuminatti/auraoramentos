@@ -8,7 +8,8 @@
       "Bash(npm run:*)",
       "Bash(git add:*)",
       "Bash(git commit -m 'fix: map produtos columns to expected frontend names via PostgREST aliases:*)",
-      "Bash(git commit -m 'feat\\(sistemas\\): Fase 1 - suporte a 48V e feedback de motivo dos drivers:*)"
+      "Bash(git commit -m 'feat\\(sistemas\\): Fase 1 - suporte a 48V e feedback de motivo dos drivers:*)",
+      "Bash(git commit -m 'feat\\(autocomplete\\): filtrar dropdown por tipo de produto:*)"
     ]
   }
 }
