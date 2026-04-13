@@ -4,7 +4,10 @@
       "Bash(git push:*)",
       "Bash(supabase db:*)",
       "Bash(ls -la /c/Users/lenny/Downloads/produtos-export-2026*)",
-      "Bash(ls -la \"/c/Users/lenny/Desktop/Luminatti/automa_aura/Conferencia\"*)"
+      "Bash(ls -la \"/c/Users/lenny/Desktop/Luminatti/automa_aura/Conferencia\"*)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m 'fix: map produtos columns to expected frontend names via PostgREST aliases:*)"
     ]
   }
 }
