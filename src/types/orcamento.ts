@@ -39,6 +39,9 @@ export interface ItemPerfil {
   precoUnitario: number;
   precoMinimo: number;
   imagemUrl?: string;
+  familia_perfil?: string | null;
+  driver_restr_tipo?: string | null;
+  driver_restr_max_w?: number | null;
 }
 
 export interface ItemFitaLED {
@@ -46,10 +49,12 @@ export interface ItemFitaLED {
   codigo: string;
   descricao: string;
   wm: number;
+  voltagem?: 12 | 24 | 48;
   metragemRolo: 5 | 10 | 15;
   precoUnitario: number;
   precoMinimo: number;
   imagemUrl?: string;
+  is_baby?: boolean | null;
 }
 
 export interface ItemDriver {
@@ -57,10 +62,11 @@ export interface ItemDriver {
   codigo: string;
   descricao: string;
   potencia: number;
-  voltagem: 12 | 24;
+  voltagem: 12 | 24 | 48;
   precoUnitario: number;
   precoMinimo: number;
   imagemUrl?: string;
+  driver_tipo?: string | null;
 }
 
 /** Sistema de Iluminação: fita + driver obrigatórios, perfil opcional */
@@ -152,8 +158,44 @@ export function calcularQtdDrivers(arg1: SistemaIluminacao | ItemPerfil, arg2?: 
   }
 
   if (driver.potencia <= 0) return 0;
-  const limiteMetros = driver.voltagem === 12 ? 5 : 10;
-  return Math.max(Math.ceil(consumo / driver.potencia), Math.ceil(demanda / limiteMetros));
+  const limite = limiteExtensaoMetros(driver.voltagem);
+  const qtdPorPotencia = Math.ceil(consumo / driver.potencia);
+  const qtdPorExtensao = limite ? Math.ceil(demanda / limite) : 0;
+  return Math.max(qtdPorPotencia, qtdPorExtensao);
+}
+
+/** Limite de extensão de fita por driver (regras 3 e 4). 48V = sem limite fixo (depende do driver). */
+export function limiteExtensaoMetros(voltagem: 12 | 24 | 48): number | null {
+  if (voltagem === 12) return 5;
+  if (voltagem === 24) return 10;
+  return null;
+}
+
+/** Motivo da quantidade de drivers: potência, extensão ou ambos. */
+export function motivoQtdDrivers(sistema: SistemaIluminacao): {
+  qtd: number;
+  motivo: 'ok' | 'potencia' | 'extensao' | 'potencia_e_extensao';
+  consumoW: number;
+  demandaM: number;
+  limiteM: number | null;
+} {
+  const { driver, fita } = sistema;
+  const demanda = calcularDemandaFita(sistema);
+  const consumo = calcularConsumoW(sistema);
+  const limite = limiteExtensaoMetros(driver.voltagem);
+  if (driver.potencia <= 0 || !fita.wm) {
+    return { qtd: 0, motivo: 'ok', consumoW: consumo, demandaM: demanda, limiteM: limite };
+  }
+  const qtdPot = Math.ceil(consumo / driver.potencia);
+  const qtdExt = limite ? Math.ceil(demanda / limite) : 0;
+  const qtd = Math.max(qtdPot, qtdExt);
+  const excedePot = qtdPot > 1;
+  const excedeExt = qtdExt > 1;
+  let motivo: 'ok' | 'potencia' | 'extensao' | 'potencia_e_extensao' = 'ok';
+  if (excedePot && excedeExt) motivo = 'potencia_e_extensao';
+  else if (excedePot) motivo = 'potencia';
+  else if (excedeExt) motivo = 'extensao';
+  return { qtd, motivo, consumoW: consumo, demandaM: demanda, limiteM: limite };
 }
 
 // ─── Subtotais por sistema ───

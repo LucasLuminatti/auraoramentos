@@ -12,7 +12,7 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers } from "@/types/orcamento";
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -266,6 +266,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                 const demandaFita = calcularDemandaFita(sis);
                 const consumoW = calcularConsumoW(sis);
                 const qtdDrivers = calcularQtdDrivers(sis);
+                const motivoDrivers = motivoQtdDrivers(sis);
                 const subtotal = calcularSubtotalSistemaSemFita(sis);
 
                 return (
@@ -401,22 +402,37 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-muted-foreground">Voltagem:</span>
-                            <Select value={String(sis.driver.voltagem)} onValueChange={(v) => updateSistema(si, { ...sis, driver: { ...sis.driver, voltagem: Number(v) as 12 | 24 } })}>
+                            <Select value={String(sis.driver.voltagem)} onValueChange={(v) => updateSistema(si, { ...sis, driver: { ...sis.driver, voltagem: Number(v) as 12 | 24 | 48 } })}>
                               <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="12">12V</SelectItem>
                                 <SelectItem value="24">24V</SelectItem>
+                                <SelectItem value="48">48V</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {qtdDrivers > 0 && <Badge variant="secondary" className="text-xs">Qtd Drivers: {qtdDrivers}</Badge>}
+                          {consumoW > 0 && <Badge variant="outline" className="text-xs">Consumo: {consumoW.toFixed(1)}W</Badge>}
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
                             <PrecoInput value={sis.driver.precoUnitario} min={sis.driver.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, driver: { ...sis.driver, precoUnitario: v } })} />
                           </div>
                         </div>
+                        {qtdDrivers > 1 && (
+                          <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                            {motivoDrivers.motivo === 'potencia' && (
+                              <>⚡ Consumo total ({motivoDrivers.consumoW.toFixed(1)}W) excede a potência do driver ({sis.driver.potencia}W). Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
+                            )}
+                            {motivoDrivers.motivo === 'extensao' && (
+                              <>📏 Extensão de fita ({motivoDrivers.demandaM}m) excede o limite de {motivoDrivers.limiteM}m para {sis.driver.voltagem}V. Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
+                            )}
+                            {motivoDrivers.motivo === 'potencia_e_extensao' && (
+                              <>⚡📏 Consumo ({motivoDrivers.consumoW.toFixed(1)}W) e extensão ({motivoDrivers.demandaM}m) excedem os limites. Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* ── PAINEL DE VALIDAÇÃO ── */}
