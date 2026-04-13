@@ -17,7 +17,8 @@ export function useProdutoSearch(query: string) {
             "voltagem:tensao, wm:watts_por_metro, passadas:passadas_padrao, " +
             "familia_perfil, driver_tipo:subtipo, driver_potencia_w:potencia_watts, " +
             "driver_restr_tipo:driver_tipo_permitido, driver_restr_max_w:driver_max_watts, " +
-            "sistema_magnetico:sistema, is_baby:somente_baby, tipo_produto, subtipo"
+            "sistema_magnetico:sistema, is_baby:somente_baby, somente_baby, " +
+            "tipo_produto, subtipo"
           );
 
         if (query.trim().length >= 2) {

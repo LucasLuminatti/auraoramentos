@@ -16,6 +16,7 @@ export interface Produto {
   driver_restr_max_w?: number | null;
   sistema_magnetico?: string | null;
   is_baby?: boolean | null;
+  somente_baby?: boolean | null;
   tipo_produto?: string | null;
   subtipo?: string | null;
 }
@@ -42,6 +43,7 @@ export interface ItemPerfil {
   familia_perfil?: string | null;
   driver_restr_tipo?: string | null;
   driver_restr_max_w?: number | null;
+  somente_baby?: boolean | null;
 }
 
 export interface ItemFitaLED {

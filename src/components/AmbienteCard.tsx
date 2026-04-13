@@ -104,6 +104,21 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
       }
     }
 
+    // ── REGRA #12/#13: Perfil Baby-only aceita apenas fita Baby ──────────
+    if (component === 'fita' && sis.perfil?.somente_baby && !(produto.is_baby ?? produto.somente_baby)) {
+      toast.error(
+        `🚫 O perfil selecionado aceita SOMENTE fita Baby. Selecione uma fita Baby.`,
+        { duration: 6000 }
+      );
+      return;
+    }
+    if (component === 'perfil' && produto.somente_baby && sis.fita.codigo && !sis.fita.is_baby) {
+      toast.warning(
+        `⚠️ Este perfil aceita SOMENTE fita Baby. A fita atual (${sis.fita.codigo}) não é Baby — troque a fita.`,
+        { duration: 7000 }
+      );
+    }
+
     // ── REGRA #9: Alerta produto magnético ───────────────────────────────
     if (component === 'perfil' && produto.sistema_magnetico) {
       toast.warning(
@@ -128,6 +143,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
           familia_perfil: produto.familia_perfil,
           driver_restr_tipo: produto.driver_restr_tipo,
           driver_restr_max_w: produto.driver_restr_max_w,
+          somente_baby: produto.somente_baby,
         },
       });
     } else if (component === 'fita') {
