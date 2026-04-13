@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "Bash(supabase db:*)",
+      "Bash(ls -la /c/Users/lenny/Downloads/produtos-export-2026*)",
+      "Bash(ls -la \"/c/Users/lenny/Desktop/Luminatti/automa_aura/Conferencia\"*)"
+    ]
+  }
+}

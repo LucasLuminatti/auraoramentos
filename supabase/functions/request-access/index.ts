@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
     const requestId = inserted.id;
     const secret = Deno.env.get("APPROVAL_TOKEN_SECRET")!;
-    const appUrl = Deno.env.get("APP_URL") || "https://id-preview--4b83f535-5981-45a3-8f30-77b74fb023aa.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://auraoramentos-kappa.vercel.app";
     const adminEmail = Deno.env.get("ADMIN_EMAIL")!;
 
     // Generate HMAC token (24h expiry)

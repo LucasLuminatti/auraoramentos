@@ -1,6 +1,6 @@
 
 -- Criar bucket público para imagens de produtos
-INSERT INTO storage.buckets (id, name, public) VALUES ('produto-imagens', 'produto-imagens', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('produto-imagens', 'produto-imagens', true) ON CONFLICT (id) DO NOTHING;
 
 -- RLS: leitura pública
 CREATE POLICY "Public read produto-imagens" ON storage.objects FOR SELECT USING (bucket_id = 'produto-imagens');

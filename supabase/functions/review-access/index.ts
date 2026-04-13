@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     }
 
     const adminEmail = Deno.env.get("ADMIN_EMAIL")!;
-    const appUrl = Deno.env.get("APP_URL") || "https://id-preview--4b83f535-5981-45a3-8f30-77b74fb023aa.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://auraoramentos-kappa.vercel.app";
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
     if (action === "approve") {
