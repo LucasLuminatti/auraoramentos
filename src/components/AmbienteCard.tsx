@@ -87,7 +87,31 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
         toast.info(`🧲 Módulo/spot magnético 48V: certifique-se de que o trilho e o driver (100W ou 200W) estão no orçamento.`, { duration: 8000 });
       }
     } else if (produto.sistema_magnetico === 'tiny_magneto' || /TINY\s+MAG/.test(d)) {
-      toast.warning(`⚡ Tiny Mag 24V: requer Conector de Driver LM3168 (preto) ou LM3169 (branco) + Driver 24V. Driver externo é obrigatório.`, { duration: 10000 });
+      if (/TRILHO.*EMBUTIR/.test(d)) {
+        toast.warning(`⚡ Tiny Mag 24V Embutir: Kit de fixação vendido separadamente + Conector LM3168/LM3169 + Driver 24V externo.`, { duration: 10000 });
+      } else {
+        toast.warning(`⚡ Tiny Mag 24V: requer Conector de Driver LM3168 (preto) ou LM3169 (branco) + Driver 24V. Driver externo é obrigatório.`, { duration: 10000 });
+      }
+    }
+
+    // ── REGRA #24: Spot sem LED integrado → lâmpada separada ──
+    const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
+    const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
+    if (temBaseLampada && !temLedIntegrado) {
+      toast.info(`💡 Este produto não possui LED integrado — lembre-se de incluir a lâmpada separadamente no orçamento.`, { duration: 8000 });
+    }
+
+    // ── REGRA #25: Pino Hub requer Spot Hub como base ──
+    if (/PINO\s+HUB/.test(d)) {
+      const temSpotHub = ambiente.luminarias.some(l => /SPOT\s+HUB/.test((l.descricao || '').toUpperCase()));
+      if (!temSpotHub) {
+        toast.warning(`🔌 Pino Hub requer um Spot Hub (de Embutir ou No Frame) como base — adicione o Spot Hub antes de instalar.`, { duration: 10000 });
+      }
+    }
+
+    // ── REGRA #28: Fita Flexível / Neon Flex → oferecer tampas ──
+    if (/FITA\s+FLEX|NEON\s+FLEX|FLEXIVEL/.test(d)) {
+      toast.info(`✨ Fita Flexível: considere incluir as Tampas de Vedação (LM2600 — 50 un.) para preservar o IP65 após cortes.`, { duration: 10000 });
     }
 
     updateLuminaria(index, { ...ambiente.luminarias[index], codigo: produto.codigo, descricao: produto.descricao, precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100, precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100, imagemUrl: imgUrl });
