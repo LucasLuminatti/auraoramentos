@@ -75,6 +75,21 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
 
   const handleSelectProdutoLuminaria = (produto: Produto, index: number) => {
     const imgUrl = produto.imagem_url || undefined;
+    const d = (produto.descricao || '').toUpperCase();
+
+    // ── REGRA #5/#6/#7/#8: Sistemas magnéticos — lembretes críticos ──
+    if (produto.sistema_magnetico === 'magneto_48v' || /MAGNETO22/.test(d)) {
+      if (/TRILHO.*EMBUTIR/.test(d)) {
+        toast.warning(`🧲 Trilho magnético 48V de embutir: inclua o Kit de Fixação LM2987 (vendido separadamente) + Conector LM2338 + Driver 100W (LM2343) ou 200W (LM2344).`, { duration: 10000 });
+      } else if (/TRILHO/.test(d)) {
+        toast.warning(`🧲 Trilho magnético 48V: inclua o Conector Direcional LM2338 + Driver 100W (LM2343) ou 200W (LM2344).`, { duration: 10000 });
+      } else if (/MODULO|SPOT/.test(d)) {
+        toast.info(`🧲 Módulo/spot magnético 48V: certifique-se de que o trilho e o driver (100W ou 200W) estão no orçamento.`, { duration: 8000 });
+      }
+    } else if (produto.sistema_magnetico === 'tiny_magneto' || /TINY\s+MAG/.test(d)) {
+      toast.warning(`⚡ Tiny Mag 24V: requer Conector de Driver LM3168 (preto) ou LM3169 (branco) + Driver 24V. Driver externo é obrigatório.`, { duration: 10000 });
+    }
+
     updateLuminaria(index, { ...ambiente.luminarias[index], codigo: produto.codigo, descricao: produto.descricao, precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100, precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100, imagemUrl: imgUrl });
   };
 
