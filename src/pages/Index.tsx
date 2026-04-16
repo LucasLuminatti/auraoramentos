@@ -33,6 +33,7 @@ const Index = () => {
   const [novoClienteNome, setNovoClienteNome] = useState("");
   const [listKey, setListKey] = useState(0);
   const [currentProjetoId, setCurrentProjetoId] = useState<string | null>(null);
+  const [currentClienteId, setCurrentClienteId] = useState<string | null>(null);
   const [currentClienteNome, setCurrentClienteNome] = useState("");
   const [currentProjetoNome, setCurrentProjetoNome] = useState("");
   const [confirmVoltarOpen, setConfirmVoltarOpen] = useState(false);
@@ -43,6 +44,7 @@ const Index = () => {
     setDados({ colaborador: colaborador?.nome || "", tipo: "" });
     setAmbientes([]);
     setCurrentProjetoId(projetoId);
+    setCurrentClienteId(clienteId);
     setCurrentClienteNome(clienteNome);
     setCurrentProjetoNome(projetoNome);
     setStep(1);
@@ -72,6 +74,7 @@ const Index = () => {
     setDados({ colaborador: colaborador?.nome || "", tipo: "" });
     setAmbientes([]);
     setCurrentProjetoId(null);
+    setCurrentClienteId(null);
     setCurrentClienteNome("");
     setCurrentProjetoNome("");
     setConfirmVoltarOpen(false);
@@ -142,7 +145,7 @@ const Index = () => {
                 <Step2Ambientes ambientes={ambientes} onChange={setAmbientes} onNext={() => setStep(3)} onPrev={() => setStep(1)} />
               )}
               {step === 3 && (
-                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(2)} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} />
+                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(2)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} />
               )}
             </div>
           </>

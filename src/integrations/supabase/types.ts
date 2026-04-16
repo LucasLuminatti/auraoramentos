@@ -266,6 +266,7 @@ export type Database = {
       }
       orcamentos: {
         Row: {
+          ambientes: Json
           cliente_id: string
           colaborador_id: string
           created_at: string
@@ -276,9 +277,11 @@ export type Database = {
           motivo_perda_detalhe: string | null
           projeto_id: string | null
           status: string
+          tipo: string | null
           valor: number
         }
         Insert: {
+          ambientes?: Json
           cliente_id: string
           colaborador_id: string
           created_at?: string
@@ -289,9 +292,11 @@ export type Database = {
           motivo_perda_detalhe?: string | null
           projeto_id?: string | null
           status?: string
+          tipo?: string | null
           valor?: number
         }
         Update: {
+          ambientes?: Json
           cliente_id?: string
           colaborador_id?: string
           created_at?: string
@@ -302,6 +307,7 @@ export type Database = {
           motivo_perda_detalhe?: string | null
           projeto_id?: string | null
           status?: string
+          tipo?: string | null
           valor?: number
         }
         Relationships: [

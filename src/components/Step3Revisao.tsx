@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FileDown, AlertTriangle, MessageSquare } from "lucide-react";
-import type { Orcamento, Ambiente, SistemaIluminacao, GrupoFita } from "@/types/orcamento";
+import type { Orcamento, Ambiente, SistemaIluminacao, GrupoFita, StatusOrcamento } from "@/types/orcamento";
+import type { Json } from "@/integrations/supabase/types";
 import {
   calcularDemandaFita, calcularConsumoW, calcularQtdDrivers,
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
@@ -15,11 +16,13 @@ import { toast } from "sonner";
 import { gerarOrcamentoHtml } from "@/lib/gerarPdfHtml";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useColaborador } from "@/hooks/useColaborador";
 import ExceptionChat from "./ExceptionChat";
 
 interface Step3Props {
   orcamento: Orcamento;
   onPrev: () => void;
+  clienteId?: string;
   clienteNome: string;
   projetoNome: string;
   projetoId?: string;
@@ -53,18 +56,22 @@ async function imageToBase64(src: string): Promise<string> {
   });
 }
 
-const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, onUpdateAmbientes }: Step3Props) => {
+const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes }: Step3Props) => {
   const { dados, ambientes } = orcamento;
   const { user } = useAuth();
+  const { colaborador } = useColaborador();
   const [approvedExceptions, setApprovedExceptions] = useState<Set<string>>(new Set());
   const [pendingExceptionIds, setPendingExceptionIds] = useState<Record<string, string>>({});
   const [chatOpen, setChatOpen] = useState(false);
   const [chatViolacao, setChatViolacao] = useState<Violacao | null>(null);
   const [chatExceptionId, setChatExceptionId] = useState("");
+  const [orcamentoId, setOrcamentoId] = useState<string | null>(null);
+  const [savingOrcamento, setSavingOrcamento] = useState(false);
+  const pdfInFlightRef = useRef(false);
 
   const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes), [ambientes]);
   const resumoDrivers = useMemo(() => calcularDriversPorProjeto(ambientes), [ambientes]);
-  const totalGeral = calcularTotalGeral(ambientes);
+  const totalGeral = useMemo(() => calcularTotalGeral(ambientes), [ambientes]);
 
   // Detect violations
   const violacoes = useMemo(() => {
@@ -177,15 +184,77 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
     toast.success("Solicitação enviada!");
   };
 
-  const handlePDF = async () => {
-    let logoBase64: string | undefined;
+  const persistirOrcamento = async (): Promise<string | null> => {
+    if (!clienteId || !colaborador?.id) {
+      toast.warning("Orçamento gerado, mas não foi salvo no histórico (cliente/colaborador não identificado).");
+      return null;
+    }
+    setSavingOrcamento(true);
+    // Supabase column is jsonb; Ambiente[] is JSON-serializable so this cast is safe.
+    const ambientesJson = ambientes as unknown as Json;
+    try {
+      if (orcamentoId) {
+        const { error } = await supabase
+          .from("orcamentos")
+          .update({
+            tipo: dados.tipo || null,
+            ambientes: ambientesJson,
+            valor: totalGeral,
+          })
+          .eq("id", orcamentoId);
+        if (error) throw error;
+        return orcamentoId;
+      }
+      const { data, error } = await supabase
+        .from("orcamentos")
+        .insert({
+          cliente_id: clienteId,
+          colaborador_id: colaborador.id,
+          projeto_id: projetoId || null,
+          tipo: dados.tipo || null,
+          ambientes: ambientesJson,
+          valor: totalGeral,
+          status: "rascunho" satisfies StatusOrcamento,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      setOrcamentoId(data.id);
+      return data.id;
+    } catch (err) {
+      console.error("Erro ao salvar orçamento:", err);
+      toast.error("Não foi possível salvar o orçamento no histórico. O PDF será gerado mesmo assim.");
+      return null;
+    } finally {
+      setSavingOrcamento(false);
+    }
+  };
+
+  const carregarLogoBase64 = async (): Promise<string | undefined> => {
     try {
       const logoModule = await import("@/assets/logo.png");
-      logoBase64 = await imageToBase64(logoModule.default);
-    } catch { /* logo won't appear */ }
-    const html = gerarOrcamentoHtml({ clienteNome, projetoNome, colaborador: dados.colaborador, tipo: dados.tipo, ambientes, logoBase64 });
-    const w = window.open("", "_blank");
-    if (w) { w.document.write(html); w.document.close(); } else { toast.error("Pop-up bloqueado. Permita pop-ups e tente novamente."); }
+      return await imageToBase64(logoModule.default);
+    } catch {
+      return undefined;
+    }
+  };
+
+  const handlePDF = async () => {
+    // Guarda sincrona contra double-click: setSavingOrcamento é assincrono e
+    // nao bloqueia um segundo clique disparado na mesma render.
+    if (pdfInFlightRef.current) return;
+    pdfInFlightRef.current = true;
+    try {
+      const [, logoBase64] = await Promise.all([
+        persistirOrcamento(),
+        carregarLogoBase64(),
+      ]);
+      const html = gerarOrcamentoHtml({ clienteNome, projetoNome, colaborador: dados.colaborador, tipo: dados.tipo, ambientes, logoBase64 });
+      const w = window.open("", "_blank");
+      if (w) { w.document.write(html); w.document.close(); } else { toast.error("Pop-up bloqueado. Permita pop-ups e tente novamente."); }
+    } finally {
+      pdfInFlightRef.current = false;
+    }
   };
 
   const violacaoIndicator = (codigo: string, precoUnitario: number, precoMinimo: number) =>
@@ -445,8 +514,8 @@ const Step3Revisao = ({ orcamento, onPrev, clienteNome, projetoNome, projetoId, 
         <Button variant="outline" onClick={onPrev} className="gap-2 print:hidden">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
-        <Button onClick={handlePDF} className="gap-2 print:hidden" disabled={hasUnresolved} title={hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : ""}>
-          <FileDown className="h-4 w-4" /> Gerar PDF
+        <Button onClick={handlePDF} className="gap-2 print:hidden" disabled={hasUnresolved || savingOrcamento} title={hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : ""}>
+          <FileDown className="h-4 w-4" /> {savingOrcamento ? "Salvando..." : "Gerar PDF"}
         </Button>
       </div>
 
