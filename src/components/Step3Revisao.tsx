@@ -185,8 +185,12 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
   };
 
   const persistirOrcamento = async (): Promise<string | null> => {
-    if (!clienteId || !colaborador?.id) {
-      toast.warning("Orçamento gerado, mas não foi salvo no histórico (cliente/colaborador não identificado).");
+    if (!clienteId) {
+      toast.warning("Orçamento não salvo: cliente não identificado.");
+      return null;
+    }
+    if (!colaborador?.id) {
+      toast.warning("Orçamento não salvo: seu usuário não está vinculado a um colaborador. Peça a um admin para criar seu registro em Colaboradores.");
       return null;
     }
     setSavingOrcamento(true);
@@ -239,6 +243,9 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
     }
   };
 
+  const sanitizarNomeArquivo = (s: string) =>
+    s.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_").slice(0, 60) || "Orcamento";
+
   const handlePDF = async () => {
     // Guarda sincrona contra double-click: setSavingOrcamento é assincrono e
     // nao bloqueia um segundo clique disparado na mesma render.
@@ -250,8 +257,37 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         carregarLogoBase64(),
       ]);
       const html = gerarOrcamentoHtml({ clienteNome, projetoNome, colaborador: dados.colaborador, tipo: dados.tipo, ambientes, logoBase64 });
-      const w = window.open("", "_blank");
-      if (w) { w.document.write(html); w.document.close(); } else { toast.error("Pop-up bloqueado. Permita pop-ups e tente novamente."); }
+
+      // Renderiza o HTML num container oculto e converte para PDF download via html2pdf.
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.left = "-10000px";
+      container.style.top = "0";
+      container.innerHTML = html;
+      document.body.appendChild(container);
+
+      const filename = `Proposta_${sanitizarNomeArquivo(clienteNome)}_${sanitizarNomeArquivo(projetoNome)}.pdf`;
+      const html2pdf = (await import("html2pdf.js")).default;
+
+      try {
+        await html2pdf()
+          .from(container.querySelector(".page") || container)
+          .set({
+            filename,
+            margin: 0,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+          })
+          .save();
+        toast.success("PDF baixado!");
+      } finally {
+        document.body.removeChild(container);
+      }
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      toast.error("Não foi possível gerar o PDF. Tente novamente.");
     } finally {
       pdfInFlightRef.current = false;
     }
