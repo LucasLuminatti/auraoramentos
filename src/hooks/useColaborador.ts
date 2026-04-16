@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { User } from "@supabase/supabase-js";
 
 export interface Colaborador {
   id: string;
@@ -8,6 +9,15 @@ export interface Colaborador {
   cargo: string | null;
   departamento: string | null;
   user_id: string | null;
+}
+
+function derivarNomeInicial(user: User): string {
+  const meta = user.user_metadata ?? {};
+  const candidatos = [meta.nome, meta.name, meta.full_name];
+  for (const c of candidatos) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  return user.email?.split("@")[0] ?? "Colaborador";
 }
 
 export function useColaborador() {
@@ -24,14 +34,38 @@ export function useColaborador() {
 
     const fetch = async () => {
       setLoading(true);
-      const { data } = await supabase
+
+      const { data: existing } = await supabase
         .from("colaboradores")
         .select("id, nome, cargo, departamento, user_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      setColaborador(data);
-      setLoading(false);
+      if (existing) {
+        setColaborador(existing);
+        setLoading(false);
+        return;
+      }
+
+      // Nenhum colaborador vinculado — cria automaticamente via edge function
+      // (usa service_role para contornar RLS da tabela colaboradores).
+      try {
+        const nome = derivarNomeInicial(user);
+        await supabase.functions.invoke("create-colaborador", {
+          body: { nome, user_id: user.id },
+        });
+        const { data: created } = await supabase
+          .from("colaboradores")
+          .select("id, nome, cargo, departamento, user_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setColaborador(created);
+      } catch (err) {
+        console.error("Falha ao auto-criar colaborador:", err);
+        setColaborador(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetch();
