@@ -104,7 +104,15 @@ export interface Orcamento {
   ambientes: Ambiente[];
 }
 
+export type StatusOrcamento = 'rascunho' | 'fechado' | 'perdido';
+
 // ─── Cálculos do Sistema Fita→Driver (com perfil opcional) ───
+
+/**
+ * Margem de segurança aplicada sobre a potência consumida ao dimensionar drivers.
+ * Mantém paridade com a edge function `validar-sistema-orcamento` (fator 1.05).
+ */
+export const MARGEM_SEGURANCA_DRIVER = 1.05;
 
 /** Metragem total do perfil (se existir) */
 export function calcularMetragemTotal(perfil: ItemPerfil): number {
@@ -164,7 +172,7 @@ export function calcularQtdDrivers(arg1: SistemaIluminacao | ItemPerfil, arg2?: 
 
   if (driver.potencia <= 0) return 0;
   const limite = limiteExtensaoMetros(driver.voltagem);
-  const qtdPorPotencia = Math.ceil(consumo / driver.potencia);
+  const qtdPorPotencia = Math.ceil((consumo * MARGEM_SEGURANCA_DRIVER) / driver.potencia);
   const qtdPorExtensao = limite ? Math.ceil(demanda / limite) : 0;
   return Math.max(qtdPorPotencia, qtdPorExtensao);
 }
@@ -191,7 +199,7 @@ export function motivoQtdDrivers(sistema: SistemaIluminacao): {
   if (driver.potencia <= 0 || !fita.wm) {
     return { qtd: 0, motivo: 'ok', consumoW: consumo, demandaM: demanda, limiteM: limite };
   }
-  const qtdPot = Math.ceil(consumo / driver.potencia);
+  const qtdPot = Math.ceil((consumo * MARGEM_SEGURANCA_DRIVER) / driver.potencia);
   const qtdExt = limite ? Math.ceil(demanda / limite) : 0;
   const qtd = Math.max(qtdPot, qtdExt);
   const excedePot = qtdPot > 1;
@@ -242,9 +250,10 @@ export function analisarMagneto48V(amb: Ambiente): ResumoMagneto48V | null {
   const potenciaTotalW = modulos.reduce((s, m) => s + (m.potencia_watts || 0) * m.quantidade, 0);
   const qtdModulos = modulos.reduce((s, m) => s + m.quantidade, 0);
 
+  const potenciaSeguraW = potenciaTotalW * MARGEM_SEGURANCA_DRIVER;
   let driverRecomendado: ResumoMagneto48V['driverRecomendado'];
-  if (potenciaTotalW <= 100) driverRecomendado = 'LM2343 (100W)';
-  else if (potenciaTotalW <= 200) driverRecomendado = 'LM2344 (200W)';
+  if (potenciaSeguraW <= 100) driverRecomendado = 'LM2343 (100W)';
+  else if (potenciaSeguraW <= 200) driverRecomendado = 'LM2344 (200W)';
   else driverRecomendado = 'múltiplos drivers';
 
   const temDriver = amb.luminarias.some(l => /LM2343|LM2344/.test(l.codigo) || /DRIVER.*TRILHO\s+MAGNETICO/i.test(l.descricao));
@@ -310,7 +319,7 @@ export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverPr
   const resultado: ResumoDriverProjeto[] = [];
   for (const [cod, g] of grupos) {
     const limite = limiteExtensaoMetros(g.voltagem);
-    const qtdPorPotencia = Math.ceil(g.totalConsumoW / g.potenciaDriverW);
+    const qtdPorPotencia = Math.ceil((g.totalConsumoW * MARGEM_SEGURANCA_DRIVER) / g.potenciaDriverW);
     const qtdPorExtensao = limite ? Math.ceil(g.totalDemandaM / limite) : 0;
     const qtdGlobal = Math.max(qtdPorPotencia, qtdPorExtensao);
     resultado.push({
