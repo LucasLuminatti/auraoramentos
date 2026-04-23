@@ -1,223 +1,49 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-04-16
+**Analysis Date:** 2026-04-23
 
 ## Test Framework
 
 **Runner:**
-- Vitest 3.2.4
+- Vitest 3.x
 - Config: `vitest.config.ts`
-- Environment: jsdom (browser simulation)
-- Global: true (describe/it/expect available without imports)
+- Environment: jsdom (browser-like DOM simulation)
+- Globals enabled (`globals: true`) — no need to import `describe`, `it`, `expect` explicitly, though the single test file does import them explicitly anyway
 
 **Assertion Library:**
-- Vitest built-in expect (compatible with Jest)
-- TypeScript Testing Library: @testing-library/react 16.0.0
+- Vitest built-in (`expect`) + `@testing-library/jest-dom` matchers loaded via setup file
 
 **Run Commands:**
 ```bash
-npm run test              # Run all tests once
-npm run test:watch       # Watch mode for development
+npm run test          # Run all tests once (vitest run)
+npm run test:watch    # Watch mode (vitest)
+# No coverage command configured in package.json scripts
 ```
-
-**Coverage:**
-- No coverage reporting configured
-- No enforcement of coverage thresholds
-- Coverage commands not present in package.json
 
 ## Test File Organization
 
 **Location:**
-- Dedicated test directory: `src/test/`
-- Currently only: `src/test/example.test.ts` (placeholder)
-- Setup file: `src/test/setup.ts` (jest-dom polyfills for window.matchMedia)
+- Centralized in `src/test/` — NOT co-located with source files
+- Current test files: `src/test/example.test.ts`, `src/test/setup.ts`
 
 **Naming:**
-- Pattern: `[name].test.ts` or `[name].spec.ts`
-- Config includes both patterns: `"src/**/*.{test,spec}.{ts,tsx}"`
+- Pattern: `[name].test.ts` or `[name].spec.ts` (both matched by `vitest.config.ts`)
+- Setup file: `src/test/setup.ts` (loaded via `setupFiles` in vitest config)
 
 **Structure:**
 ```
-src/test/
-├── setup.ts              # Vitest setup (jsdom polyfills)
-└── example.test.ts       # Placeholder test
+src/
+  test/
+    setup.ts          # Global test setup (jest-dom matchers + matchMedia mock)
+    example.test.ts   # Placeholder example test (not production test coverage)
 ```
 
-**NOT YET IMPLEMENTED:**
-- No co-located test files (e.g., `useAuth.test.ts` alongside `useAuth.ts`)
-- No tests for components
-- No tests for hooks
-- No tests for business logic functions in `src/types/orcamento.ts`
+## Test Setup
 
-## Test Structure
+**`src/test/setup.ts` configures:**
+1. `@testing-library/jest-dom` matchers (`.toBeInTheDocument()`, `.toHaveClass()`, etc.)
+2. `window.matchMedia` mock (required for Radix UI components that check viewport in jsdom)
 
-**Suite Organization:**
-
-Vitest uses describe-it-expect pattern (identical to Jest):
-
-```typescript
-import { describe, it, expect } from "vitest";
-
-describe("example", () => {
-  it("should pass", () => {
-    expect(true).toBe(true);
-  });
-});
-```
-
-**Patterns:**
-
-No established patterns yet. The single test file shows:
-- Suite wrapping via `describe()`
-- Single assertion via `expect().toBe()`
-- No setup/teardown (beforeEach/afterEach)
-- No fixtures or factories
-- No async/await testing patterns
-
-**Current Example:**
-```typescript
-// src/test/example.test.ts
-import { describe, it, expect } from "vitest";
-
-describe("example", () => {
-  it("should pass", () => {
-    expect(true).toBe(true);
-  });
-});
-```
-
-## Mocking
-
-**Framework:** Not in use yet
-- Vitest supports `vi.mock()` but not currently used
-- No mock utilities installed or configured
-- No setupFiles for global mocks beyond jsdom polyfills
-
-**What Should Be Mocked (Not Yet Done):**
-- Supabase client (`src/integrations/supabase/client.ts`)
-- React Router (`react-router-dom`)
-- Sonner toast notifications
-- HTTP/network calls in hooks
-
-**What Should NOT Be Mocked:**
-- Date functions (rely on actual `new Date()`)
-- Math calculations for accuracy
-- DOM APIs (jsdom provides real DOM)
-- Local storage (jsdom supports it)
-
-## Fixtures and Factories
-
-**Test Data:**
-- None currently implemented
-- Would be needed for:
-  - Mock `Produto` objects (with all fields)
-  - Mock `Ambiente` objects (with sistemas and luminarias)
-  - Mock `Orcamento` objects (for Step3Revisao testing)
-  - Mock Supabase responses (database tables)
-
-**Suggested Location:**
-```
-src/test/fixtures/
-├── produtos.ts           # Mock Produto[] arrays
-├── ambientes.ts          # Mock Ambiente objects
-├── orcamentos.ts         # Mock Orcamento objects
-└── supabase.ts           # Mock Supabase responses
-```
-
-**Example Pattern (Not Yet Implemented):**
-```typescript
-// Would look like:
-export const mockProduto: Produto = {
-  id: "test-1",
-  codigo: "FITA-LED-24V",
-  descricao: "Fita LED RGB 24V 14.4W/m",
-  preco_tabela: 150,
-  preco_minimo: 120,
-  wm: 14.4,
-  voltagem: 24,
-  tipo_produto: "fita",
-};
-```
-
-## Coverage
-
-**Requirements:** None enforced
-- No minimum threshold set
-- No coverage reporting in package.json
-- No CI checks on coverage
-
-**View Coverage (Not Configured):**
-- Would use: `vitest --coverage` (requires @vitest/coverage-v8 or similar)
-- Not currently installed in devDependencies
-
-## Test Types
-
-**Unit Tests:**
-- Scope: Individual functions/hooks in isolation
-- Approach: Test inputs and outputs, mock dependencies
-- Target: Business logic functions in `src/types/orcamento.ts` (calculation functions)
-- Target: Hook logic in `src/hooks/` (state management, API calls)
-- NOT YET IMPLEMENTED
-
-**Integration Tests:**
-- Scope: Component + hook + Supabase interactions
-- Approach: Render component, mock Supabase, verify state and UI updates
-- Target: Step components (Step1, Step2, Step3) with user interactions
-- Target: Admin dashboard with data fetching
-- NOT YET IMPLEMENTED
-
-**E2E Tests:**
-- Framework: Not configured; would need Playwright or Cypress
-- Scope: Full user flows (login → create budget → generate PDF)
-- Status: Not applicable at current test infrastructure level
-
-## Common Patterns (Not Yet Implemented)
-
-**Async Testing:**
-
-Would follow Vitest pattern with async/await:
-```typescript
-// Example pattern (not yet in codebase):
-it("should fetch produtos on search", async () => {
-  const { result } = renderHook(() => useProdutoSearch("LED", "fita"));
-  await waitFor(() => {
-    expect(result.current.loading).toBe(false);
-  });
-  expect(result.current.results.length).toBeGreaterThan(0);
-});
-```
-
-**Error Testing:**
-
-Would use try-catch or expect().rejects:
-```typescript
-// Example pattern (not yet in codebase):
-it("should handle Supabase errors gracefully", async () => {
-  vi.mocked(supabase.from).mockRejectedValue(new Error("Network error"));
-  const { result } = renderHook(() => useAuth());
-  await waitFor(() => {
-    expect(result.current.user).toBeNull();
-  });
-});
-```
-
-**Component Testing (React Testing Library):**
-
-Would use render + screen queries:
-```typescript
-// Example pattern (not yet in codebase):
-it("should validate and show error toast on Step1", () => {
-  render(<Step1DadosOrcamento dados={{...}} onChange={vi.fn()} onNext={vi.fn()} />);
-  const button = screen.getByText("Próximo");
-  fireEvent.click(button);
-  expect(mockToast.error).toHaveBeenCalledWith("Selecione o tipo de orçamento");
-});
-```
-
-## Setup and Dependencies
-
-**Setup File:**
-`src/test/setup.ts` provides jsdom polyfills:
 ```typescript
 import "@testing-library/jest-dom";
 
@@ -236,58 +62,159 @@ Object.defineProperty(window, "matchMedia", {
 });
 ```
 
-This mocks:
-- `@testing-library/jest-dom` matchers (toBeInTheDocument, etc.)
-- `window.matchMedia()` for responsive design queries
+Any new setup required for all tests (e.g., mocking `crypto.randomUUID`, ResizeObserver, IntersectionObserver) belongs in `src/test/setup.ts`.
 
-**Installed Test Dependencies:**
-- `vitest@^3.2.4` — test runner
-- `@testing-library/react@^16.0.0` — React component testing
-- `@testing-library/jest-dom@^6.6.0` — DOM matchers
-- `jsdom@^20.0.3` — DOM implementation for Node
+## Test Structure
 
-**Missing for Full Coverage:**
-- `@vitest/coverage-v8` — coverage reporting
-- `@vitest/ui` — test UI dashboard
-- `testing-library/user-event` — better user interactions
-- Mock factory libraries (factory-bot equivalent)
+**Current example (the only real test):**
+```typescript
+import { describe, it, expect } from "vitest";
 
-## Current Testing Status
+describe("example", () => {
+  it("should pass", () => {
+    expect(true).toBe(true);
+  });
+});
+```
 
-**CRITICAL GAP:** Only 1 placeholder test exists
-- `src/test/example.test.ts` — trivial "expect(true).toBe(true)"
-- Zero tests for:
-  - Calculation functions (`calcularDemandaFita`, `calcularQtdDrivers`, etc.)
-  - Hooks (`useAuth`, `useProdutoSearch`, `useValidarSistemas`)
-  - Components (`Step1DadosOrcamento`, `AmbienteCard`, `Step3Revisao`)
-  - API integration (Supabase queries)
-  - Business logic (price violation detection, driver recommendations)
+**Recommended pattern for domain logic tests (pure functions):**
+```typescript
+import { describe, it, expect } from "vitest";
+import { calcularQtdDrivers, calcularDemandaFita } from "@/types/orcamento";
 
-**Recommendations for Adding Tests:**
+describe("calcularQtdDrivers", () => {
+  it("returns 1 driver when consumption fits within potência", () => {
+    // arrange
+    const sistema = { ... };
+    // act
+    const result = calcularQtdDrivers(sistema);
+    // assert
+    expect(result).toBe(1);
+  });
+});
+```
 
-1. **Priority 1: Business Logic (`src/types/orcamento.ts`)**
-   - Test all calculation functions with multiple scenarios
-   - Test discriminated unions and type guards
-   - Test edge cases (0 power, null perfil, 48V vs 12V limits)
-   - No mocking needed — pure functions
+**Recommended pattern for component tests:**
+```typescript
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import ValidacaoPanel from "@/components/ValidacaoPanel";
 
-2. **Priority 2: Hooks (`src/hooks/`)**
-   - Test `useAuth()` — session state management
-   - Test `useProdutoSearch()` — debouncing and error handling
-   - Test `useValidarSistemas()` — edge function integration
-   - Mock Supabase client
+describe("ValidacaoPanel", () => {
+  it("renders nothing when validacao is undefined", () => {
+    const { container } = render(<ValidacaoPanel validacao={undefined} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+```
 
-3. **Priority 3: Components**
-   - Test `AmbienteCard` — adding/removing systems, price validation
-   - Test `Step3Revisao` — violation detection, exception chat
-   - Mock child hooks and Supabase
-   - Verify toast messages on validation failures
+## Mocking
 
-4. **Priority 4: Integration**
-   - Test full budget creation flow (Step1 → Step2 → Step3)
-   - Mock Supabase for saving orcamentos
-   - Verify PDF generation side effects
+**Framework:** Vitest built-in (`vi.mock`, `vi.fn`, `vi.spyOn`)
+
+**What to mock:**
+- `@/integrations/supabase/client` — mock the `supabase` object for any component/hook that calls Supabase
+- `sonner` toast — mock for components that call `toast.success`/`toast.error`
+- `@/hooks/useAuth` — mock to inject a fake user session
+- `@/hooks/useUserRole` — mock to control admin/collaborator context
+
+**Supabase mock pattern (to be established):**
+```typescript
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }),
+    auth: {
+      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+    },
+    functions: {
+      invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
+    channel: vi.fn().mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(),
+    }),
+    removeChannel: vi.fn(),
+  },
+}));
+```
+
+**What NOT to mock:**
+- Pure calculation functions from `src/types/orcamento.ts` — test them directly, they have no side effects
+- `src/lib/utils.ts` (`cn`, `getSaudacao`) — test directly
+- `src/test/setup.ts` globals — already applied automatically
+
+## Fixtures and Factories
+
+**No fixture files exist.** Test data should be defined inline as typed objects:
+
+```typescript
+import type { SistemaIluminacao, ItemFitaLED, ItemDriver } from "@/types/orcamento";
+
+const mockFita: ItemFitaLED = {
+  id: "fita-1",
+  codigo: "LF001",
+  descricao: "Fita LED 24V 10W/m",
+  wm: 10,
+  voltagem: 24,
+  metragemRolo: 5,
+  precoUnitario: 100,
+  precoMinimo: 80,
+};
+
+const mockDriver: ItemDriver = {
+  id: "driver-1",
+  codigo: "LD001",
+  descricao: "Driver 100W 24V",
+  potencia: 100,
+  voltagem: 24,
+  precoUnitario: 150,
+  precoMinimo: 120,
+};
+```
+
+**Location for shared fixtures (to be created):**
+- `src/test/fixtures/` — create this directory when shared test data is needed across multiple test files
+
+## Coverage
+
+**Requirements:** None enforced — no coverage thresholds in `vitest.config.ts`
+
+**View Coverage:**
+```bash
+npx vitest run --coverage
+```
+Note: `@vitest/coverage-v8` or `@vitest/coverage-istanbul` is not listed in `package.json` devDependencies — install one before running coverage.
+
+## Test Types
+
+**Unit Tests:**
+- Primary target: pure calculation functions in `src/types/orcamento.ts`
+- Functions like `calcularQtdDrivers`, `calcularDemandaFita`, `calcularConsumoW`, `calcularRolosPorGrupo`, `calcularDriversPorProjeto`, `limiteExtensaoMetros`, `analisarMagneto48V` are pure and trivially testable without mocking
+- Utility functions in `src/lib/utils.ts` (`cn`, `getSaudacao`)
+
+**Integration Tests:**
+- Not currently present
+- Recommended scope: hooks with mocked Supabase (`useAuth`, `useUserRole`, `useColaborador`)
+
+**E2E Tests:**
+- Not used — no Playwright/Cypress in dependencies
+
+## Critical Gap
+
+The test suite is effectively empty (only a `true === true` placeholder). The highest-value tests to add are unit tests for the domain calculation functions in `src/types/orcamento.ts` since they contain the core business logic (driver sizing, tape demand, roll optimization) and have zero external dependencies:
+
+- `calcularQtdDrivers` — tests for potência vs extensão limit branching, 12V/24V/48V cases
+- `calcularRolosPorGrupo` — tests for rolo optimization (greedy algorithm for 5/10/15m splits)
+- `calcularDriversPorProjeto` — tests for project-level driver grouping and economy calculation
+- `analisarMagneto48V` — tests for 48V magnetic system validation and driver recommendations
+
+Add test files at `src/test/orcamento.test.ts` (or `src/types/orcamento.test.ts` — both paths match the vitest `include` glob `src/**/*.{test,spec}.{ts,tsx}`).
 
 ---
 
-*Testing analysis: 2026-04-16*
+*Testing analysis: 2026-04-23*

@@ -1,264 +1,182 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-04-16
+**Analysis Date:** 2026-04-23
 
 ## Naming Patterns
 
 **Files:**
-- Components: PascalCase (e.g., `Step1DadosOrcamento.tsx`, `AmbienteCard.tsx`)
-- Hooks: camelCase with `use` prefix (e.g., `useAuth.ts`, `useProdutoSearch.ts`)
-- Pages: PascalCase (e.g., `Auth.tsx`, `Index.tsx`)
-- Utilities: camelCase (e.g., `utils.ts`, `gerarPdfHtml.ts`)
-- Tests: camelCase with `.test.ts` suffix (e.g., `example.test.ts`)
-- UI components: lowercase (e.g., `button.tsx`, `dialog.tsx`) — shadow-cn/ui library, auto-generated
+- React components: PascalCase matching component name — `AmbienteCard.tsx`, `Step3Revisao.tsx`, `ExceptionChat.tsx`
+- Custom hooks: camelCase with `use` prefix — `useAuth.ts`, `useUserRole.ts`, `useColaborador.ts`, `useValidarSistemas.ts`
+- shadcn-ui primitives: kebab-case — `use-toast.ts`, `use-mobile.tsx`
+- Utility/lib files: camelCase — `gerarPdfHtml.ts`, `utils.ts`
+- Pages: PascalCase — `Auth.tsx`, `Admin.tsx`, `Index.tsx`
 
 **Functions:**
-- React components: PascalCase (e.g., `Step1DadosOrcamento`, `AmbienteCard`)
-- Utility functions: camelCase (e.g., `getSaudacao()`, `cn()`, `calcularDemandaFita()`)
-- Handler functions: camelCase with `handle` prefix (e.g., `handleNext()`, `handleSelectProdutoLuminaria()`)
-- Domain calculation functions: camelCase without prefix (e.g., `calcularMetragemTotal()`, `calcularConsumoW()`)
+- Calculation/domain functions: camelCase with Portuguese verb prefix — `calcularMetragemTotal`, `calcularDemandaFita`, `calcularQtdDrivers`, `formatarMoeda`, `analisarMagneto48V`
+- React components: PascalCase — `AmbienteCard`, `Step3Revisao`, `ProdutoAutocomplete`
+- Event handlers: `handle` prefix — `handleSubmit`, `handleNovoOrcamento`, `handleCriarCliente`, `handleAction`
+- Fetch functions: `fetch` prefix — `fetchData`, `fetchExceptions`, `fetchProdutos`
+- Supabase payload converters: descriptive camelCase — `sistemaParaPayload`, `imageToBase64`
 
 **Variables:**
-- React state: camelCase (e.g., `isOpen`, `editingName`, `loading`)
-- Props interfaces: PascalCase with `Props` suffix (e.g., `Step1Props`, `AmbienteCardProps`)
-- Domain entities (Portuguese): camelCase + Portuguese nouns (e.g., `colaborador`, `ambiente`, `sistema`, `fita`, `driver`, `perfil`)
-- Constants: UPPER_SNAKE_CASE (e.g., `MARGEM_SEGURANCA_DRIVER = 1.05`, `STEPS = ["Dados", "Ambientes", "Revisão"]`)
-- Type literals: lowercase Portuguese (e.g., `'Primeiro Orçamento'`, `'Revisão 01'`, `'magneto_48v'`)
+- State variables: camelCase, often Portuguese nouns — `colaborador`, `orcamento`, `violacoes`, `gruposFita`
+- Boolean state: `is`/`loading`/`open`/`saving` prefixes — `isAdmin`, `loading`, `chatOpen`, `savingOrcamento`
+- Constants: SCREAMING_SNAKE_CASE for module-level — `MARGEM_SEGURANCA_DRIVER`, `TOAST_LIMIT`, `BATCH_SIZE`
+- Inline constants: PascalCase arrays — `RULES`, `STEPS`
 
-**Types:**
-- Interfaces: PascalCase, no prefix (e.g., `Produto`, `Ambiente`, `SistemaIluminacao`)
-- Type unions: lowercase snake_case for discriminator values (e.g., `'fita' | 'driver' | 'perfil'`)
-- Branded types: discriminated unions on `tipo_produto` field (e.g., `tipo_produto: 'fita' | 'driver' | 'perfil'`)
-- Deprecated types marked with `@deprecated` comment (e.g., `SistemaPerfil`)
+**Types/Interfaces:**
+- Domain entities: PascalCase Portuguese nouns — `Orcamento`, `Ambiente`, `SistemaIluminacao`, `ItemFitaLED`, `ItemDriver`
+- Component prop types: PascalCase with `Props` suffix — `AmbienteCardProps`, `Step3Props`, `ValidacaoPanelProps`
+- Local interfaces (not exported): PascalCase, defined at file top — `Violacao`, `PriceException`, `Message`, `OrcamentoRow`
+- Union string literals: single-quoted Portuguese strings — `'rascunho' | 'fechado' | 'perdido'`, `'Primeiro Orçamento' | 'Revisão 01'`
+- Export only types/interfaces shared across files; keep component-local types unexported
 
 ## Code Style
 
 **Formatting:**
-- No `.prettierrc` — relies on VS Code defaults (2-space indentation, LF line endings)
-- No explicit Prettier config; follows ESLint recommendations
+- No Prettier config present — formatting is ad-hoc/editor-driven
+- Single quotes for string literals in TypeScript/TSX
+- Semicolons used consistently
+- Inline JSX attributes on one line for short props, multi-line for long prop lists
+- Template literals used for string interpolation
+- `"` (double quotes) used inside JSX string props
 
 **Linting:**
-- ESLint config: `eslint.config.js` (using flat config format)
-- Extends: `js.configs.recommended` + `typescript-eslint.configs.recommended`
-- Key rules:
-  - `@typescript-eslint/no-unused-vars: "off"` — unused vars allowed
-  - `react-refresh/only-export-components: ["warn", ...]` — warn if non-component exports in component files
-  - React Hooks recommended rules enabled
-
-**TypeScript Strictness:**
-- `noImplicitAny: false` — allows implicit `any`
-- `strictNullChecks: false` — allows nullable types without explicit `| null`
-- `noUnusedLocals: false` — allows unused local variables
-- `noUnusedParameters: false` — allows unused function parameters
-- Low strictness; focus on runtime correctness via overloads and type guards
+- ESLint 9 with `typescript-eslint` recommended config (`eslint.config.js`)
+- `react-hooks/recommended` rules enabled
+- `@typescript-eslint/no-unused-vars` explicitly turned OFF — unused vars are tolerated
+- `react-refresh/only-export-components` is a warning, not an error
+- `strict: false` in `tsconfig.app.json` — TypeScript is lenient (no strict null checks, `noImplicitAny: false`)
 
 ## Import Organization
 
-**Order:**
-1. React/Core library imports (e.g., `import React from "react"`)
-2. External packages (e.g., `import { useNavigate } from "react-router-dom"`)
-3. UI components from shadcn-ui (e.g., `import { Button } from "@/components/ui/button"`)
-4. Internal hooks (e.g., `import { useAuth } from "@/hooks/useAuth"`)
-5. Internal types (e.g., `import type { Orcamento } from "@/types/orcamento"`)
-6. Internal utils (e.g., `import { getSaudacao } from "@/lib/utils"`)
-7. Assets (e.g., `import logo from "@/assets/logo.png"`)
-8. Third-party services (e.g., `import { supabase } from "@/integrations/supabase/client"`)
-9. Icons (e.g., `import { Plus, Trash2 } from "lucide-react"`)
-10. Toast/notifications (e.g., `import { toast } from "sonner"`)
+**Order (observed pattern):**
+1. React core — `import { useState, useEffect } from "react"`
+2. Third-party libraries — `react-router-dom`, `@tanstack/react-query`, `sonner`, `date-fns`, `lucide-react`
+3. Supabase client — `import { supabase } from "@/integrations/supabase/client"`
+4. Internal types — `import type { ... } from "@/types/orcamento"`
+5. Internal hooks — `import { useAuth } from "@/hooks/useAuth"`
+6. Internal components (shadcn-ui first, then custom) — `@/components/ui/...` then `@/components/...`
+7. Assets — `import logo from "@/assets/logo.png"`
 
 **Path Aliases:**
-- `@/*` → `./src/*` — all imports use the `@/` prefix for absolute imports
-- Examples: `@/hooks/useAuth`, `@/components/ui/button`, `@/types/orcamento`, `@/integrations/supabase/client`
+- `@/` maps to `src/` — used consistently across all files (configured in both `tsconfig.app.json` and `vitest.config.ts`)
+- Never use relative paths like `../../` — always use `@/`
+
+## Toast / Notification Pattern
+
+Two toast systems coexist — always use `sonner` for user-facing notifications in new code:
+
+**`sonner` (preferred for all new component/page code):**
+```typescript
+import { toast } from "sonner";
+
+toast.success("Cliente adicionado!");
+toast.error("Erro ao criar cliente");
+toast("Mensagem neutra");
+```
+Files using sonner: `src/components/AmbienteCard.tsx`, `src/components/AdminExceptions.tsx`, `src/components/ExceptionChat.tsx`, `src/pages/Admin.tsx`, `src/pages/Index.tsx`, `src/components/Step1DadosOrcamento.tsx`
+
+**`useToast` hook (legacy, only in `src/pages/Auth.tsx`):**
+```typescript
+import { useToast } from "@/hooks/use-toast";
+const { toast } = useToast();
+toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
+```
+Do not use `useToast` in new code. Use `sonner`.
+
+## Supabase Query Pattern
+
+Direct Supabase calls are made inside `useEffect` or async handler functions — TanStack Query is installed but not used for data fetching (no `useQuery`/`useMutation` calls found). Pattern is manual loading-state management:
+
+```typescript
+const [data, setData] = useState<Type[]>([]);
+const [loading, setLoading] = useState(true);
+
+const fetchData = async () => {
+  setLoading(true);
+  const { data } = await supabase.from("table").select("*");
+  setData(data || []);
+  setLoading(false);
+};
+
+useEffect(() => { fetchData(); }, [dependency]);
+```
+
+Use `.maybeSingle()` (not `.single()`) when a row may or may not exist — avoids throwing on empty results.
+
+Realtime subscriptions use the channel API:
+```typescript
+const channel = supabase
+  .channel("channel-name")
+  .on("postgres_changes", { event: "*", schema: "public", table: "table_name" }, callback)
+  .subscribe();
+return () => { supabase.removeChannel(channel); };
+```
 
 ## Error Handling
 
 **Patterns:**
-- Try-catch with early returns on errors
-- Supabase errors: check `.error` object, `throw error` to trigger catch block
-- Network errors: silenced in debounced hooks (e.g., `useValidarSistemas` catches all errors silently)
-- Type errors: use type guards (`'fita' in arg`) for function overloads
-- Constraint checks: guard conditions before operations (e.g., `if (!dados.tipo) { toast.error(...); return; }`)
+- Supabase errors: destructure `{ data, error }`, check `if (error)` or `throw error`, show toast to user
+- Edge function calls: wrapped in `try/catch`, errors logged with `console.error`, silent fallback or `null` state
+- Async handlers: `setLoading(true)` before, `setLoading(false)` in `finally` or after both success/error branches
+- User validation errors: `toast.error("message")` and `return` early before any async call
+- Never bubble errors to error boundaries — all errors are caught locally
 
-**Examples:**
+**`console.error` usage:** Only for non-user-facing errors (edge function failures, 404 route logging). User-visible errors always go through toast.
+
+## Form State
+
+Forms use inline `useState` for each field — no form library for most forms:
 ```typescript
-// Hook pattern: try-catch with console.error
-try {
-  const { data } = await supabase.from("...").select(...);
-  if (error) throw error;  // Explicit throw
-  setResults(data || []);
-} catch {
-  setResults([]);  // Silenced on network error
-} finally {
-  setLoading(false);
-}
-
-// Component pattern: early validation with toast
-if (!dados.tipo) {
-  toast.error("Selecione o tipo de orçamento");
-  return;
-}
-
-// Edge case: type guard with overloads
-if ('fita' in arg) {
-  // arg is SistemaIluminacao
-  const sis = arg as SistemaIluminacao;
-} else {
-  // arg is ItemPerfil
-  const perfil = arg as ItemPerfil;
-}
+const [email, setEmail] = useState("");
+const [loading, setLoading] = useState(false);
+// ...
+<Input value={email} onChange={(e) => setEmail(e.target.value)} />
 ```
+
+`react-hook-form` and `zod` are installed as dependencies but not used in any existing form. Do not introduce them for new forms unless there is significant validation complexity justifying it.
+
+## Component Design
+
+**Props:**
+- Props interfaces always defined immediately above the component function
+- Callback props named `on` + PascalCase verb — `onChange`, `onRemove`, `onNext`, `onPrev`, `onOpenChange`, `onStatusChange`
+- Optional props marked with `?` — `clienteId?: string`, `placeholder?: string`
+
+**Component export:** Always `export default ComponentName` at the end of the file. No named component exports.
+
+**Internal helpers:** Pure utility functions defined above the component function in the same file (not exported) — `getPasswordStrength`, `imageToBase64`, `derivarNomeInicial`, `sistemaParaPayload`, `PrecoInput`.
+
+**Conditional rendering:** Ternary for simple cases, early return for loading/empty states.
+
+## Styling
+
+**Tailwind CSS utilities:**
+- Use design token classes (`text-foreground`, `bg-card`, `text-muted-foreground`, `border-destructive`) not hard-coded colors
+- Hard-coded colors allowed for semantic states not in the token system — `bg-red-50`, `text-yellow-800`, `bg-emerald-500`
+- Use `cn()` from `src/lib/utils.ts` for conditional class merging:
+  ```typescript
+  import { cn } from "@/lib/utils";
+  className={cn("w-28", isAbaixoTabela && "border-destructive text-destructive")}
+  ```
+
+**shadcn-ui component usage:**
+- Always import from `@/components/ui/` — never directly from `@radix-ui/*`
+- Compose shadcn primitives (Card, Dialog, Table, Badge, etc.) rather than building custom markup
+- Icons exclusively from `lucide-react`
+
+## Language Convention
+
+- **UI text:** Brazilian Portuguese — button labels, error messages, placeholder text, section headings
+- **Code identifiers:** English or Portuguese camelCase depending on domain — domain types use Portuguese (`Orcamento`, `Ambiente`, `colaborador`), infrastructure/React patterns use English (`loading`, `error`, `user`, `session`)
+- **Comments:** Portuguese for domain logic, English for infrastructure code
+- **JSDoc:** Used sparingly — only on exported calculation functions in `src/types/orcamento.ts` with `/** ... */` style
 
 ## Logging
 
-**Framework:** `console.error()` only — no structured logging
-- Used only for unexpected failures (e.g., `console.error("Falha ao auto-criar colaborador:", err)`)
-- Network errors in hooks are silenced intentionally (offline validation as fallback)
-- User-facing errors: always show via `toast()` from Sonner
-
-**Patterns:**
-```typescript
-console.error("Erro ao salvar orçamento:", err);
-console.error("Erro ao gerar PDF:", err);
-console.error("Error creating colaborador:", res.error);
-```
-
-## Comments
-
-**When to Comment:**
-- Explain WHY, not WHAT (code is self-documenting via naming)
-- Business rules with numbers/magic constants (e.g., `// MARGEM_SEGURANCA_DRIVER = 1.05 (paridade com edge function)`)
-- Complex algorithm sections marked with comment dividers
-- Deprecated items marked with `@deprecated`
-
-**JSDoc/TSDoc:**
-- Used sparingly; optional parameter documentation only
-- Public interfaces documented (e.g., `/** Sistema de Iluminação: fita + driver obrigatórios, perfil opcional */`)
-- Overloaded functions documented above first signature only
-
-**Example:**
-```typescript
-/** Margem de segurança aplicada sobre a potência consumida ao dimensionar drivers.
- * Mantém paridade com a edge function `validar-sistema-orcamento` (fator 1.05). */
-export const MARGEM_SEGURANCA_DRIVER = 1.05;
-
-/** Metragem de fita necessária para o sistema */
-export function calcularDemandaFita(sistema: SistemaIluminacao): number;
-export function calcularDemandaFita(perfil: ItemPerfil): number;
-export function calcularDemandaFita(arg: SistemaIluminacao | ItemPerfil): number {
-  // Implementation with type guard
-}
-```
-
-## Function Design
-
-**Size:** No hard limit; business calculation functions in `src/types/orcamento.ts` range 30-50 LOC
-- Component event handlers: 5-15 LOC
-- Utility functions: 10-30 LOC
-- Complex calculations: up to 50 LOC (e.g., `calcularDriversPorProjeto`)
-
-**Parameters:**
-- Single object when 2+ parameters (e.g., `handleSelectProdutoLuminaria(produto: Produto, index: number)`)
-- Destructuring in function signature preferred
-- Optional parameters: suffix with `?` (e.g., `imagemUrl?: string`)
-
-**Return Values:**
-- Always explicit: no implicit `undefined` returns
-- Objects for multiple values: `{ qtd: number; motivo: string; ... }`
-- Arrays for collections: `Violacao[]`, `ResumoDriverProjeto[]`
-- Null for "no result": `perfil: ItemPerfil | null`, `| null` instead of optional
-
-## Module Design
-
-**Exports:**
-- Named exports for utilities and hooks (e.g., `export function useAuth()`)
-- Default export for React components (e.g., `export default Step1DadosOrcamento`)
-- Type exports with `type` keyword (e.g., `export type StatusOrcamento = 'rascunho' | 'fechado' | 'perdido'`)
-- Constants exported as regular exports (e.g., `export const MARGEM_SEGURANCA_DRIVER = 1.05`)
-
-**Barrel Files:**
-- None used; direct imports preferred
-- UI component re-exports in `src/components/ui/` but not for business logic
-
-**Organization:**
-- Business types/calculations in single file: `src/types/orcamento.ts` (390+ LOC, comprehensive)
-- Each hook in separate file: `src/hooks/useAuth.ts`, `src/hooks/useProdutoSearch.ts`
-- Feature components grouped by feature: `Step1DadosOrcamento.tsx`, `Step2Ambientes.tsx`
-- UI components in `src/components/ui/` (shadcn-ui library)
-- Pages in `src/pages/`
-
-## Supabase Client Usage
-
-**Pattern:**
-- Direct `.from()` calls for queries (no abstraction layer)
-- Client initialized in `src/integrations/supabase/client.ts` with auto-refresh enabled
-- Types auto-generated in `src/integrations/supabase/types.ts` (never edit manually)
-- Edge functions called via `.functions.invoke()`
-- RLS enforced; some tables require service_role (e.g., `colaboradores` creation)
-
-**Examples:**
-```typescript
-// Direct query
-const { data } = await supabase
-  .from("produtos")
-  .select("...")
-  .eq('tipo_produto', 'fita')
-  .limit(50);
-
-// Check single row
-const { data } = await supabase
-  .from("allowed_users")
-  .select("email")
-  .eq("email", email.toLowerCase().trim())
-  .maybeSingle();
-
-// Insert
-await supabase.from("clientes").insert({ nome: novoClienteNome.trim() });
-
-// Edge function
-await supabase.functions.invoke("create-colaborador", {
-  body: { nome, user_id },
-});
-```
-
-## Form Handling
-
-**Framework:** `react-hook-form` with shadcn-ui wrapper components
-- Components: `Form`, `FormField`, `FormItem`, `FormLabel`, `FormControl`, `FormDescription`, `FormMessage`
-- No schema validation in forms; validation mostly client-side via business logic
-- Complex inputs: custom components wrapping `Input` (e.g., `PrecoInput`)
-
-**Pattern:**
-```typescript
-const [valor, setValor] = useState(0);
-const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const raw = e.target.value;
-  onChange(raw === "" ? 0 : (parseFloat(raw) || 0));
-};
-<Input
-  type="number"
-  min={0}
-  step={0.10}
-  value={valor}
-  onChange={handleChange}
-/>
-```
-
-## Database Field Mapping
-
-**Supabase field names:** snake_case in database
-**Frontend mapping:** camelCase in domain types with intentional renaming via `.select()` aliases
-
-Example from `useProdutoSearch.ts`:
-```typescript
-.select(
-  "id, codigo, descricao, preco_tabela, preco_minimo, imagem_url, " +
-  "voltagem:tensao, wm:watts_por_metro, passadas:passadas_padrao, " +
-  "familia_perfil, driver_tipo:subtipo, ..."
-)
-```
-
-Maps `tensao` (DB) → `voltagem` (TypeScript), `watts_por_metro` → `wm`, etc.
+**No structured logging framework.** Use `console.error` only for non-recoverable background failures (edge function invocation errors, unexpected 404s). Do not use `console.log` for debugging in committed code.
 
 ---
 
-*Convention analysis: 2026-04-16*
+*Convention analysis: 2026-04-23*

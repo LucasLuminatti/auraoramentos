@@ -1,167 +1,161 @@
 # External Integrations
 
-**Analysis Date:** 2026-04-16
+**Analysis Date:** 2026-04-23
 
 ## APIs & External Services
 
-**Supabase (Primary Backend):**
-- **Service:** Supabase (supabase.com) - Full-stack backend platform
-- **What it's used for:** Authentication, database, real-time subscriptions, file storage, edge functions
-- **SDK/Client:** @supabase/supabase-js 2.95.3
-- **Client location:** `src/integrations/supabase/client.ts` (auto-generated)
-- **Auth:** Environment variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
+**Email Service:**
+- Resend - Email provider for onboarding and approval notifications
+  - SDK/Client: npm package `resend@2.0.0` (used in Edge Functions)
+  - Auth: `RESEND_API_KEY` (stored as Supabase secret)
+  - Sender email: `noreply@orcamentosaura.com.br` (custom domain via Registro.br)
+  - Domain configuration: DKIM, SPF, DMARC configured at domain registrar
 
 ## Data Storage
 
 **Databases:**
-- **Type/Provider:** PostgreSQL (hosted via Supabase)
-- **Connection:** Via Supabase client in `src/integrations/supabase/client.ts`
-  - Auth storage: localStorage (configured for session persistence and auto-refresh)
-  - Typed via auto-generated `src/integrations/supabase/types.ts`
-- **Client:** @supabase/supabase-js (JavaScript client, no ORM in frontend)
-- **Query patterns:**
-  - Direct `.from(table).select()` queries in components (e.g., `useUserRole.ts`)
-  - Real-time subscriptions via `.channel()` and `.subscribe()` (e.g., `Step3Revisao.tsx`)
-  - Realtime updates for price exceptions in `Step3Revisao.tsx` lines 125-138
-
-**Tables in use (identified from codebase):**
-- `user_roles` - User permission matrix (admin checks)
-- `price_exceptions` - Price negotiation requests and approval tracking
-- `colaboradores` - Collaborator profiles and metadata
-- `produtos` - Product catalog (LED tapes, drivers, profiles)
-- `cliente_arquivos` - Client file attachments and metadata
-- `orcamentos` - Budget/quote records
-- (Additional tables auto-generated in `src/integrations/supabase/types.ts`)
+- Supabase PostgreSQL
+  - Project ID: `jkewlaezvrbuicmncqbj`
+  - Region: sa-east-1
+  - Connection: Auto-configured via Supabase client in `src/integrations/supabase/client.ts`
+  - Client: @supabase/supabase-js v2.95.3
+  - Auto-generated types: `src/integrations/supabase/types.ts`
 
 **File Storage:**
-- **Buckets:**
-  - `cliente-arquivos` - Client project documents and attachments
-    - Managed via `supabase.storage.from("cliente-arquivos")`
-    - Referenced in `src/components/DriveExplorer.tsx`, `src/components/ClienteArquivos.tsx`
-  - `produto-imagens` - Product images (LED tapes, drivers, profiles)
-    - Managed via `supabase.storage.from("produto-imagens")`
-    - Referenced in `src/components/ImportImagens.tsx`
-- **Upload/Download:** Via Supabase Storage API (`.upload()`, `.remove()`, `.getPublicUrl()`)
+- Supabase Storage buckets - Client/project document storage (accessed via `Drive.tsx` page)
+- Local filesystem only for exports (PDF generation via html2pdf.js, Excel via xlsx)
 
 **Caching:**
-- TanStack React Query (in-memory client-side caching)
-  - Not currently being used for Supabase queries (direct calls instead)
-  - Configured in `src/App.tsx` but no QueryClient hooks observed in data fetching
+- TanStack React Query - Server state caching (QueryClient initialized in `src/App.tsx`)
+- No Redis or external cache layer
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- **Service:** Supabase Auth (built-in)
-- **Implementation:** Email/password authentication
-  - Session management via `supabase.auth.onAuthStateChange()` (real-time listener)
-  - Auto-refresh token enabled in client config
-  - Logout via `supabase.auth.signOut()`
-- **Hook:** `src/hooks/useAuth.ts`
-  - Returns: `user`, `session`, `loading`, `signOut` function
-  - Subscribes to auth state changes and persists via localStorage
+- Supabase Auth (built-in)
+  - Implementation: Email/password via Supabase SDK
+  - Session storage: localStorage with persistent session
+  - Auto-refresh: Token auto-refresh enabled
+  - Role-based access: `useUserRole()` hook checks admin vs. collaborator roles
+  - Access control via `allowed_users` and `access_requests` tables
 
-**Authorization:**
-- Role-based access control (RBAC) via `user_roles` table
-- Admin check in `src/hooks/useUserRole.ts` - queries `user_roles` table for "admin" role
-- Protected routes in `src/App.tsx`:
-  - `/auth` - Public (Auth page)
-  - `/` - Protected (ProtectedRoute HOC)
-  - `/admin` - Admin-only (AdminRoute HOC)
-  - `/admin/upload-imagens` - Admin-only
-  - `/drive` - Protected
-
-## Monitoring & Observability
-
-**Error Tracking:**
-- Not detected - No error tracking service (Sentry, LogRocket, etc.)
-
-**Logs:**
-- Client-side: Sonner toast notifications for user-facing events
-  - Success/error messages in `Step3Revisao.tsx` (lines 132-136)
-- Server-side: Edge Functions (Deno) - standard stdout/stderr logging
-  - No dedicated logging service
-
-**Real-time Debugging:**
-- Supabase client logs available via browser DevTools
-- Redux DevTools or similar: Not detected
-
-## CI/CD & Deployment
-
-**Hosting:**
-- Frontend: Not specified (likely Vercel, Netlify, or similar static host)
-- Backend: Supabase hosted cloud platform
-  - Region: Inferred from project ID `qirsfbypqfeobcnkgspk` (default region may be US-East)
-
-**CI Pipeline:**
-- Not detected - No GitHub Actions, GitLab CI, or similar found
-
-**Build Process:**
-- Build command: `npm run build` (runs `vite build`)
-- Dev command: `npm run dev` (runs `vite`)
-- Output: Static SPA (single-page application)
-
-## Environment Configuration
-
-**Required env vars:**
-```
-VITE_SUPABASE_URL=https://qirsfbypqfeobcnkgspk.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<pk_live_...>
-```
-
-**Secrets location:**
-- `.env` file (present at project root)
-- **WARNING:** Never commit `.env` - use `.gitignore`
+**Access Control Flow:**
+1. User requests access via `/request-access` page
+2. `request-access` Edge Function validates and stores in `access_requests` table
+3. Admin approves/rejects via `review-access` Edge Function (verify_jwt=false)
+4. Approved users added to `allowed_users` table and can signup via `/auth?mode=signup`
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- Real-time database triggers via Supabase (`postgres_changes` events)
-  - Price exception approvals/rejections in `Step3Revisao.tsx` (lines 126-138)
-  - Channel subscription: `supabase.channel("step3-exceptions")`
+- None - Supabase Auth redirects handled client-side
 
 **Outgoing:**
-- Supabase Edge Functions (server-side business logic):
-  - `supabase/functions/validar-sistema-orcamento/` - System validation logic (~506 lines)
-    - Input: System configuration (tape, driver, profile, tension)
-    - Output: Validation errors, alerts, suggestions
-  - `supabase/functions/create-colaborador/` - Collaborator creation
-  - `supabase/functions/import-precos/` - Price import batch processing
-  - `supabase/functions/import-produtos/` - Product import batch processing
-  - `supabase/functions/request-access/` - Access request workflow
-  - `supabase/functions/review-access/` - Access request review and approval
+- Email notifications via Resend:
+  - New access requests → admin email
+  - Access approval confirmation → requester email
+  - Access rejection notice → requester email
+  - Managed in `supabase/functions/request-access/index.ts` and `supabase/functions/review-access/index.ts`
 
-## External Data Sources
+## Edge Functions
 
-**Product Catalog:**
-- Imported via Admin dashboard (`AdminProductos.tsx`)
-- Source: Excel/CSV files uploaded by admins
-- Processing: `supabase/functions/import-produtos/`
+Supabase Edge Functions (Deno runtime, TypeScript):
 
-**Product Images:**
-- Uploaded to `produto-imagens` bucket
-- Processing: `supabase/functions/import-imagens/` (implied)
+**1. validar-sistema-orcamento**
+- Location: `supabase/functions/validar-sistema-orcamento/index.ts`
+- Purpose: Validates lighting systems (fita, driver, perfil compatibility)
+- Input: Array of lighting system items with specifications
+- Output: Validation results (errors, alerts, suggestions)
+- Dependencies: Supabase client (reads `regras_compatibilidade_perfil` table)
+- No JWT verification (public endpoint)
 
-**Pricing Data:**
-- Imported via Admin dashboard (`AdminPrecos.tsx`)
-- Source: Excel/CSV files uploaded by admins
-- Processing: `supabase/functions/import-precos/`
+**2. create-colaborador**
+- Location: `supabase/functions/create-colaborador/index.ts`
+- Purpose: Auto-creates collaborator record when user signs up
+- Triggered by: `useColaborador()` hook in `src/hooks/useColaborador.ts`
+- Input: nome, cargo, departamento, user_id
+- Output: Created record from `colaboradores` table
+- Uses: SERVICE_ROLE_KEY for admin access
+- JWT verification: Required (implicit)
 
-## Client-Side Libraries for Integration
+**3. request-access**
+- Location: `supabase/functions/request-access/index.ts`
+- Purpose: Handles new access requests from public users
+- Input: name, email
+- Flow:
+  1. Validates against existing requests
+  2. Inserts into `access_requests` table
+  3. Generates HMAC-signed approval link (24h expiry)
+  4. Emails admin with approve/reject links
+- Email template: styled HTML with approve/reject CTAs
+- JWT verification: false (public endpoint, verify_jwt=false in config)
 
-**Form Submission:**
-- React Hook Form + Zod for validation
-- Direct Supabase API calls in event handlers (no centralized API layer)
+**4. review-access**
+- Location: `supabase/functions/review-access/index.ts`
+- Purpose: Processes admin approval/rejection of access requests
+- Input: action (approve/reject), requestId, token (HMAC signed)
+- Flow:
+  1. Verifies HMAC signature (prevents tampering)
+  2. Checks token expiry (24h)
+  3. Updates `access_requests` status (APPROVED/REJECTED)
+  4. If approved: adds to `allowed_users` table
+  5. Sends email to requester
+- Returns: HTML page with status (cannot re-process approved/rejected requests)
+- JWT verification: false (allow clickthrough from email, verify_jwt=false in config)
 
-**Realtime Subscriptions:**
-- Supabase Realtime (`WebSocket`)
-  - Price exception status changes streamed to clients
-  - ~50ms latency for exception approvals
+**5. import-precos**
+- Location: `supabase/functions/import-precos/index.ts`
+- Purpose: Bulk import product pricing (admin only)
+- Triggered by: `ImportPrecos.tsx` component
+- Input: Excel file (multipart/form-data) with price updates
+- Parses and upserts into pricing tables
+- JWT verification: Required
 
-**PDF Export:**
-- html2pdf.js (converts DOM to PDF client-side)
-- Budget PDFs generated without server involvement
-- Images converted to base64 before PDF embedding (see `imageToBase64` in `Step3Revisao.tsx`)
+**6. import-produtos**
+- Location: `supabase/functions/import-produtos/index.ts`
+- Purpose: Bulk import product catalog (admin only)
+- Triggered by: `ImportProdutos.tsx` component
+- Input: Excel file with product data
+- Parses and upserts into product tables
+- JWT verification: Required
+
+## Environment Configuration
+
+**Required frontend env vars (.env.local or via Vercel):**
+- `VITE_SUPABASE_URL` - Supabase project URL
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon/public key
+
+**Required Edge Function secrets (set in Supabase dashboard):**
+- `RESEND_API_KEY` - API key for Resend email service
+- `ADMIN_EMAIL` - Admin email for access request notifications
+- `APPROVAL_TOKEN_SECRET` - Secret for HMAC-signing approval tokens
+- `SUPABASE_URL` - Supabase project URL (auto-provided by Supabase)
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations (auto-provided)
+- `APP_URL` - Frontend URL (defaults to https://auraoramentos-kappa.vercel.app)
+
+**Secrets location:**
+- Environment variables: Vercel project settings (production) or .env.local (development)
+- Edge Function secrets: Supabase project dashboard → Settings → Functions
+
+## Deployment & Hosting
+
+**Frontend:**
+- Vercel (auraoramentos-kappa.vercel.app)
+- Deployed from: https://github.com/LucasLuminatti/auraoramentos (main branch)
+- Built with: `vite build` → dist/ → Vercel static hosting
+
+**Backend:**
+- Supabase Edge Functions
+- Deno runtime, deployed via `supabase functions deploy` CLI
+- Environment: Supabase managed environment (sa-east-1)
+
+## CI/CD
+
+**Pipeline:**
+- No automated CI/CD detected in config (manual deployment)
+- Vercel auto-deploys from GitHub main branch (if connected)
+- Edge Functions deployed via Supabase CLI manually
 
 ---
 
-*Integration audit: 2026-04-16*
+*Integration audit: 2026-04-23*
