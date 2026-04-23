@@ -112,58 +112,60 @@ Marcos/ciclos futuros. Não entram neste marco.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PREP-01 | Phase [N] | Pending |
-| PREP-02 | Phase [N] | Pending |
-| PREP-03 | Phase [N] | Pending |
-| PREP-04 | Phase [N] | Pending |
-| AUTH-UAT-01 | Phase [N] | Pending |
-| AUTH-UAT-02 | Phase [N] | Pending |
-| AUTH-UAT-03 | Phase [N] | Pending |
-| AUTH-UAT-04 | Phase [N] | Pending |
-| AUTH-UAT-05 | Phase [N] | Pending |
-| AUTH-UAT-06 | Phase [N] | Pending |
-| ORC-UAT-01 | Phase [N] | Pending |
-| ORC-UAT-02 | Phase [N] | Pending |
-| ORC-UAT-03 | Phase [N] | Pending |
-| ORC-UAT-04 | Phase [N] | Pending |
-| ORC-UAT-05 | Phase [N] | Pending |
-| ORC-UAT-06 | Phase [N] | Pending |
-| ORC-UAT-07 | Phase [N] | Pending |
-| ORC-UAT-08 | Phase [N] | Pending |
-| ORC-UAT-09 | Phase [N] | Pending |
-| ORC-UAT-10 | Phase [N] | Pending |
-| ORC-UAT-11 | Phase [N] | Pending |
-| ORC-UAT-12 | Phase [N] | Pending |
-| ADM-UAT-01 | Phase [N] | Pending |
-| ADM-UAT-02 | Phase [N] | Pending |
-| ADM-UAT-03 | Phase [N] | Pending |
-| ADM-UAT-04 | Phase [N] | Pending |
-| ADM-UAT-05 | Phase [N] | Pending |
-| ADM-UAT-06 | Phase [N] | Pending |
-| ADM-UAT-07 | Phase [N] | Pending |
-| ADM-UAT-08 | Phase [N] | Pending |
-| DRV-UAT-01 | Phase [N] | Pending |
-| DRV-UAT-02 | Phase [N] | Pending |
-| DRV-UAT-03 | Phase [N] | Pending |
-| DRV-UAT-04 | Phase [N] | Pending |
-| EDGE-UAT-01 | Phase [N] | Pending |
-| EDGE-UAT-02 | Phase [N] | Pending |
-| EDGE-UAT-03 | Phase [N] | Pending |
-| EDGE-UAT-04 | Phase [N] | Pending |
-| CROSS-UAT-01 | Phase [N] | Pending |
-| CROSS-UAT-02 | Phase [N] | Pending |
-| CROSS-UAT-03 | Phase [N] | Pending |
-| CROSS-UAT-04 | Phase [N] | Pending |
-| CROSS-UAT-05 | Phase [N] | Pending |
-| FIX-01 | Phase [N] | Pending |
-| FIX-02 | Phase [N] | Pending |
-| REP-01 | Phase [N] | Pending |
+| PREP-01 | Phase 1 | Pending |
+| PREP-02 | Phase 1 | Pending |
+| PREP-03 | Phase 1 | Pending |
+| PREP-04 | Phase 1 | Pending |
+| AUTH-UAT-01 | Phase 2 | Pending |
+| AUTH-UAT-02 | Phase 2 | Pending |
+| AUTH-UAT-03 | Phase 2 | Pending |
+| AUTH-UAT-04 | Phase 2 | Pending |
+| AUTH-UAT-05 | Phase 2 | Pending |
+| AUTH-UAT-06 | Phase 2 | Pending |
+| ORC-UAT-01 | Phase 2 | Pending |
+| ORC-UAT-02 | Phase 2 | Pending |
+| ORC-UAT-03 | Phase 2 | Pending |
+| ORC-UAT-04 | Phase 2 | Pending |
+| ORC-UAT-05 | Phase 2 | Pending |
+| ORC-UAT-06 | Phase 2 | Pending |
+| ORC-UAT-07 | Phase 2 | Pending |
+| ORC-UAT-08 | Phase 2 | Pending |
+| ORC-UAT-09 | Phase 2 | Pending |
+| ORC-UAT-10 | Phase 2 | Pending |
+| ORC-UAT-11 | Phase 2 | Pending |
+| ORC-UAT-12 | Phase 2 | Pending |
+| ADM-UAT-01 | Phase 3 | Pending |
+| ADM-UAT-02 | Phase 3 | Pending |
+| ADM-UAT-03 | Phase 3 | Pending |
+| ADM-UAT-04 | Phase 3 | Pending |
+| ADM-UAT-05 | Phase 3 | Pending |
+| ADM-UAT-06 | Phase 3 | Pending |
+| ADM-UAT-07 | Phase 3 | Pending |
+| ADM-UAT-08 | Phase 3 | Pending |
+| DRV-UAT-01 | Phase 3 | Pending |
+| DRV-UAT-02 | Phase 3 | Pending |
+| DRV-UAT-03 | Phase 3 | Pending |
+| DRV-UAT-04 | Phase 3 | Pending |
+| EDGE-UAT-01 | Phase 3 | Pending |
+| EDGE-UAT-02 | Phase 3 | Pending |
+| EDGE-UAT-03 | Phase 3 | Pending |
+| EDGE-UAT-04 | Phase 3 | Pending |
+| CROSS-UAT-01 | Phase 4 | Pending |
+| CROSS-UAT-02 | Phase 4 | Pending |
+| CROSS-UAT-03 | Phase 4 | Pending |
+| CROSS-UAT-04 | Phase 4 | Pending |
+| CROSS-UAT-05 | Phase 4 | Pending |
+| FIX-01 | Phase 2 | Pending |
+| FIX-02 | Phase 4 | Pending |
+| REP-01 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 46 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 46 ⚠️ (will be resolved by roadmapper)
+- Mapped to phases: 46 (100%)
+- Unmapped: 0 ✓
+
+**Note on FIX-01:** mapeado formalmente a Phase 2 (primeira fase em que UAT é executado e bugs podem aparecer). A prática de fix-on-the-fly continua como critério de sucesso em Phase 3 — sem duplicar o requirement na traceability.
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after initial definition*
+*Last updated: 2026-04-23 after roadmap creation (traceability populated)*
