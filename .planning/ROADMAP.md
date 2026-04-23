@@ -1,66 +1,97 @@
-# Roadmap: AURA — Marco 1 (Validacao)
+# Roadmap: AURA — Marco 1 (Melhorias v1)
 
-**Created:** 2026-04-23
-**Milestone:** Marco 1 — Validacao (UAT ate zero bug)
-**Deadline:** 2026-04-30
+**Defined:** 2026-04-23
 **Granularity:** coarse
-**Core Value:** Um colaborador consegue montar um orcamento real, do zero ao PDF entregue, sem bug e sem precisar de suporte.
+**Coverage:** 42/42 v1 requirements mapped
+**Mode:** yolo (parallelization enabled)
+
+> **Contexto:** AURA em produção (Vercel kappa). Marco 1 = primeiro ciclo estruturado de melhorias pós-lançamento. Todas as mudanças de schema são aditivas — nada destrutivo em dados de produção.
 
 ## Phases
 
-- [ ] **Phase 1: Preparacao do UAT** — Checklist escrito, contas de teste prontas, git limpo, template de bug versionado
-- [ ] **Phase 2: UAT Core — Colaborador (Auth + Wizard)** — Caminho critico do colaborador: do cadastro ao PDF gerado, sem bug
-- [ ] **Phase 3: UAT Admin + Infra (Admin + Drive + Edge)** — Dashboard admin, file explorer e edge functions validados, sem bug
-- [ ] **Phase 4: Varredura Transversal e Fechamento** — Consoles limpos, zero cosmetico, relatorio final de UAT entregue
+- [ ] **Phase 1: Schema & Prep** — Limpar git pendente e aplicar todas as migrations aditivas (arquitetos, FKs, campos novos) que desbloqueiam as fases seguintes
+- [ ] **Phase 2: Cadastros & Arquiteto CRUD** — Signup expandido (CPF/telefone/setor), form de cliente com arquiteto, CRUD de arquitetos no admin e vinculação dos produtos existentes
+- [ ] **Phase 3: Produtos & Importação** — UI de cadastro manual de produto, cadastro dos 16 itens faltantes e importação CSV completa (create + preços + imagens + preview + erros por linha)
+- [ ] **Phase 4: Drive RLS & Reorganização Admin** — RLS do Drive por colaborador, visualização detalhada de pedido, tela de preços, docs de exceção e reorganização das abas
+- [ ] **Phase 5: PDF Redesign** — Reconstrução do PDF com layout tipográfico limpo, remoção das 4 caixas e texto final formatado
+- [ ] **Phase 6: Filtros & Smoke** — Filtros por arquiteto (clientes/produtos/pedidos), filtros combináveis e smoke test manual em prod
 
 ## Phase Details
 
-### Phase 1: Preparacao do UAT
-**Goal**: Tudo o que precisa estar pronto antes da primeira tela ser testada esta pronto — sem improvisar quando a execucao comecar.
-**Depends on**: Nothing (first phase)
-**Requirements**: PREP-01, PREP-02, PREP-03, PREP-04
+### Phase 1: Schema & Prep
+**Goal**: Base de dados pronta para receber todas as features do marco — com git limpo e migrations aditivas aplicadas em produção sem quebrar nada existente
+**Depends on**: Nothing (primeira fase)
+**Requirements**: PREP-01, ARQ-01, ARQ-03, ARQ-04, ARQ-05
 **Success Criteria** (what must be TRUE):
-  1. `.planning/uat/CHECKLIST.md` existe, cobre 100% das Validated do PROJECT.md, organizado por fluxo (auth, wizard, admin, drive, edge, transversal)
-  2. Template de relatorio de bug existe (campos: esperado, ocorrido, passos, severidade, status, commit de fix)
-  3. Git status limpo: mudancas pendentes em `request-access`, `review-access`, `config.toml` e `linked-project.json` foram commitadas ou revertidas com decisao documentada
-  4. Conta admin de teste e conta colaborador de teste autenticam em prod (vercel kappa) e tem dados minimos para rodar todos os fluxos
+  1. `git status` limpo — edge functions `request-access`/`review-access` e `supabase/config.toml` commitados ou revertidos com decisão explícita
+  2. Tabela `arquitetos` existe em produção com colunas `id`, `nome`, `contato` (nullable), `created_at`
+  3. Coluna `arquiteto_id` (nullable, FK) existe em `clientes` e `produtos`
+  4. Colunas `cpf`, `telefone`, `setor` (nullable) existem em `colaboradores`; `contato` e `cpf_cnpj` existem em `clientes`
+  5. Wizard de orçamento, login e admin continuam funcionando em produção sem regressão visível (colunas novas vazias não quebram render)
 **Plans**: TBD
 
-### Phase 2: UAT Core — Colaborador (Auth + Wizard)
-**Goal**: O caminho critico do colaborador — cadastrar, logar, montar orcamento, gerar PDF — executa fim a fim em prod sem bug, com correcoes on-the-fly aplicadas.
+### Phase 2: Cadastros & Arquiteto CRUD
+**Goal**: Usuários novos entram com dados completos (CPF/telefone/setor), clientes podem ser vinculados a arquitetos e admin gerencia arquitetos como entidade própria
 **Depends on**: Phase 1
-**Requirements**: AUTH-UAT-01, AUTH-UAT-02, AUTH-UAT-03, AUTH-UAT-04, AUTH-UAT-05, AUTH-UAT-06, ORC-UAT-01, ORC-UAT-02, ORC-UAT-03, ORC-UAT-04, ORC-UAT-05, ORC-UAT-06, ORC-UAT-07, ORC-UAT-08, ORC-UAT-09, ORC-UAT-10, ORC-UAT-11, ORC-UAT-12, FIX-01
+**Requirements**: USR-01, USR-02, USR-03, USR-04, CLI-01, CLI-02, CLI-03, ARQ-02, PROD-03, PROD-04
 **Success Criteria** (what must be TRUE):
-  1. Todos os 6 itens AUTH-UAT marcados como passed no CHECKLIST (cadastro, login, reset, logout, role gate, auto-create colaborador)
-  2. Todos os 12 itens ORC-UAT marcados como passed — wizard completo (lista de clientes, Step 1, Step 2 CRUD ambientes/luminarias/sistemas, Step 3 calculos/violacao/excecao/PDF/snapshot)
-  3. PDF real gerado e baixado em prod com layout correto (cabecalho, ambientes, itens, totais, precos) e registro correspondente em `orcamentos` no Supabase
-  4. Todo bug encontrado foi corrigido via commit+push, retestado no mesmo fluxo, e registrado no template de bug (FIX-01)
-  5. Zero bugs abertos em AUTH-UAT ou ORC-UAT ao final da fase
+  1. Signup pede CPF (validado pelo algoritmo brasileiro), telefone mascarado e setor (enum) — não avança sem os três
+  2. Colaborador antigo que ainda não tem CPF/telefone/setor consegue preencher após login sem ser bloqueado
+  3. Admin tem seção de arquitetos com listar/criar/editar/excluir funcionando ponta-a-ponta
+  4. Form de criar cliente aceita contato, CPF/CNPJ e seletor de arquiteto (autocomplete contra `arquitetos`), todos opcionais
+  5. Produto existente no admin pode ter arquiteto atribuído/alterado via edição
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 3: UAT Admin + Infra (Admin + Drive + Edge)
-**Goal**: O lado admin (dashboard completo), o Drive e as edge functions executam sem bug em prod, com correcoes on-the-fly aplicadas.
-**Depends on**: Phase 2
-**Requirements**: ADM-UAT-01, ADM-UAT-02, ADM-UAT-03, ADM-UAT-04, ADM-UAT-05, ADM-UAT-06, ADM-UAT-07, ADM-UAT-08, DRV-UAT-01, DRV-UAT-02, DRV-UAT-03, DRV-UAT-04, EDGE-UAT-01, EDGE-UAT-02, EDGE-UAT-03, EDGE-UAT-04
+### Phase 3: Produtos & Importação
+**Goal**: Catálogo de produtos é gerenciável do zero (cadastro manual claro) e importação CSV passa a ser ferramenta de verdade (create/update/imagens/preview/erros)
+**Depends on**: Phase 2 (arquiteto precisa estar selecionável no form de produto)
+**Requirements**: PROD-01, PROD-02, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06
 **Success Criteria** (what must be TRUE):
-  1. Todos os 8 itens ADM-UAT marcados como passed — 5 abas (Produtos, Colaboradores, Orcamentos, Clientes, Excecoes), upload de imagens, CSV de produtos/precos, aprovacao de excecao com reflexo real-time no Step 3
-  2. Todos os 4 itens DRV-UAT marcados como passed — listagem, upload (drag-drop e botao), navegacao com breadcrumb, download e exclusao
-  3. Todas as 4 edge functions (`request-access`, `review-access`, `create-colaborador`, `validar-sistema-orcamento`) executam sem erro quando acionadas pelos fluxos correspondentes — verificavel em logs do Supabase
-  4. Todo bug encontrado foi corrigido via commit+push, retestado no mesmo fluxo, e registrado no template de bug (FIX-01 aplicado tambem nesta fase)
-  5. Zero bugs abertos em ADM-UAT, DRV-UAT ou EDGE-UAT ao final da fase
+  1. Admin tem formulário manual de produto com nome, descrição, upload de imagem, preço, preço mínimo e seletor de arquiteto — salva e aparece no catálogo
+  2. Os 16 produtos atuais sem descrição/foto/preço estão cadastrados em produção via UI
+  3. CSV importado cria produtos novos (não só atualiza) e atualiza preços via SKU/código
+  4. CSV aceita coluna de imagem (URL ou caminho) e correlaciona automaticamente ao produto correto
+  5. Tela de importação mostra instruções, exemplo baixável, preview (created vs updated vs erros por linha) e falha em 1 linha não aborta o batch
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 4: Varredura Transversal e Fechamento
-**Goal**: Tudo que atravessa a aplicacao (toasts, guards de rota, 404, responsividade, console limpo) passa a varredura final; zero cosmetico remanescente; relatorio final entregue.
-**Depends on**: Phase 3
-**Requirements**: CROSS-UAT-01, CROSS-UAT-02, CROSS-UAT-03, CROSS-UAT-04, CROSS-UAT-05, FIX-02, REP-01
+### Phase 4: Drive RLS & Reorganização Admin
+**Goal**: Drive isolado por colaborador (admin vê tudo, colab só o seu) e painel admin reorganizado com visualização de pedido, tela de preços e docs de exceção
+**Depends on**: Phase 2 (admin já tem arquiteto e cadastros novos; reorg precisa desses blocos existirem)
+**Requirements**: ACC-01, ACC-02, ACC-03, ACC-04, ADM-01, ADM-02, ADM-03, ADM-04, ADM-05
 **Success Criteria** (what must be TRUE):
-  1. Todos os 5 itens CROSS-UAT marcados como passed — toasts em toda operacao Supabase, redirect para `/auth` quando nao autenticado, `/NotFound` renderiza, layout utilizavel em 1366x768 e 1920x1080, console do browser sem warnings/errors nos fluxos principais
-  2. Zero bugs cosmeticos remanescentes (texto incorreto, layout quebrado, cor fora do padrao) — varredura visual completa nos 3 fluxos criticos (colaborador, admin, drive) (FIX-02)
-  3. `.planning/uat/RELATORIO.md` publicado: lista o que foi testado, bugs encontrados, commits de correcao referenciados por hash, estado final (REP-01)
-  4. Nenhum item das 46 requirements v1 permanece aberto — CHECKLIST inteiro com status "passed" ou "passed-after-fix"
+  1. Colaborador autenticado vê e grava apenas arquivos onde `colaborador_id = auth.uid()`; admin vê todos os arquivos de todos
+  2. Upload no Drive associa automaticamente ao `colaborador_id` do usuário logado (sem campo manual)
+  3. Admin tem visualização detalhada de pedido mostrando cliente, arquiteto, ambientes, sistemas, itens e totais
+  4. Admin tem tela dedicada de atualização de preços com edição inline e salvamento em batch
+  5. Abas do admin reorganizadas em agrupamentos claros (Cadastros / Pedidos / Preços / Exceções) e existe ajuda in-app explicando o fluxo de exceção
+  6. Dashboard inicial do admin decidida (mantida simplificada ou removida) — decisão implementada, não pendente
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 5: PDF Redesign
+**Goal**: PDF do orçamento reconstruído com layout tipográfico profissional, sem as 4 caixas atuais e com texto final formatado — sem quebrar snapshots antigos
+**Depends on**: Phase 1 (campos novos de cliente já precisam estar renderizáveis quando presentes; orçamentos antigos sem esses campos continuam ok)
+**Requirements**: PDF-01, PDF-02, PDF-03, PDF-04, PDF-05
+**Success Criteria** (what must be TRUE):
+  1. PDF gerado tem layout tipográfico limpo (tipografia, margens, hierarquia visual) — não parece screenshot de HTML
+  2. As 4 caixas abaixo do Total geral (Prazo de entrega, Garantia, Condições de pagamento, Observações) foram removidas
+  3. Conteúdo dessas caixas reaparece como texto formatado ao final do PDF (parágrafos/lista legível)
+  4. Card "TOTAL GERAL" revisto visualmente e consistente com o novo design
+  5. Orçamento antigo (snapshot já persistido em `orcamentos`) continua renderizando no novo PDF sem crash nem campos quebrados
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 6: Filtros & Smoke
+**Goal**: Listas do admin passam a ser filtráveis por arquiteto (e combinações) e marco fecha com smoke test manual em produção cobrindo todos os fluxos afetados
+**Depends on**: Phase 2 (arquiteto precisa existir), Phase 3 (produtos vinculados), Phase 4 (reorganização admin), Phase 5 (PDF novo)
+**Requirements**: FIL-01, FIL-02, FIL-03, FIL-04, WRAP-01
+**Success Criteria** (what must be TRUE):
+  1. Lista de clientes, produtos e orçamentos no admin têm filtro por arquiteto funcional
+  2. Filtros combináveis (arquiteto + cliente, arquiteto + período, arquiteto + status) retornam resultado coerente
+  3. Smoke test em produção executado cobrindo: signup novo, criar cliente com arquiteto, criar orçamento completo, gerar PDF novo, importar CSV e Drive isolado por colaborador
+  4. Nenhum bug visível ou regressão encontrada no smoke — ou, se encontrada, registrada e corrigida antes do fechamento do marco
 **Plans**: TBD
 **UI hint**: yes
 
@@ -68,25 +99,30 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Preparacao do UAT | 0/0 | Not started | - |
-| 2. UAT Core — Colaborador (Auth + Wizard) | 0/0 | Not started | - |
-| 3. UAT Admin + Infra (Admin + Drive + Edge) | 0/0 | Not started | - |
-| 4. Varredura Transversal e Fechamento | 0/0 | Not started | - |
+| 1. Schema & Prep | 0/0 | Not started | - |
+| 2. Cadastros & Arquiteto CRUD | 0/0 | Not started | - |
+| 3. Produtos & Importação | 0/0 | Not started | - |
+| 4. Drive RLS & Reorganização Admin | 0/0 | Not started | - |
+| 5. PDF Redesign | 0/0 | Not started | - |
+| 6. Filtros & Smoke | 0/0 | Not started | - |
 
 ## Coverage Summary
 
-- **v1 requirements:** 46
-- **Mapped:** 46/46 (100%)
+- **Total v1 requirements:** 42
+- **Mapped to phases:** 42
 - **Orphaned:** 0
-- **Duplicated:** 0
+- **Coverage:** 100%
 
-**Distribution:**
-- Phase 1: 4 requirements (PREP-01 a PREP-04)
-- Phase 2: 19 requirements (6 AUTH-UAT + 12 ORC-UAT + FIX-01)
-- Phase 3: 16 requirements (8 ADM-UAT + 4 DRV-UAT + 4 EDGE-UAT). FIX-01 reaparece como criterio observavel tambem nesta fase, mas o requirement formal esta contabilizado uma unica vez em Phase 2 para evitar duplicacao na traceability.
-- Phase 4: 7 requirements (5 CROSS-UAT + FIX-02 + REP-01)
+### Distribution
 
-**Note on FIX-01:** FIX-01 esta oficialmente mapeado a Phase 2 (onde e aplicado pela primeira vez). Seu comportamento (corrigir on-the-fly) e um criterio de sucesso tambem em Phase 3 — o requirement nao se repete na traceability, mas a pratica continua ate o fim do UAT.
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| 1 | PREP-01, ARQ-01, ARQ-03, ARQ-04, ARQ-05 | 5 |
+| 2 | USR-01, USR-02, USR-03, USR-04, CLI-01, CLI-02, CLI-03, ARQ-02, PROD-03, PROD-04 | 10 |
+| 3 | PROD-01, PROD-02, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06 | 8 |
+| 4 | ACC-01, ACC-02, ACC-03, ACC-04, ADM-01, ADM-02, ADM-03, ADM-04, ADM-05 | 9 |
+| 5 | PDF-01, PDF-02, PDF-03, PDF-04, PDF-05 | 5 |
+| 6 | FIL-01, FIL-02, FIL-03, FIL-04, WRAP-01 | 5 |
 
 ---
-*Roadmap created: 2026-04-23*
+*Roadmap created: 2026-04-23 (pivô — escopo UAT descartado, melhorias v1 em vigor)*

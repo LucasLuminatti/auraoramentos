@@ -1,171 +1,183 @@
-# Requirements: AURA — Marco 1 (Validação)
+# Requirements: AURA — Marco 1 (Melhorias v1)
 
 **Defined:** 2026-04-23
-**Core Value:** Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, sem bug e sem precisar de suporte.
+**Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
 
-> **Contexto do marco:** AURA já está em produção. Este marco é *validação* do estado atual — UAT manual executado em prod (vercel kappa), corrigindo bugs on-the-fly, até zero bug remanescente. **Não** é redesign, refatoração, ou novas features. Cálculos, apesar de cobertos pelo UAT (comportamento visível), não são refatorados aqui — isso é marco 2.
+> **Contexto:** AURA em produção. Marco 1 = bloco estruturado de melhorias cobrindo cadastro, produtos, importação, acesso, admin, PDF e filtros. **Fora**: margem, refatoração de cálculos, comissões (ficam pra marcos futuros).
 
 ## v1 Requirements
 
-### Preparação
+### Cadastro — Usuário e Cliente
 
-- [ ] **PREP-01**: Checklist de UAT escrito e versionado em `.planning/uat/CHECKLIST.md`, cobrindo 100% das Validated do PROJECT.md
-- [ ] **PREP-02**: Template de relatório de bug criado (o que esperava, o que aconteceu, passos, severidade, status)
-- [ ] **PREP-03**: Mudanças pendentes no git status (edge functions `request-access`/`review-access`, `config.toml`) revisadas e decididas: commitar ou reverter antes do UAT começar
-- [ ] **PREP-04**: Conta de teste (admin) e conta de teste (colaborador) prontas em prod, com dados mínimos pra rodar todos os fluxos
+- [ ] **USR-01**: Signup pede CPF (obrigatório, validado pelo algoritmo brasileiro) além do email/senha atual
+- [ ] **USR-02**: Signup pede telefone (obrigatório, formato BR com máscara)
+- [ ] **USR-03**: Signup pede setor (enum: `comercial`, `projetos`, `logistica`, `financeiro`), obrigatório
+- [ ] **USR-04**: Colaborador existente consegue preencher os 3 campos (CPF/telefone/setor) após login caso ainda não tenha — sem bloquear os antigos
+- [ ] **CLI-01**: Formulário de criar cliente ganha campo **contato** (opcional, texto livre)
+- [ ] **CLI-02**: Formulário de criar cliente ganha campo **CPF/CNPJ** (opcional, sem validação semântica neste marco)
+- [ ] **CLI-03**: Formulário de criar cliente ganha seletor de **arquiteto** (opcional, autocomplete contra tabela `arquitetos`)
 
-### UAT — Autenticação e Acesso
+### Arquiteto (entidade nova)
 
-- [ ] **AUTH-UAT-01**: Cadastro via `/request-access` → aprovação no admin → signup completa funciona ponta a ponta
-- [ ] **AUTH-UAT-02**: Login com email/senha persiste sessão após refresh e redireciona corretamente
-- [ ] **AUTH-UAT-03**: Fluxo `/forgot-password` → email recebido → `/reset-password` → nova senha funcional
-- [ ] **AUTH-UAT-04**: Logout limpa sessão e bloqueia rotas protegidas
-- [ ] **AUTH-UAT-05**: Role admin acessa `/admin`; colaborador é bloqueado por `AdminRoute`
-- [ ] **AUTH-UAT-06**: Colaborador recém-criado tem registro auto-gerado na tabela `colaboradores` no primeiro login
+- [ ] **ARQ-01**: Tabela `arquitetos` criada no Supabase com campos: `id`, `nome`, `contato` (nullable), `created_at`
+- [ ] **ARQ-02**: CRUD de arquitetos no admin (nova aba ou seção): listar, criar, editar, excluir
+- [ ] **ARQ-03**: FK `arquiteto_id` (nullable) adicionada a `clientes`
+- [ ] **ARQ-04**: FK `arquiteto_id` (nullable) adicionada a `produtos`
+- [ ] **ARQ-05**: Orçamentos/pedidos expõem arquiteto via relação (cliente → arquiteto) — não precisa FK direta
 
-### UAT — Wizard de Orçamento
+### Produtos
 
-- [ ] **ORC-UAT-01**: ClienteList (mode=list) exibe clientes/projetos/orçamentos sem erro e operações (criar/editar/duplicar/excluir) funcionam
-- [ ] **ORC-UAT-02**: Step 1 — seleção de cliente/projeto e tipo de revisão valida e persiste
-- [ ] **ORC-UAT-03**: Step 2 — CRUD de ambientes funciona (adicionar, editar nome, excluir, reordenar se houver)
-- [ ] **ORC-UAT-04**: Step 2 — adicionar `ItemLuminaria` standalone com busca de produto e preço
-- [ ] **ORC-UAT-05**: Step 2 — adicionar `SistemaIluminacao` (fita + driver + perfil opcional) com combinações válidas
-- [ ] **ORC-UAT-06**: Step 3 — cálculos de metragem, drivers, agrupamento de rolos e totais exibem resultado consistente com dados inseridos (*valida comportamento visível; não refatorar fórmulas*)
-- [ ] **ORC-UAT-07**: Step 3 — detecção de violação de preço dispara alerta quando preço < mínimo
-- [ ] **ORC-UAT-08**: Step 3 — ajustar preço para o mínimo resolve a violação
-- [ ] **ORC-UAT-09**: Step 3 — solicitar exceção via ExceptionChat cria registro e notifica admin em tempo real
-- [ ] **ORC-UAT-10**: Step 3 — geração de PDF baixa arquivo válido com layout correto (cabeçalho, ambientes, itens, totais, preços)
-- [ ] **ORC-UAT-11**: Step 3 — snapshot do orçamento persistido em `orcamentos` ao gerar PDF (verificar no banco)
-- [ ] **ORC-UAT-12**: Clicar no logo durante wizard avisa sobre dados não salvos antes de voltar
+- [ ] **PROD-01**: UI de cadastro manual de produto no admin — formulário com nome, descrição, imagem (upload), preço, preço mínimo, arquiteto (seletor)
+- [ ] **PROD-02**: 16 produtos da base atual sem descrição/foto/preço são cadastrados via UI do admin (ação do Lenny, não automação)
+- [ ] **PROD-03**: Produtos existentes no banco são vinculados a arquiteto (migração one-shot ou edição manual via admin — o que for mais pragmático)
+- [ ] **PROD-04**: Edição de produto existente no admin permite alterar arquiteto
 
-### UAT — Admin e Exceções
+### Importação
 
-- [ ] **ADM-UAT-01**: Aba Produtos — busca por nome, listagem, edição de preços funcional
-- [ ] **ADM-UAT-02**: Aba Colaboradores — listagem e edição (incluindo mudanças de role) funcional
-- [ ] **ADM-UAT-03**: Aba Orçamentos — listagem, abrir snapshot, exportar funcional
-- [ ] **ADM-UAT-04**: Aba Clientes — CRUD de clientes e projetos funcional
-- [ ] **ADM-UAT-05**: Aba Exceções — admin vê solicitações pendentes e aprova/rejeita
-- [ ] **ADM-UAT-06**: Aprovação de exceção reflete em tempo real no Step 3 do colaborador que solicitou
-- [ ] **ADM-UAT-07**: `/admin/upload-imagens` — upload de imagens de produtos funcional
-- [ ] **ADM-UAT-08**: Importações CSV (produtos, preços) — importa sem erro e dados aparecem corretamente
+- [ ] **IMP-01**: Importação CSV no admin suporta **criação** de produtos novos (não só atualização)
+- [ ] **IMP-02**: Importação CSV aceita coluna de **preço** (e preço mínimo) e atualiza o produto pela chave de correlação
+- [ ] **IMP-03**: Importação CSV aceita coluna de **imagem** (URL pública ou caminho de arquivo) e associa ao produto correto automaticamente
+- [ ] **IMP-04**: Tela de importação tem **instruções claras em tela**: formato esperado, nome das colunas obrigatórias, chave de correlação (SKU ou código), exemplo baixável
+- [ ] **IMP-05**: Tela de importação mostra **preview** antes de confirmar: quantos produtos serão criados vs atualizados, quantas imagens casaram, quais linhas têm erro
+- [ ] **IMP-06**: Importação trata erros linha a linha — falha em 1 linha não aborta o batch inteiro; usuário vê relatório pós-import
 
-### UAT — Drive e Edge Functions
+### Acesso / Visibilidade
 
-- [ ] **DRV-UAT-01**: `/drive` carrega estrutura de pastas sem erro
-- [ ] **DRV-UAT-02**: Upload de arquivo funcional (drag-drop e botão)
-- [ ] **DRV-UAT-03**: Navegação por pastas (entrar, voltar, breadcrumb) funcional
-- [ ] **DRV-UAT-04**: Download e exclusão de arquivo funcional
-- [ ] **EDGE-UAT-01**: Edge function `request-access` — submissão do formulário público cria registro pendente
-- [ ] **EDGE-UAT-02**: Edge function `review-access` — admin aprova/rejeita e status reflete corretamente
-- [ ] **EDGE-UAT-03**: Edge function `create-colaborador` — executa no primeiro login do usuário sem erro
-- [ ] **EDGE-UAT-04**: Edge function `validar-sistema-orcamento` — retorna validação correta quando chamada pelo Step 3
+- [ ] **ACC-01**: Supabase Storage/tabela do Drive aplica RLS por `colaborador_id`: colaborador autenticado lê e grava apenas arquivos onde `colaborador_id = auth.uid()` (ou equivalente)
+- [ ] **ACC-02**: Admin tem policy que lê **todos** os arquivos do Drive (bypass de RLS ou policy ampla por role)
+- [ ] **ACC-03**: UI do Drive filtra a listagem conforme o usuário — colab não vê nem sombra de outro colab
+- [ ] **ACC-04**: Upload de arquivo associa automaticamente ao `colaborador_id` do usuário logado
 
-### UAT — Transversal
+### Painel Admin
 
-- [ ] **CROSS-UAT-01**: Toasts de erro/sucesso aparecem em todas as operações que usam Supabase (sem operação silenciosa)
-- [ ] **CROSS-UAT-02**: Rotas protegidas redirecionam para `/auth` quando não autenticado
-- [ ] **CROSS-UAT-03**: Páginas inexistentes renderizam `/NotFound` sem quebrar
-- [ ] **CROSS-UAT-04**: Responsividade básica — layout utilizável em laptop (1366×768) e desktop (1920×1080)
-- [ ] **CROSS-UAT-05**: Nenhum warning/error no console do browser durante fluxos principais
+- [ ] **ADM-01**: Visualização detalhada de pedido/orçamento no admin — dados do cliente, arquiteto, ambientes, sistemas de iluminação, itens, totais
+- [ ] **ADM-02**: Tela dedicada de **atualização de preços** — lista de produtos com edição inline de preço/preço mínimo, salvar em batch
+- [ ] **ADM-03**: Documentação in-app (texto em tela, tooltip ou bloco de ajuda) explicando como funciona o fluxo de exceção de preço (quem solicita, quem aprova, o que acontece)
+- [ ] **ADM-04**: Estrutura do admin reorganizada: abas/seções mais claras, agrupamento lógico (Cadastros: produtos/arquitetos/clientes/colaboradores; Pedidos; Preços; Exceções)
+- [ ] **ADM-05**: Dashboard inicial do admin avaliada — se existir e não agregar valor, remover; se for útil, simplificar
 
-### Correção e Fechamento
+### PDF
 
-- [ ] **FIX-01**: Todo bug encontrado durante UAT é corrigido via commit+push, retestado, e marcado como resolvido
-- [ ] **FIX-02**: Nenhum bug cosmético (texto incorreto, layout quebrado, cor fora do padrão) remanescente
-- [ ] **REP-01**: Relatório final de UAT em `.planning/uat/RELATORIO.md` — lista o que foi testado, bugs encontrados, commits de correção, e estado final
+- [ ] **PDF-01**: Novo design do PDF — layout tipográfico limpo e profissional, não estilo print HTML
+- [ ] **PDF-02**: Card escuro "TOTAL GERAL" mantido ou redesenhado (não é o foco de remoção — mas visual revisto)
+- [ ] **PDF-03**: Remover as **4 caixas** abaixo do Total geral: Prazo de entrega, Garantia, Condições de pagamento, Observações (ver referência no PROJECT.md)
+- [ ] **PDF-04**: Conteúdo dessas 4 caixas reapresentado como **bloco de texto formatado** ao final do PDF (parágrafos ou lista enxuta, tipografia legível, margens adequadas)
+- [ ] **PDF-05**: Snapshot persistido em `orcamentos` continua compatível com PDFs antigos (mudança só no render, não na estrutura do snapshot)
+
+### Filtros e Organização
+
+- [ ] **FIL-01**: Lista de clientes no admin filtrável por arquiteto
+- [ ] **FIL-02**: Lista de produtos no admin filtrável por arquiteto
+- [ ] **FIL-03**: Lista de orçamentos/pedidos no admin filtrável por arquiteto
+- [ ] **FIL-04**: Filtros combináveis onde fizer sentido (arquiteto + cliente, arquiteto + período, etc.)
+
+### Preparação e Finalização
+
+- [ ] **PREP-01**: Mudanças não-commitadas no início do marco (edge functions `request-access`/`review-access`, `supabase/config.toml`) revisadas e decididas: commitadas ou revertidas
+- [ ] **WRAP-01**: Smoke test manual em prod cobrindo: signup novo, criar cliente com arquiteto, criar orçamento, gerar PDF novo, importar CSV, Drive isolado por colaborador — sem bug visível
 
 ## v2 Requirements
 
-Marcos/ciclos futuros. Não entram neste marco.
+Ficam pra marcos futuros, já previstos.
 
-### Cálculos (Marco 2 — próximo)
+### Margem e Precificação (marco 2)
 
-- **CALC-01**: Refatoração e documentação da lógica de cálculos (fita, driver, perfil, agrupamento de rolos)
-- **CALC-02**: Testes unitários cobrindo todas as fórmulas de `src/types/orcamento.ts`
-- **CALC-03**: Revisão de regras de negócio com a Luminatti (confirmar fórmulas contra planilha atual)
+- **MARG-01**: Custo dos produtos entra no banco (campo `custo` em `produtos`)
+- **MARG-02**: Margem exibida no detalhamento de pedido (admin) = (venda − custo) / venda
+- **MARG-03**: Margem agregada por arquiteto, por período, por colaborador
 
-### Features Futuras
+### Cálculos (marco 3)
 
-- **FEAT-01**: Módulo de comissões
-- **FEAT-02**: Integração com ERP da Luminatti
-- **FEAT-03**: Mobile-first redesign
+- **CALC-01**: Documentação das fórmulas atuais de fita/driver/perfil/agrupamento de rolos
+- **CALC-02**: Testes unitários sobre todas as fórmulas
+- **CALC-03**: Revisão das regras com a Luminatti antes de qualquer refatoração
+
+### Comissões (marco 4)
+
+- **COM-01**: Regras de comissão configuráveis por setor/tier
+- **COM-02**: Cálculo automático por pedido fechado
+- **COM-03**: Visualização: colaborador vê a sua; admin vê todas
 
 ### Qualidade
 
-- **QA-01**: Suite de testes automatizados (Vitest + Playwright)
-- **QA-02**: CI/CD com checks obrigatórios antes de deploy
-- **QA-03**: Error tracking em produção (Sentry ou similar)
+- **QA-01**: Testes automatizados (Vitest + Playwright)
+- **QA-02**: CI/CD com checks obrigatórios
+- **QA-03**: Error tracking em produção
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Refatoração de cálculos | Marco 2 — não mexer em fórmulas antes de garantir estabilidade do entorno |
-| Testes automatizados | Manual UAT é suficiente aqui; automação é marco de qualidade próprio |
-| Redesign / mudança de UX | Não é retrabalho visual — é validação de estabilidade |
-| Reescrita de edge functions | Só corrigir se UAT pegar bug; não reescrever "porque podia melhorar" |
-| Novas features (comissões, ERP, etc.) | Depois de cálculos estabilizados |
-| Migração de schema do banco | Só se UAT exigir |
-| Setup de domínio próprio de email (Resend) | Infra separada; afeta deliverability mas não é bloqueador do UAT |
+| Margem no pedido | Marco 2 — depende de tabela de preços/custos que Lenny ainda vai receber |
+| Refatoração de cálculos | Marco 3 — fórmulas só são mexidas depois de documentadas e revisadas |
+| Módulo de comissões | Marco 4 — feature nova complexa, não cabe com as outras mudanças |
+| Role nova "representante" | Representante = colaborador; não inflacionar roles |
+| Validação de CPF/CNPJ no cliente | Campos opcionais neste marco; validação fica pra quando virar obrigatório |
+| Integração com ERP | Sem necessidade imediata; CSV manual resolve |
+| Redesign geral de UI | Ajustes pontuais sim (PDF, admin), redesign não |
+| Testes automatizados | Marco de qualidade próprio |
+| Setup de domínio próprio de Resend | Infra separada |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| USR-01 | Phase 2 | Pending |
+| USR-02 | Phase 2 | Pending |
+| USR-03 | Phase 2 | Pending |
+| USR-04 | Phase 2 | Pending |
+| CLI-01 | Phase 2 | Pending |
+| CLI-02 | Phase 2 | Pending |
+| CLI-03 | Phase 2 | Pending |
+| ARQ-01 | Phase 1 | Pending |
+| ARQ-02 | Phase 2 | Pending |
+| ARQ-03 | Phase 1 | Pending |
+| ARQ-04 | Phase 1 | Pending |
+| ARQ-05 | Phase 1 | Pending |
+| PROD-01 | Phase 3 | Pending |
+| PROD-02 | Phase 3 | Pending |
+| PROD-03 | Phase 2 | Pending |
+| PROD-04 | Phase 2 | Pending |
+| IMP-01 | Phase 3 | Pending |
+| IMP-02 | Phase 3 | Pending |
+| IMP-03 | Phase 3 | Pending |
+| IMP-04 | Phase 3 | Pending |
+| IMP-05 | Phase 3 | Pending |
+| IMP-06 | Phase 3 | Pending |
+| ACC-01 | Phase 4 | Pending |
+| ACC-02 | Phase 4 | Pending |
+| ACC-03 | Phase 4 | Pending |
+| ACC-04 | Phase 4 | Pending |
+| ADM-01 | Phase 4 | Pending |
+| ADM-02 | Phase 4 | Pending |
+| ADM-03 | Phase 4 | Pending |
+| ADM-04 | Phase 4 | Pending |
+| ADM-05 | Phase 4 | Pending |
+| PDF-01 | Phase 5 | Pending |
+| PDF-02 | Phase 5 | Pending |
+| PDF-03 | Phase 5 | Pending |
+| PDF-04 | Phase 5 | Pending |
+| PDF-05 | Phase 5 | Pending |
+| FIL-01 | Phase 6 | Pending |
+| FIL-02 | Phase 6 | Pending |
+| FIL-03 | Phase 6 | Pending |
+| FIL-04 | Phase 6 | Pending |
 | PREP-01 | Phase 1 | Pending |
-| PREP-02 | Phase 1 | Pending |
-| PREP-03 | Phase 1 | Pending |
-| PREP-04 | Phase 1 | Pending |
-| AUTH-UAT-01 | Phase 2 | Pending |
-| AUTH-UAT-02 | Phase 2 | Pending |
-| AUTH-UAT-03 | Phase 2 | Pending |
-| AUTH-UAT-04 | Phase 2 | Pending |
-| AUTH-UAT-05 | Phase 2 | Pending |
-| AUTH-UAT-06 | Phase 2 | Pending |
-| ORC-UAT-01 | Phase 2 | Pending |
-| ORC-UAT-02 | Phase 2 | Pending |
-| ORC-UAT-03 | Phase 2 | Pending |
-| ORC-UAT-04 | Phase 2 | Pending |
-| ORC-UAT-05 | Phase 2 | Pending |
-| ORC-UAT-06 | Phase 2 | Pending |
-| ORC-UAT-07 | Phase 2 | Pending |
-| ORC-UAT-08 | Phase 2 | Pending |
-| ORC-UAT-09 | Phase 2 | Pending |
-| ORC-UAT-10 | Phase 2 | Pending |
-| ORC-UAT-11 | Phase 2 | Pending |
-| ORC-UAT-12 | Phase 2 | Pending |
-| ADM-UAT-01 | Phase 3 | Pending |
-| ADM-UAT-02 | Phase 3 | Pending |
-| ADM-UAT-03 | Phase 3 | Pending |
-| ADM-UAT-04 | Phase 3 | Pending |
-| ADM-UAT-05 | Phase 3 | Pending |
-| ADM-UAT-06 | Phase 3 | Pending |
-| ADM-UAT-07 | Phase 3 | Pending |
-| ADM-UAT-08 | Phase 3 | Pending |
-| DRV-UAT-01 | Phase 3 | Pending |
-| DRV-UAT-02 | Phase 3 | Pending |
-| DRV-UAT-03 | Phase 3 | Pending |
-| DRV-UAT-04 | Phase 3 | Pending |
-| EDGE-UAT-01 | Phase 3 | Pending |
-| EDGE-UAT-02 | Phase 3 | Pending |
-| EDGE-UAT-03 | Phase 3 | Pending |
-| EDGE-UAT-04 | Phase 3 | Pending |
-| CROSS-UAT-01 | Phase 4 | Pending |
-| CROSS-UAT-02 | Phase 4 | Pending |
-| CROSS-UAT-03 | Phase 4 | Pending |
-| CROSS-UAT-04 | Phase 4 | Pending |
-| CROSS-UAT-05 | Phase 4 | Pending |
-| FIX-01 | Phase 2 | Pending |
-| FIX-02 | Phase 4 | Pending |
-| REP-01 | Phase 4 | Pending |
+| WRAP-01 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 46 total
-- Mapped to phases: 46 (100%)
-- Unmapped: 0 ✓
+- v1 requirements: 42 total
+- Mapped to phases: 42 (100%)
+- Unmapped: 0
 
-**Note on FIX-01:** mapeado formalmente a Phase 2 (primeira fase em que UAT é executado e bugs podem aparecer). A prática de fix-on-the-fly continua como critério de sucesso em Phase 3 — sem duplicar o requirement na traceability.
+**Distribution:**
+- Phase 1 (Schema & Prep): 5 requirements
+- Phase 2 (Cadastros & Arquiteto CRUD): 10 requirements
+- Phase 3 (Produtos & Importação): 8 requirements
+- Phase 4 (Drive RLS & Reorganização Admin): 9 requirements
+- Phase 5 (PDF Redesign): 5 requirements
+- Phase 6 (Filtros & Smoke): 5 requirements
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after roadmap creation (traceability populated)*
+*Last updated: 2026-04-23 after roadmap creation (42/42 mapped to 6 phases)*

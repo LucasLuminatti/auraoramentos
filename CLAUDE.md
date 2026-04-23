@@ -3,19 +3,19 @@
 
 **AURA**
 
-Sistema web de criação de orçamentos de iluminação da Luminatti, já em produção (vercel kappa). Colaboradores montam orçamentos em um wizard de 3 passos (cliente/projeto → ambientes com sistemas de LED → revisão e PDF), e admins gerenciam produtos, preços, clientes e aprovam exceções de preço. Backend em Supabase (auth, Postgres, edge functions); frontend em React 18 + Vite + TypeScript + shadcn-ui.
+Sistema web de criação de orçamentos de iluminação da Luminatti, em produção no Vercel (URL kappa). Colaboradores montam orçamentos em um wizard de 3 passos (cliente/projeto → ambientes com sistemas de LED → revisão e PDF), e admins gerenciam produtos, preços, clientes, exceções e documentos. Backend em Supabase (auth, Postgres, edge functions, storage); frontend em React 18 + Vite + TypeScript + shadcn-ui.
 
-**Core Value:** Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, sem bug e sem precisar de suporte.
+**Core Value:** Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com dados organizados por arquiteto e filtráveis — e o admin consegue controlar preços, pedidos e margens sem planilha paralela.
 
 ### Constraints
 
-- **Tech stack**: React 18 + Vite + TypeScript + Supabase + shadcn-ui — não trocar stack no marco 1
-- **Timeline**: Fechar marco 1 essa semana (pré 2026-04-30)
-- **Executor**: Só Lenny roda o UAT (perfil admin + colaborador alternados na mesma conta/conta de teste)
-- **Ambiente**: UAT rodado em prod (vercel kappa) contra o Supabase real
-- **Fluxo de correção**: Achou bug → para UAT → corrige → commit+push → retesta aquele fluxo → segue
-- **Critério de aceite**: Zero bug, mesmo cosmético. Nada tolerado.
-- **Dependências externas**: Email via Resend, PDF via html2pdf.js, Vercel deploy — se algum falhar durante UAT, documentar como bloqueador antes de corrigir
+- **Tech stack**: React 18 + Vite + TypeScript + Supabase + shadcn-ui — sem trocar stack
+- **Schema**: Mudanças de schema são aditivas (novas colunas opcionais, novas tabelas) — **não quebrar** queries existentes
+- **Compatibilidade**: Orçamentos/snapshots antigos precisam continuar renderizando mesmo sem os novos campos preenchidos
+- **Fluxo atual**: Nenhuma mudança pode quebrar o wizard de 3 passos já em uso
+- **Timeline**: Sem prazo rígido anunciado, mas pace ágil — uma fase de cada vez, sem inchar marco
+- **Segurança**: RLS do Drive precisa ser testada (admin vê tudo, colaborador vê só o seu) — erro aqui vaza documento de cliente
+- **Campos opcionais**: Novos campos em cliente (contato, CPF/CNPJ, arquiteto) são opcionais; signup (CPF/telefone/setor) são obrigatórios
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:codebase/STACK.md -->
