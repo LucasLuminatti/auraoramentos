@@ -18,8 +18,7 @@ async function hmacSign(secret: string, message: string): Promise<string> {
 }
 
 function htmlPage(title: string, emoji: string, heading: string, body: string, color: string): Response {
-  return new Response(
-    `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
@@ -40,12 +39,19 @@ function htmlPage(title: string, emoji: string, heading: string, body: string, c
     <div class="emoji">${emoji}</div>
     <h1>${heading}</h1>
     <p>${body}</p>
-    <span class="badge">Aura · Criador de Orçamentos</span>
+    <span class="badge">Aura &middot; Criador de Or&ccedil;amentos</span>
   </div>
 </body>
-</html>`,
-    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
-  );
+</html>`;
+  const body_bytes = new TextEncoder().encode(html);
+  return new Response(body_bytes, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 Deno.serve(async (req) => {
@@ -130,7 +136,7 @@ Deno.serve(async (req) => {
 
       // Email to requester
       await resend.emails.send({
-        from: "Aura Orçamentos <onboarding@resend.dev>",
+        from: "Aura Orçamentos <noreply@orcamentosaura.com.br>",
         to: [request.email],
         subject: "Seu acesso foi aprovado! ✓",
         html: `
@@ -151,7 +157,7 @@ Deno.serve(async (req) => {
                       <div style="font-size:48px;margin-bottom:20px;">🎉</div>
                       <h2 style="color:#1a1a2e;margin:0 0 12px;font-size:22px;">Acesso aprovado, ${request.name}!</h2>
                       <p style="color:#6b7280;margin:0 0 28px;font-size:15px;line-height:1.6;">Seu pedido de acesso ao sistema Aura foi aprovado. Agora você pode criar sua conta.</p>
-                      <a href="${appUrl}/auth" style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Criar minha conta →</a>
+                      <a href="${appUrl}/auth?mode=signup" style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Criar minha conta →</a>
                       <p style="color:#9ca3af;font-size:12px;margin:24px 0 0;">Acesse com o e-mail: <strong>${request.email}</strong></p>
                     </td>
                   </tr>
@@ -179,7 +185,7 @@ Deno.serve(async (req) => {
 
       // Email to requester
       await resend.emails.send({
-        from: "Aura Orçamentos <onboarding@resend.dev>",
+        from: "Aura Orçamentos <noreply@orcamentosaura.com.br>",
         to: [request.email],
         subject: "Atualização sobre seu pedido de acesso",
         html: `

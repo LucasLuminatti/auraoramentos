@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     // Send email to admin
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
     await resend.emails.send({
-      from: "Aura Orçamentos <onboarding@resend.dev>",
+      from: "Aura Orçamentos <noreply@orcamentosaura.com.br>",
       to: [adminEmail],
       subject: `Novo pedido de acesso: ${name.trim()}`,
       html: `
