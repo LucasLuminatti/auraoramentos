@@ -28,7 +28,10 @@
   3. Coluna `arquiteto_id` (nullable, FK) existe em `clientes` e `produtos`
   4. Colunas `cpf`, `telefone`, `setor` (nullable) existem em `colaboradores`; `contato` e `cpf_cnpj` existem em `clientes`
   5. Wizard de orçamento, login e admin continuam funcionando em produção sem regressão visível (colunas novas vazias não quebram render)
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 01-01-PLAN.md — PREP-01 preflight + git cleanup (config.toml, edge functions decision, .gitignore)
+- [ ] 01-02-PLAN.md — 4 aditive migrations (arquitetos, FKs in clientes/produtos, cols in colaboradores/clientes) + db push + types regen
+- [ ] 01-03-PLAN.md — Smoke test in prod (wizard, admin, PDF, dashboard) — Phase 1 closure
 
 ### Phase 2: Cadastros & Arquiteto CRUD
 **Goal**: Usuários novos entram com dados completos (CPF/telefone/setor), clientes podem ser vinculados a arquitetos e admin gerencia arquitetos como entidade própria
@@ -99,7 +102,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Schema & Prep | 0/0 | Not started | - |
+| 1. Schema & Prep | 0/3 | Planned | - |
 | 2. Cadastros & Arquiteto CRUD | 0/0 | Not started | - |
 | 3. Produtos & Importação | 0/0 | Not started | - |
 | 4. Drive RLS & Reorganização Admin | 0/0 | Not started | - |
