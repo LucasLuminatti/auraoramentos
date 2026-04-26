@@ -1,3 +1,4 @@
+Initialising login role...
 export type Json =
   | string
   | number
@@ -10,7 +11,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
@@ -62,6 +63,27 @@ export type Database = {
           email?: string
           id?: string
           role?: string
+        }
+        Relationships: []
+      }
+      arquitetos: {
+        Row: {
+          contato: string | null
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          contato?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          contato?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
         }
         Relationships: []
       }
@@ -180,6 +202,9 @@ export type Database = {
       }
       clientes: {
         Row: {
+          arquiteto_id: string | null
+          contato: string | null
+          cpf_cnpj: string | null
           created_at: string
           email: string | null
           id: string
@@ -187,6 +212,9 @@ export type Database = {
           telefone: string | null
         }
         Insert: {
+          arquiteto_id?: string | null
+          contato?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -194,37 +222,57 @@ export type Database = {
           telefone?: string | null
         }
         Update: {
+          arquiteto_id?: string | null
+          contato?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
           nome?: string
           telefone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clientes_arquiteto_id_fkey"
+            columns: ["arquiteto_id"]
+            isOneToOne: false
+            referencedRelation: "arquitetos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       colaboradores: {
         Row: {
           cargo: string | null
+          cpf: string | null
           created_at: string
           departamento: string | null
           id: string
           nome: string
+          setor: string | null
+          telefone: string | null
           user_id: string | null
         }
         Insert: {
           cargo?: string | null
+          cpf?: string | null
           created_at?: string
           departamento?: string | null
           id?: string
           nome: string
+          setor?: string | null
+          telefone?: string | null
           user_id?: string | null
         }
         Update: {
           cargo?: string | null
+          cpf?: string | null
           created_at?: string
           departamento?: string | null
           id?: string
           nome?: string
+          setor?: string | null
+          telefone?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -389,75 +437,95 @@ export type Database = {
       }
       produtos: {
         Row: {
-          ativo: boolean | null
-          categoria: string | null
+          aplicacao: string | null
+          arquiteto_id: string | null
           codigo: string
+          cor: string | null
           created_at: string
           descricao: string
-          driver_potencia_w: number | null
-          driver_restr_max_w: number | null
-          driver_restr_tipo: string | null
-          driver_tipo: string | null
+          driver_max_watts: number | null
+          driver_tipo_permitido: string | null
           familia_perfil: string | null
-          fita_compativel: string | null
-          grupo: string | null
+          fator_spot: number | null
           id: string
           imagem_url: string | null
-          is_baby: boolean | null
-          passadas: number | null
+          largura_canal_mm: number | null
+          largura_mm: number | null
+          passadas_padrao: number | null
+          potencia_watts: number | null
           preco_minimo: number
           preco_tabela: number
-          sistema_magnetico: string | null
-          voltagem: number | null
-          wm: number | null
+          sistema: string | null
+          somente_baby: boolean | null
+          subtipo: string | null
+          tamanho_rolo_m: number | null
+          tensao: number | null
+          tipo_produto: string | null
+          watts_por_metro: number | null
         }
         Insert: {
-          ativo?: boolean | null
-          categoria?: string | null
+          aplicacao?: string | null
+          arquiteto_id?: string | null
           codigo: string
+          cor?: string | null
           created_at?: string
           descricao: string
-          driver_potencia_w?: number | null
-          driver_restr_max_w?: number | null
-          driver_restr_tipo?: string | null
-          driver_tipo?: string | null
+          driver_max_watts?: number | null
+          driver_tipo_permitido?: string | null
           familia_perfil?: string | null
-          fita_compativel?: string | null
-          grupo?: string | null
+          fator_spot?: number | null
           id?: string
           imagem_url?: string | null
-          is_baby?: boolean | null
-          passadas?: number | null
+          largura_canal_mm?: number | null
+          largura_mm?: number | null
+          passadas_padrao?: number | null
+          potencia_watts?: number | null
           preco_minimo?: number
           preco_tabela?: number
-          sistema_magnetico?: string | null
-          voltagem?: number | null
-          wm?: number | null
+          sistema?: string | null
+          somente_baby?: boolean | null
+          subtipo?: string | null
+          tamanho_rolo_m?: number | null
+          tensao?: number | null
+          tipo_produto?: string | null
+          watts_por_metro?: number | null
         }
         Update: {
-          ativo?: boolean | null
-          categoria?: string | null
+          aplicacao?: string | null
+          arquiteto_id?: string | null
           codigo?: string
+          cor?: string | null
           created_at?: string
           descricao?: string
-          driver_potencia_w?: number | null
-          driver_restr_max_w?: number | null
-          driver_restr_tipo?: string | null
-          driver_tipo?: string | null
+          driver_max_watts?: number | null
+          driver_tipo_permitido?: string | null
           familia_perfil?: string | null
-          fita_compativel?: string | null
-          grupo?: string | null
+          fator_spot?: number | null
           id?: string
           imagem_url?: string | null
-          is_baby?: boolean | null
-          passadas?: number | null
+          largura_canal_mm?: number | null
+          largura_mm?: number | null
+          passadas_padrao?: number | null
+          potencia_watts?: number | null
           preco_minimo?: number
           preco_tabela?: number
-          sistema_magnetico?: string | null
-          voltagem?: number | null
-          wm?: number | null
+          sistema?: string | null
+          somente_baby?: boolean | null
+          subtipo?: string | null
+          tamanho_rolo_m?: number | null
+          tensao?: number | null
+          tipo_produto?: string | null
+          watts_por_metro?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "produtos_arquiteto_id_fkey"
+            columns: ["arquiteto_id"]
+            isOneToOne: false
+            referencedRelation: "arquitetos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projetos: {
         Row: {
@@ -488,6 +556,42 @@ export type Database = {
           },
         ]
       }
+      regras_compatibilidade_perfil: {
+        Row: {
+          created_at: string
+          driver_max_watts: number | null
+          driver_tipo_aceito: string
+          familia_perfil: string
+          id: string
+          largura_max_fita_mm: number | null
+          passadas_padrao: number
+          sistemas_compativeis: string[]
+          somente_baby: boolean
+        }
+        Insert: {
+          created_at?: string
+          driver_max_watts?: number | null
+          driver_tipo_aceito?: string
+          familia_perfil: string
+          id?: string
+          largura_max_fita_mm?: number | null
+          passadas_padrao?: number
+          sistemas_compativeis?: string[]
+          somente_baby?: boolean
+        }
+        Update: {
+          created_at?: string
+          driver_max_watts?: number | null
+          driver_tipo_aceito?: string
+          familia_perfil?: string
+          id?: string
+          largura_max_fita_mm?: number | null
+          passadas_padrao?: number
+          sistemas_compativeis?: string[]
+          somente_baby?: boolean
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -506,11 +610,86 @@ export type Database = {
         }
         Relationships: []
       }
+      vinculos_spot_lampada: {
+        Row: {
+          codigo_lampada: string
+          codigo_spot: string
+          created_at: string
+          id: string
+          led_integrado: boolean
+          tipo_lampada: string | null
+        }
+        Insert: {
+          codigo_lampada: string
+          codigo_spot: string
+          created_at?: string
+          id?: string
+          led_integrado?: boolean
+          tipo_lampada?: string | null
+        }
+        Update: {
+          codigo_lampada?: string
+          codigo_spot?: string
+          created_at?: string
+          id?: string
+          led_integrado?: boolean
+          tipo_lampada?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vinculos_spot_lampada_codigo_lampada_fkey"
+            columns: ["codigo_lampada"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["codigo"]
+          },
+          {
+            foreignKeyName: "vinculos_spot_lampada_codigo_spot_fkey"
+            columns: ["codigo_spot"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      calcular_conectores_emenda: {
+        Args: { p_qtd_cantos: number; p_qtd_perfis: number }
+        Returns: Json
+      }
+      calcular_drivers: {
+        Args: {
+          p_metragem_fita: number
+          p_potencia_driver: number
+          p_tensao: number
+          p_watts_por_metro: number
+        }
+        Returns: number
+      }
+      calcular_drivers_magneto_48v: {
+        Args: { p_potencia_total_modulos: number }
+        Returns: Json
+      }
+      calcular_metragem_fita: {
+        Args: {
+          p_comprimento_perfil: number
+          p_num_passadas: number
+          p_quantidade_pecas: number
+        }
+        Returns: number
+      }
+      calcular_tampa_cega_smode: {
+        Args: { p_comprimento_perfil: number; p_comprimentos_modulos: number[] }
+        Returns: Json
+      }
+      calcular_tampas_vedacao_fita_flexivel: {
+        Args: { p_qtd_sessoes: number }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -518,6 +697,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      otimizar_rolos_fita: { Args: { p_demanda_metros: number }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
@@ -652,3 +832,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.90.0 (currently installed v2.78.1)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

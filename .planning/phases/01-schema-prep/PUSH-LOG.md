@@ -1,0 +1,63 @@
+# Phase 1 — Migration Push Log
+
+## Dry-run output (2026-04-26)
+
+```
+DRY RUN: migrations will *not* be pushed to the database.
+Connecting to remote database...
+Would push these migrations:
+ • 20260423000001_create_arquitetos.sql
+ • 20260423000002_clientes_arquiteto_contato_cpf.sql
+ • 20260423000003_produtos_arquiteto.sql
+ • 20260423000004_colaboradores_cpf_telefone_setor.sql
+Finished supabase db push.
+```
+
+## Push real (2026-04-26)
+
+```
+Initialising login role...
+Connecting to remote database...
+Applying migration 20260423000001_create_arquitetos.sql...
+Applying migration 20260423000002_clientes_arquiteto_contato_cpf.sql...
+Applying migration 20260423000003_produtos_arquiteto.sql...
+Applying migration 20260423000004_colaboradores_cpf_telefone_setor.sql...
+Finished supabase db push.
+```
+
+- Status: success
+- Migrations aplicadas: 20260423000001, 20260423000002, 20260423000003, 20260423000004
+- Nota: password fornecida via sessao autenticada (supabase link refeito, CLI gerenciou auth automaticamente)
+
+## Migration list --linked (pós-push)
+
+```
+   Local          | Remote         | Time (UTC)
+  ----------------|----------------|---------------------
+   20260213142833 | 20260213142833 | 2026-02-13 14:28:33
+   20260213150619 | 20260213150619 | 2026-02-13 15:06:19
+   20260213151143 | 20260213151143 | 2026-02-13 15:11:43
+   20260213151338 | 20260213151338 | 2026-02-13 15:13:38
+   20260213173908 | 20260213173908 | 2026-02-13 17:39:08
+   20260213185256 | 20260213185256 | 2026-02-13 18:52:56
+   20260218165401 | 20260218165401 | 2026-02-18 16:54:01
+   20260219141350 | 20260219141350 | 2026-02-19 14:13:50
+   20260223205747 | 20260223205747 | 2026-02-23 20:57:47
+   20260224205252 | 20260224205252 | 2026-02-24 20:52:52
+   20260225173735 | 20260225173735 | 2026-02-25 17:37:35
+   20260225192552 | 20260225192552 | 2026-02-25 19:25:52
+   20260302192445 | 20260302192445 | 2026-03-02 19:24:45
+   20260302192941 | 20260302192941 | 2026-03-02 19:29:41
+   20260303162907 | 20260303162907 | 2026-03-03 16:29:07
+   20260319000001 | 20260319000001 | 2026-03-19 00:00:01
+   20260319000002 | 20260319000002 | 2026-03-19 00:00:02
+   20260319000003 | 20260319000003 | 2026-03-19 00:00:03
+   20260319000004 | 20260319000004 | 2026-03-19 00:00:04
+   20260416000001 | 20260416000001 | 2026-04-16 00:00:01
+   20260423000001 | 20260423000001 | 2026-04-23 00:00:01
+   20260423000002 | 20260423000002 | 2026-04-23 00:00:02
+   20260423000003 | 20260423000003 | 2026-04-23 00:00:03
+   20260423000004 | 20260423000004 | 2026-04-23 00:00:04
+```
+
+Total: 24/24 migrations alinhadas (local + remote). Zero gap.
