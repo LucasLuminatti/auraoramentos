@@ -29,7 +29,7 @@
   4. Colunas `cpf`, `telefone`, `setor` (nullable) existem em `colaboradores`; `contato` e `cpf_cnpj` existem em `clientes`
   5. Wizard de orçamento, login e admin continuam funcionando em produção sem regressão visível (colunas novas vazias não quebram render)
 **Plans**: 3 plans
-- [ ] 01-01-PLAN.md — PREP-01 preflight + git cleanup (config.toml, edge functions decision, .gitignore)
+- [x] 01-01-PLAN.md — PREP-01 preflight + git cleanup (config.toml, edge functions decision, .gitignore)
 - [ ] 01-02-PLAN.md — 4 aditive migrations (arquitetos, FKs in clientes/produtos, cols in colaboradores/clientes) + db push + types regen
 - [ ] 01-03-PLAN.md — Smoke test in prod (wizard, admin, PDF, dashboard) — Phase 1 closure
 
