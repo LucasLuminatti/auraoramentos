@@ -20,6 +20,7 @@ import ImportImagens from "@/components/ImportImagens";
 import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
+import ClienteDialog, { type ClienteRow } from "@/components/ClienteDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes", "arquitetos"] as const;
@@ -55,9 +56,13 @@ const Admin = () => {
   const [clientes, setClientes] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null);
+  const [clienteCreateOpen, setClienteCreateOpen] = useState(false);
+  const [clienteEditOpen, setClienteEditOpen] = useState(false);
+  const [clienteEditTarget, setClienteEditTarget] = useState<ClienteRow | null>(null);
 
   // Arquitetos tab
   const [arquitetos, setArquitetos] = useState<ArquitetoRow[]>([]);
+  const [arquitetosMap, setArquitetosMap] = useState<Record<string, string>>({});
   const [arquitetoDialogOpen, setArquitetoDialogOpen] = useState(false);
   const [arquitetoDialogMode, setArquitetoDialogMode] = useState<"create" | "edit">("create");
   const [arquitetoEditTarget, setArquitetoEditTarget] = useState<ArquitetoRow | null>(null);
@@ -109,7 +114,10 @@ const Admin = () => {
   };
 
   const fetchClientes = async () => {
-    const { data } = await supabase.from("clientes").select("*").order("nome");
+    const { data } = await supabase
+      .from("clientes")
+      .select("id, nome, email, telefone, contato, cpf_cnpj, arquiteto_id")
+      .order("nome");
     setClientes(data || []);
   };
 
@@ -123,6 +131,9 @@ const Admin = () => {
       return;
     }
     setArquitetos((data || []) as ArquitetoRow[]);
+    const map: Record<string, string> = {};
+    for (const a of data || []) map[a.id] = a.nome;
+    setArquitetosMap(map);
   };
 
   const handleDeleteArquiteto = async () => {
@@ -394,34 +405,53 @@ const Admin = () => {
 
           {/* CLIENTES */}
           <TabsContent value="clientes">
-            <div className="rounded-xl border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefone</TableHead>
-                    <TableHead className="w-20"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clientes.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.nome}</TableCell>
-                      <TableCell>{c.email || "—"}</TableCell>
-                      <TableCell>{c.telefone || "—"}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setDeleteTarget({ id: c.id, nome: c.nome }); setDeleteDialogOpen(true); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => setClienteCreateOpen(true)} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo Cliente
+                </Button>
+              </div>
+              <div className="rounded-xl border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Arquiteto</TableHead>
+                      <TableHead className="w-28 text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                  {clientes.length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhum cliente</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {clientes.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.nome}</TableCell>
+                        <TableCell>{c.email || "—"}</TableCell>
+                        <TableCell>{c.telefone || "—"}</TableCell>
+                        <TableCell>{c.arquiteto_id ? (arquitetosMap[c.arquiteto_id] || "—") : "—"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setClienteEditTarget(c as ClienteRow);
+                              setClienteEditOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setDeleteTarget({ id: c.id, nome: c.nome }); setDeleteDialogOpen(true); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {clientes.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </TabsContent>
 
@@ -506,6 +536,21 @@ const Admin = () => {
         mode={arquitetoDialogMode}
         arquiteto={arquitetoEditTarget}
         onSuccess={fetchArquitetos}
+      />
+
+      <ClienteDialog
+        open={clienteCreateOpen}
+        onOpenChange={setClienteCreateOpen}
+        mode="create"
+        onSuccess={fetchClientes}
+      />
+
+      <ClienteDialog
+        open={clienteEditOpen}
+        onOpenChange={setClienteEditOpen}
+        mode="edit"
+        cliente={clienteEditTarget}
+        onSuccess={fetchClientes}
       />
 
       <AlertDialog open={arquitetoDeleteOpen} onOpenChange={setArquitetoDeleteOpen}>
