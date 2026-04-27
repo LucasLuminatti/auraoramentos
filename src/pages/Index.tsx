@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 
 const STEPS = ["Dados", "Ambientes", "Revisão"];
 
@@ -85,6 +86,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <CompletarCadastroBanner />
       {/* Header */}
       <header className="border-b bg-card shadow-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
