@@ -1,33 +1,46 @@
 ---
 created: 2026-04-27T18:09:13.967Z
-title: Admin > Orçamentos linha da tabela não é clicável
+title: Orçamento existente não é clicável em nenhum lugar
 area: ui
 files:
   - src/pages/Admin.tsx
+  - src/pages/Index.tsx
 ---
 
 ## Problem
 
-Na aba "Orçamentos" do Admin (`/admin?tab=orcamentos`), a tabela lista os
-orçamentos (Data, Cliente, Projeto, Colaborador, Valor, Status, Ações) mas
-a coluna **Ações** está vazia e não há `onClick` na `<TableRow>` — então é
-impossível abrir/inspecionar um orçamento existente a partir do Admin.
+**Não é possível abrir um orçamento já criado em nenhuma rota do sistema.**
 
-Descoberto durante o smoke test do Phase 1 (Teste 3 — Orçamento antigo + PDF):
-queríamos validar que orçamentos pré-Phase 1 continuam abrindo, mas não
-conseguimos clicar em nenhuma linha pra testar.
+Descoberto no smoke do Phase 1 (Teste 3 — orçamento antigo + PDF) em
+2026-04-27. Dois caminhos quebrados:
+
+1. **Admin > aba Orçamentos** (`/admin?tab=orcamentos`):
+   tabela lista (Data, Cliente, Projeto, Colaborador, Valor, Status, Ações)
+   mas a coluna "Ações" está vazia e a `<TableRow>` não tem `onClick`.
+
+2. **Home `/` > Cliente > Projeto > orçamento listado**:
+   dentro do projeto, o card "26/04/2026 · Rascunho · R$ 25,41" também é
+   estático — sem `onClick`, sem botão de abrir/editar.
+
+Resultado: o orçamento criado existe no banco (`orcamentos` table tem o row),
+aparece nos dois lugares, mas não tem como visualizar/editar/duplicar.
+Bloqueia validação de regressão de orçamentos antigos no smoke.
 
 ## Solution
 
-Duas opções (escolher uma):
+Investigar primeiro:
+- Existe rota `/orcamento/:id` ou equivalente? (`grep` em `App.tsx`/`Routes`)
+- Se não existir, o wizard precisa ser adaptado pra hidratar de um ID,
+  ou criar rota nova que carrega orçamento + ambientes + sistemas e
+  monta o state inicial do wizard no Step 3.
 
-1. Adicionar um botão "Abrir" / ícone de olho na coluna **Ações** que faça
-   `navigate("/orcamento/" + id)` (ou rota equivalente — verificar como o
-   wizard já navega ao abrir um orçamento existente pelo fluxo Cliente →
-   Projeto).
-2. Tornar a `<TableRow>` clicável diretamente (`onClick` + `cursor-pointer`)
-   com a mesma navegação.
+Implementar nos 2 lugares:
+1. `Admin.tsx` aba orçamentos — botão "Abrir" na coluna Ações (ícone
+   `Eye` do lucide-react).
+2. `Index.tsx` (home/projeto view) — `onClick` + `cursor-pointer` no card
+   do orçamento.
 
-Conferir se a rota `/orcamento/:id` (ou similar) já existe — se não, pode
-ser que o wizard só abre via state na navegação do Index.tsx, exigindo
-uma rota nova ou ajuste no Step1/2/3 pra hidratar de um id.
+Ambos navegam pra mesma rota de visualização.
+
+Considerar se faz sentido permitir só visualização (read-only) pra
+orçamentos `fechado`/`perdido` e edição pra `rascunho`/`enviado`.
