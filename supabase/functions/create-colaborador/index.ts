@@ -12,13 +12,25 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { nome, cargo, departamento, user_id } = await req.json();
+    const { nome, cargo, departamento, user_id, cpf, telefone, setor } = await req.json();
 
     if (!nome || !user_id) {
       return new Response(JSON.stringify({ error: "nome and user_id are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Validate setor if provided (matches DB CHECK constraint).
+    const validSetores = ["comercial", "projetos", "logistica", "financeiro"];
+    if (setor && !validSetores.includes(setor)) {
+      return new Response(
+        JSON.stringify({ error: `setor must be one of: ${validSetores.join(", ")}` }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const supabaseAdmin = createClient(
@@ -28,7 +40,15 @@ Deno.serve(async (req) => {
 
     const { data, error } = await supabaseAdmin
       .from("colaboradores")
-      .insert({ nome, cargo: cargo || null, departamento: departamento || null, user_id })
+      .insert({
+        nome,
+        cargo: cargo || null,
+        departamento: departamento || null,
+        user_id,
+        cpf: cpf || null,
+        telefone: telefone || null,
+        setor: setor || null,
+      })
       .select()
       .single();
 
