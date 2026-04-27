@@ -76,6 +76,8 @@ Plan: 1 of 3
 - Executar Phase 1 (começando por PREP-01 — limpar git pendente antes de qualquer migration)
 - Decidir destino das mudanças pendentes em `supabase/config.toml`, `supabase/functions/request-access/`, `supabase/functions/review-access/`, `supabase/.temp/` (commit ou revert)
 - Planejar ordem das migrations aditivas (arquitetos primeiro, depois FKs em clientes/produtos, depois colunas em colaboradores/clientes)
+- [todo] Admin > Orçamentos linha não clicável (`.planning/todos/pending/2026-04-27-admin-orcamentos-row-nao-clicavel.md`)
+- [todo] PDF zuado — input pra Phase 5 (`.planning/todos/pending/2026-04-27-pdf-zuado-input-para-phase-5.md`)
 
 ### Blockers
 
