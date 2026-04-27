@@ -43,7 +43,11 @@
   3. Admin tem seção de arquitetos com listar/criar/editar/excluir funcionando ponta-a-ponta
   4. Form de criar cliente aceita contato, CPF/CNPJ e seletor de arquiteto (autocomplete contra `arquitetos`), todos opcionais
   5. Produto existente no admin pode ter arquiteto atribuído/alterado via edição
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 02-01-PLAN.md — Foundation: src/lib/masks.ts, src/lib/validators.ts, edge function create-colaborador expandida (USR-01..03 base)
+- [ ] 02-02-PLAN.md — Signup expandido em Auth.tsx + Banner USR-04 + página /perfil/completar (USR-01..04)
+- [ ] 02-03-PLAN.md — ArquitetoAutocomplete + ArquitetoDialog + 8ª aba Arquitetos no Admin com CRUD (ARQ-02)
+- [ ] 02-04-PLAN.md — ClienteDialog (4 campos) + ProdutoEditDialog com arquiteto + integração no Admin (CLI-01..03, PROD-03, PROD-04)
 **UI hint**: yes
 
 ### Phase 3: Produtos & Importação
@@ -103,7 +107,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Schema & Prep | 0/3 | Planned | - |
-| 2. Cadastros & Arquiteto CRUD | 0/0 | Not started | - |
+| 2. Cadastros & Arquiteto CRUD | 0/4 | Planned | - |
 | 3. Produtos & Importação | 0/0 | Not started | - |
 | 4. Drive RLS & Reorganização Admin | 0/0 | Not started | - |
 | 5. PDF Redesign | 0/0 | Not started | - |
@@ -129,3 +133,4 @@
 
 ---
 *Roadmap created: 2026-04-23 (pivô — escopo UAT descartado, melhorias v1 em vigor)*
+*Phase 2 planned: 2026-04-27*
