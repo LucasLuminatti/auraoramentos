@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, Eye, EyeOff, Mail } from "lucide-react";
+import { formatCPF, formatTelefone, unmask } from "@/lib/masks";
+import { validateCPF, validateTelefone } from "@/lib/validators";
 
 function getPasswordStrength(password: string) {
   const checks = {
@@ -33,6 +36,13 @@ const RULES = [
   { key: "hasSpecial" as const, text: "Um caractere especial (!@#$...)" },
 ];
 
+const SETORES = [
+  { value: "comercial", label: "Comercial" },
+  { value: "projetos", label: "Projetos" },
+  { value: "logistica", label: "Logística" },
+  { value: "financeiro", label: "Financeiro" },
+];
+
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const isLogin = searchParams.get("mode") !== "signup";
@@ -44,6 +54,14 @@ const Auth = () => {
   const [nome, setNome] = useState("");
   const [cargo, setCargo] = useState("");
   const [departamento, setDepartamento] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [setor, setSetor] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    cpf?: string;
+    telefone?: string;
+    setor?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
   const navigate = useNavigate();
@@ -55,6 +73,14 @@ const Auth = () => {
     e.preventDefault();
 
     if (!isLogin) {
+      // Validação inline dos 3 campos novos (D-05): sem toast por campo, apenas erros sob o input.
+      const fe: typeof fieldErrors = {};
+      if (!validateCPF(cpf)) fe.cpf = "CPF inválido";
+      if (!validateTelefone(telefone)) fe.telefone = "Telefone inválido (celular com DDD)";
+      if (!setor) fe.setor = "Selecione um setor";
+      setFieldErrors(fe);
+      if (Object.keys(fe).length > 0) return;
+
       if (!nome.trim()) {
         toast({ title: "Preencha seu nome", variant: "destructive" });
         return;
@@ -114,7 +140,15 @@ const Auth = () => {
         if (userId) {
           try {
             const res = await supabase.functions.invoke("create-colaborador", {
-              body: { nome, cargo, departamento, user_id: userId },
+              body: {
+                nome,
+                cargo,
+                departamento,
+                user_id: userId,
+                cpf: unmask(cpf),
+                telefone: unmask(telefone),
+                setor,
+              },
             });
             if (res.error) {
               console.error("Error creating colaborador:", res.error);
@@ -156,6 +190,10 @@ const Auth = () => {
                 setNome("");
                 setCargo("");
                 setDepartamento("");
+                setCpf("");
+                setTelefone("");
+                setSetor("");
+                setFieldErrors({});
                 navigate("/auth");
               }}
             >
@@ -184,40 +222,18 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Dados do colaborador (só no cadastro) */}
+            {/* Nome (só no cadastro) — D-04 ordem: Nome → Email → ConfirmEmail → CPF → Telefone → Setor → Cargo → Departamento → Senha → ConfirmSenha */}
             {!isLogin && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome Completo *</Label>
-                  <Input
-                    id="nome"
-                    placeholder="Ex: João Silva"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="cargo">Cargo</Label>
-                    <Input
-                      id="cargo"
-                      placeholder="Ex: Designer"
-                      value={cargo}
-                      onChange={(e) => setCargo(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="departamento">Setor</Label>
-                    <Input
-                      id="departamento"
-                      placeholder="Ex: Projetos"
-                      value={departamento}
-                      onChange={(e) => setDepartamento(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome Completo *</Label>
+                <Input
+                  id="nome"
+                  placeholder="Ex: João Silva"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                />
+              </div>
             )}
 
             {/* E-mail */}
@@ -250,6 +266,77 @@ const Auth = () => {
                   <p className="text-xs text-destructive">Os e-mails não conferem</p>
                 )}
               </div>
+            )}
+
+            {/* CPF, Telefone, Setor + Cargo/Departamento (só no cadastro) */}
+            {!isLogin && (
+              <>
+                {/* CPF */}
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF *</Label>
+                  <Input
+                    id="cpf"
+                    placeholder="000.000.000-00"
+                    value={cpf}
+                    onChange={(e) => setCpf(formatCPF(e.target.value))}
+                    className={fieldErrors.cpf ? "border-destructive" : ""}
+                    required
+                  />
+                  {fieldErrors.cpf && <p className="text-xs text-destructive">{fieldErrors.cpf}</p>}
+                </div>
+
+                {/* Telefone */}
+                <div className="space-y-2">
+                  <Label htmlFor="telefone">Telefone *</Label>
+                  <Input
+                    id="telefone"
+                    placeholder="(11) 98765-4321"
+                    value={telefone}
+                    onChange={(e) => setTelefone(formatTelefone(e.target.value))}
+                    className={fieldErrors.telefone ? "border-destructive" : ""}
+                    required
+                  />
+                  {fieldErrors.telefone && <p className="text-xs text-destructive">{fieldErrors.telefone}</p>}
+                </div>
+
+                {/* Setor */}
+                <div className="space-y-2">
+                  <Label htmlFor="setor">Setor *</Label>
+                  <Select value={setor} onValueChange={setSetor}>
+                    <SelectTrigger id="setor" className={fieldErrors.setor ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Selecione um setor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SETORES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldErrors.setor && <p className="text-xs text-destructive">{fieldErrors.setor}</p>}
+                </div>
+
+                {/* Cargo + Departamento (opcionais) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="cargo">Cargo</Label>
+                    <Input
+                      id="cargo"
+                      placeholder="Ex: Designer"
+                      value={cargo}
+                      onChange={(e) => setCargo(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="departamento">Departamento</Label>
+                    <Input
+                      id="departamento"
+                      placeholder="Ex: Projetos"
+                      value={departamento}
+                      onChange={(e) => setDepartamento(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Senha */}
