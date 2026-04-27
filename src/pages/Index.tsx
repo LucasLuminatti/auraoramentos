@@ -14,10 +14,8 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Plus, User, FolderOpen, ChevronRight, Shield, HardDrive } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
+import ClienteDialog from "@/components/ClienteDialog";
 
 const STEPS = ["Dados", "Ambientes", "Revisão"];
 
@@ -31,7 +29,6 @@ const Index = () => {
   const [dados, setDados] = useState<DadosOrcamento>({ colaborador: "", tipo: "" });
   const [ambientes, setAmbientes] = useState<Ambiente[]>([]);
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
-  const [novoClienteNome, setNovoClienteNome] = useState("");
   const [listKey, setListKey] = useState(0);
   const [currentProjetoId, setCurrentProjetoId] = useState<string | null>(null);
   const [currentClienteId, setCurrentClienteId] = useState<string | null>(null);
@@ -50,19 +47,6 @@ const Index = () => {
     setCurrentProjetoNome(projetoNome);
     setStep(1);
     setMode("create");
-  };
-
-  const handleCriarCliente = async () => {
-    if (!novoClienteNome.trim()) return;
-    const { error } = await supabase.from("clientes").insert({ nome: novoClienteNome.trim() });
-    if (error) {
-      toast.error("Erro ao criar cliente");
-      return;
-    }
-    toast.success("Cliente adicionado!");
-    setClienteDialogOpen(false);
-    setNovoClienteNome("");
-    setListKey((k) => k + 1);
   };
 
   const handleLogoClick = () => {
@@ -102,7 +86,7 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2">
             {mode === "list" && (
-              <Button onClick={() => { setNovoClienteNome(""); setClienteDialogOpen(true); }} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button onClick={() => setClienteDialogOpen(true)} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus className="h-4 w-4" /> Novo Cliente
               </Button>
             )}
@@ -154,25 +138,12 @@ const Index = () => {
         )}
       </main>
 
-      <Dialog open={clienteDialogOpen} onOpenChange={setClienteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Novo Cliente</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <Input
-              placeholder="Nome do cliente"
-              value={novoClienteNome}
-              onChange={(e) => setNovoClienteNome(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCriarCliente()}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClienteDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCriarCliente} disabled={!novoClienteNome.trim()}>Criar Cliente</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClienteDialog
+        open={clienteDialogOpen}
+        onOpenChange={setClienteDialogOpen}
+        mode="create"
+        onSuccess={() => setListKey((k) => k + 1)}
+      />
 
       <Dialog open={confirmVoltarOpen} onOpenChange={setConfirmVoltarOpen}>
         <DialogContent className="sm:max-w-md">
