@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Flag } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
 import AdminExceptions from "@/components/AdminExceptions";
@@ -19,9 +19,20 @@ import ImportPrecos from "@/components/ImportPrecos";
 import ImportImagens from "@/components/ImportImagens";
 import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 
+const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes"] as const;
+type AdminTab = (typeof VALID_TABS)[number];
+
 const Admin = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabParam = searchParams.get("tab") as AdminTab | null;
+  const activeTab: AdminTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "dashboard";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value }, { replace: true });
+  };
 
   const [importSubTab, setImportSubTab] = useState<"produtos" | "precos" | "imagens">("produtos");
 
@@ -162,7 +173,7 @@ const Admin = () => {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6">
-        <Tabs defaultValue="dashboard">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="mb-6">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="excecoes">Exceções de Preço</TabsTrigger>
