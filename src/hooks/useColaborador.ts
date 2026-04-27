@@ -9,6 +9,9 @@ export interface Colaborador {
   cargo: string | null;
   departamento: string | null;
   user_id: string | null;
+  cpf: string | null;
+  telefone: string | null;
+  setor: string | null;
 }
 
 function derivarNomeInicial(user: User): string {
@@ -37,7 +40,7 @@ export function useColaborador() {
 
       const { data: existing } = await supabase
         .from("colaboradores")
-        .select("id, nome, cargo, departamento, user_id")
+        .select("id, nome, cargo, departamento, user_id, cpf, telefone, setor")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -56,7 +59,7 @@ export function useColaborador() {
         });
         const { data: created } = await supabase
           .from("colaboradores")
-          .select("id, nome, cargo, departamento, user_id")
+          .select("id, nome, cargo, departamento, user_id, cpf, telefone, setor")
           .eq("user_id", user.id)
           .maybeSingle();
         setColaborador(created);

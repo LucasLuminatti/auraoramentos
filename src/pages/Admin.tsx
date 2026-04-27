@@ -18,6 +18,7 @@ import ImportProdutos from "@/components/ImportProdutos";
 import ImportPrecos from "@/components/ImportPrecos";
 import ImportImagens from "@/components/ImportImagens";
 import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
+import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 
 const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes"] as const;
 type AdminTab = (typeof VALID_TABS)[number];
@@ -155,6 +156,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <CompletarCadastroBanner />
       <header className="border-b bg-card shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">

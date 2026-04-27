@@ -15,6 +15,7 @@ import RequestAccess from "./pages/RequestAccess";
 import NotFound from "./pages/NotFound";
 import AdminUploadImagens from "./pages/AdminUploadImagens";
 import Drive from "./pages/Drive";
+import PerfilCompletar from "./pages/PerfilCompletar";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/request-access" element={<RequestAccess />} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+          <Route path="/perfil/completar" element={<ProtectedRoute><PerfilCompletar /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/admin/upload-imagens" element={<AdminRoute><AdminUploadImagens /></AdminRoute>} />
           <Route path="/drive" element={<ProtectedRoute><Drive /></ProtectedRoute>} />
