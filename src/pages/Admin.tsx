@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Flag } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Flag, Plus, Pencil } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
@@ -19,8 +19,10 @@ import ImportPrecos from "@/components/ImportPrecos";
 import ImportImagens from "@/components/ImportImagens";
 import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
+import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes"] as const;
+const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes", "arquitetos"] as const;
 type AdminTab = (typeof VALID_TABS)[number];
 
 const Admin = () => {
@@ -54,6 +56,14 @@ const Admin = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null);
 
+  // Arquitetos tab
+  const [arquitetos, setArquitetos] = useState<ArquitetoRow[]>([]);
+  const [arquitetoDialogOpen, setArquitetoDialogOpen] = useState(false);
+  const [arquitetoDialogMode, setArquitetoDialogMode] = useState<"create" | "edit">("create");
+  const [arquitetoEditTarget, setArquitetoEditTarget] = useState<ArquitetoRow | null>(null);
+  const [arquitetoDeleteTarget, setArquitetoDeleteTarget] = useState<ArquitetoRow | null>(null);
+  const [arquitetoDeleteOpen, setArquitetoDeleteOpen] = useState(false);
+
   // Encerrar negociação
   const [encerrarOpen, setEncerrarOpen] = useState(false);
   const [encerrarOrcId, setEncerrarOrcId] = useState("");
@@ -63,6 +73,7 @@ const Admin = () => {
     fetchColaboradores();
     fetchOrcamentos();
     fetchClientes();
+    fetchArquitetos();
   }, []);
 
   useEffect(() => {
@@ -100,6 +111,43 @@ const Admin = () => {
   const fetchClientes = async () => {
     const { data } = await supabase.from("clientes").select("*").order("nome");
     setClientes(data || []);
+  };
+
+  const fetchArquitetos = async () => {
+    const { data, error } = await supabase
+      .from("arquitetos")
+      .select("id, nome, contato")
+      .order("nome", { ascending: true });
+    if (error) {
+      toast.error("Erro ao carregar arquitetos");
+      return;
+    }
+    setArquitetos((data || []) as ArquitetoRow[]);
+  };
+
+  const handleDeleteArquiteto = async () => {
+    if (!arquitetoDeleteTarget) return;
+    const { error } = await supabase.from("arquitetos").delete().eq("id", arquitetoDeleteTarget.id);
+    if (error) {
+      toast.error("Erro ao excluir arquiteto: " + error.message);
+      return;
+    }
+    toast.success("Arquiteto excluído!");
+    setArquitetoDeleteOpen(false);
+    setArquitetoDeleteTarget(null);
+    fetchArquitetos();
+  };
+
+  const openCreateArquiteto = () => {
+    setArquitetoDialogMode("create");
+    setArquitetoEditTarget(null);
+    setArquitetoDialogOpen(true);
+  };
+
+  const openEditArquiteto = (arq: ArquitetoRow) => {
+    setArquitetoDialogMode("edit");
+    setArquitetoEditTarget(arq);
+    setArquitetoDialogOpen(true);
   };
 
   const handleDeleteCliente = async () => {
@@ -184,6 +232,7 @@ const Admin = () => {
             <TabsTrigger value="colaboradores">Colaboradores</TabsTrigger>
             <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
+            <TabsTrigger value="arquitetos">Arquitetos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -375,6 +424,57 @@ const Admin = () => {
               </Table>
             </div>
           </TabsContent>
+
+          {/* ARQUITETOS */}
+          <TabsContent value="arquitetos">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Arquitetos</h3>
+                <Button size="sm" onClick={openCreateArquiteto} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Novo Arquiteto
+                </Button>
+              </div>
+              <div className="rounded-xl border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead className="w-28 text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {arquitetos.map((a) => (
+                      <TableRow key={a.id}>
+                        <TableCell className="font-medium">{a.nome}</TableCell>
+                        <TableCell>{a.contato || "—"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openEditArquiteto(a)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => { setArquitetoDeleteTarget(a); setArquitetoDeleteOpen(true); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {arquitetos.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                          Nenhum arquiteto cadastrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -399,6 +499,36 @@ const Admin = () => {
         orcamentoId={encerrarOrcId}
         onSuccess={fetchOrcamentos}
       />
+
+      <ArquitetoDialog
+        open={arquitetoDialogOpen}
+        onOpenChange={setArquitetoDialogOpen}
+        mode={arquitetoDialogMode}
+        arquiteto={arquitetoEditTarget}
+        onSuccess={fetchArquitetos}
+      />
+
+      <AlertDialog open={arquitetoDeleteOpen} onOpenChange={setArquitetoDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Arquiteto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{arquitetoDeleteTarget?.nome}</strong>?
+              Clientes e produtos vinculados ficarão sem arquiteto (não serão deletados).
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteArquiteto}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
