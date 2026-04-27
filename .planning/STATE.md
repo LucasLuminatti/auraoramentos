@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-26T18:14:53.721Z"
+last_updated: "2026-04-27T18:30:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 17
 ---
 
 # STATE: AURA — Marco 1 (Melhorias v1)
 
-**Last updated:** 2026-04-23 (after roadmap creation)
+**Last updated:** 2026-04-27 (after Phase 1 close)
 
 ## Project Reference
 
@@ -23,23 +23,23 @@ progress:
 - **Current Milestone:** Marco 1 — Melhorias v1
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 01 — schema-prep
+- **Current Focus:** Phase 02 — Cadastros & Arquiteto CRUD (próxima)
 
 ## Current Position
 
-Phase: 01 (schema-prep) — EXECUTING
-Plan: 1 of 3
+Phase: 01 (schema-prep) — COMPLETE
+Plan: 3/3 done
 
-- **Phase:** 1 — Schema & Prep
-- **Plan:** None (planning not yet started)
-- **Status:** Executing Phase 01
-- **Progress:** `[□□□□□□]` 0/6 phases complete
+- **Phase:** 2 — Cadastros & Arquiteto CRUD (não iniciada)
+- **Plan:** Pendente — rodar `/gsd-plan-phase 2`
+- **Status:** Phase 1 fechada, pronto para Phase 2
+- **Progress:** `[■□□□□□]` 1/6 phases complete
 
 ## Milestone Progress
 
 | Phase | Requirements | Status |
 |-------|--------------|--------|
-| 1. Schema & Prep | 5 | Not started |
+| 1. Schema & Prep | 5 | Complete (2026-04-27) |
 | 2. Cadastros & Arquiteto CRUD | 10 | Not started |
 | 3. Produtos & Importação | 8 | Not started |
 | 4. Drive RLS & Reorganização Admin | 9 | Not started |
@@ -50,11 +50,11 @@ Plan: 1 of 3
 
 ## Performance Metrics
 
-- **Phases completed:** 0/6
-- **Requirements validated:** 0/42
-- **Plans completed:** 0
-- **Migrations aplicadas:** 0
-- **Commits do marco:** 0
+- **Phases completed:** 1/6
+- **Requirements validated:** 5/42 (PREP-01, ARQ-01, ARQ-03, ARQ-04, ARQ-05)
+- **Plans completed:** 3 (01-01, 01-02, 01-03)
+- **Migrations aplicadas:** 4 (20260423000001..04)
+- **Commits do marco:** 13 (5 schema + 5 docs/state + 3 hotfix/todos)
 
 ## Accumulated Context
 
@@ -95,14 +95,14 @@ Plan: 1 of 3
 
 ### Last Session
 
-- **Date:** 2026-04-23
-- **Action:** Pivô do marco — PROJECT.md e REQUIREMENTS.md reescritos (UAT descartado), roadmap novo criado com 42 requirements em 6 phases
-- **Outcome:** Roadmap pronto, traceability atualizada, fase 1 destravada para planning
+- **Date:** 2026-04-27
+- **Action:** Phase 1 smoke (Plan 03) — 5 testes manuais executados em prod (Vercel kappa + Supabase Dashboard); hotfix `b8dfc40` aplicado pra persistir aba de admin no F5; bugs pré-existentes capturados como todos
+- **Outcome:** Phase 1 fechada. Schema novo (arquitetos + FKs + colunas em colaboradores/clientes) confirmado em prod sem regressão. 4 gaps documentados (orçamento não-clicável, PDF zuado, create-colaborador 401 fora do signup, request-access 409 UX) — nenhum bloqueia Phase 2
 
 ### Next Session
 
-- **Suggested next action:** `/gsd-plan-phase 1`
-- **Expected outcome:** Plano de execução para Schema & Prep (PREP-01, ARQ-01, ARQ-03, ARQ-04, ARQ-05 + migrations adicionais de colaboradores/clientes que serão usadas pelas fases 2+)
+- **Suggested next action:** `/gsd-plan-phase 2`
+- **Expected outcome:** Plano de execução para Phase 02 — Cadastros & Arquiteto CRUD (10 requirements: ARQ-02 admin CRUD + USR-01..03 frontend + CLI-01..02 frontend + autocomplete arquiteto no Step 1, etc.)
 
 ---
-*STATE refreshed: 2026-04-23 após pivô para Marco 1 — Melhorias v1*
+*STATE refreshed: 2026-04-27 após fechamento de Phase 1*
