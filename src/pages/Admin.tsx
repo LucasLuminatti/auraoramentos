@@ -21,6 +21,7 @@ import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
 import ClienteDialog, { type ClienteRow } from "@/components/ClienteDialog";
+import ProdutoEditDialog, { type ProdutoEditRow } from "@/components/ProdutoEditDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes", "arquitetos"] as const;
@@ -45,6 +46,8 @@ const Admin = () => {
   const [produtoSearch, setProdutoSearch] = useState("");
   const [loadingProdutos, setLoadingProdutos] = useState(false);
   const [totalProdutos, setTotalProdutos] = useState(0);
+  const [produtoEditOpen, setProdutoEditOpen] = useState(false);
+  const [produtoEditTarget, setProdutoEditTarget] = useState<ProdutoEditRow | null>(null);
 
   // Colaboradores tab
   const [colaboradores, setColaboradores] = useState<any[]>([]);
@@ -292,22 +295,44 @@ const Admin = () => {
                     <TableRow>
                       <TableHead>Código</TableHead>
                       <TableHead>Descrição</TableHead>
+                      <TableHead>Arquiteto</TableHead>
                       <TableHead className="text-right">Preço Tabela</TableHead>
                       <TableHead className="text-right">Preço Mínimo</TableHead>
+                      <TableHead className="w-20 text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingProdutos ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Buscando...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Buscando...</TableCell></TableRow>
                     ) : produtos.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
                     ) : (
                       produtos.map((p) => (
                         <TableRow key={p.id}>
                           <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
                           <TableCell>{p.descricao}</TableCell>
+                          <TableCell>{p.arquiteto_id ? (arquitetosMap[p.arquiteto_id] || "—") : "—"}</TableCell>
                           <TableCell className="text-right">{p.preco_tabela ? `R$ ${Number(p.preco_tabela).toFixed(2)}` : "—"}</TableCell>
                           <TableCell className="text-right">{p.preco_minimo ? `R$ ${Number(p.preco_minimo).toFixed(2)}` : "—"}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setProdutoEditTarget({
+                                  id: p.id,
+                                  codigo: p.codigo,
+                                  descricao: p.descricao,
+                                  preco_tabela: p.preco_tabela,
+                                  preco_minimo: p.preco_minimo,
+                                  arquiteto_id: p.arquiteto_id ?? null,
+                                });
+                                setProdutoEditOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -551,6 +576,13 @@ const Admin = () => {
         mode="edit"
         cliente={clienteEditTarget}
         onSuccess={fetchClientes}
+      />
+
+      <ProdutoEditDialog
+        open={produtoEditOpen}
+        onOpenChange={setProdutoEditOpen}
+        produto={produtoEditTarget}
+        onSuccess={() => fetchProdutos(produtoSearch)}
       />
 
       <AlertDialog open={arquitetoDeleteOpen} onOpenChange={setArquitetoDeleteOpen}>
