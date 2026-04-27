@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-27T18:30:00.000Z"
+last_updated: "2026-04-27T18:51:00.995Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
+  total_plans: 7
   completed_plans: 3
-  percent: 17
+  percent: 43
 ---
 
 # STATE: AURA — Marco 1 (Melhorias v1)
@@ -32,7 +32,7 @@ Plan: 3/3 done
 
 - **Phase:** 2 — Cadastros & Arquiteto CRUD (não iniciada)
 - **Plan:** Pendente — rodar `/gsd-plan-phase 2`
-- **Status:** Phase 1 fechada, pronto para Phase 2
+- **Status:** Ready to execute
 - **Progress:** `[■□□□□□]` 1/6 phases complete
 
 ## Milestone Progress
