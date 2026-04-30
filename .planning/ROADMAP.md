@@ -60,7 +60,12 @@
   3. CSV importado cria produtos novos (não só atualiza) e atualiza preços via SKU/código
   4. CSV aceita coluna de imagem (URL ou caminho) e correlaciona automaticamente ao produto correto
   5. Tela de importação mostra instruções, exemplo baixável, preview (created vs updated vs erros por linha) e falha em 1 linha não aborta o batch
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 03-01-PLAN.md — Schema (products + product_variants via rename + view de compat) + bucket Storage produtos-imagens + RLS + db push + types regen
+- [ ] 03-02-PLAN.md — Seed AU001..16 (D-10/D-11) + reconcile() (D-05..D-08) + parsers tensao/potencia + tests
+- [ ] 03-03-PLAN.md — ProdutoEditDialog estendido (mode=create + upload imagem) + Admin botão + Novo Produto
+- [ ] 03-04-PLAN.md — ImportMaster (one-shot xlsx) + ImportProdutos refatorada (CSV diário, preview create/update, template, imagem_url) + ImportImagens migrada para bucket plural + edge fn import-produtos refatorada
+- [ ] 03-05-PLAN.md — REQUIREMENTS.md (PROD-02 obsoleto, IMP-02 deferido) + STATE.md (Phase 3 Complete) + ROADMAP.md (checkboxes)
 **UI hint**: yes
 
 ### Phase 4: Drive RLS & Reorganização Admin
