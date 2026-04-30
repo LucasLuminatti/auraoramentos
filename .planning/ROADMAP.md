@@ -44,10 +44,10 @@
   4. Form de criar cliente aceita contato, CPF/CNPJ e seletor de arquiteto (autocomplete contra `arquitetos`), todos opcionais
   5. Produto existente no admin pode ter arquiteto atribuído/alterado via edição
 **Plans**: 4 plans
-- [ ] 02-01-PLAN.md — Foundation: src/lib/masks.ts, src/lib/validators.ts, edge function create-colaborador expandida (USR-01..03 base)
-- [ ] 02-02-PLAN.md — Signup expandido em Auth.tsx + Banner USR-04 + página /perfil/completar (USR-01..04)
-- [ ] 02-03-PLAN.md — ArquitetoAutocomplete + ArquitetoDialog + 8ª aba Arquitetos no Admin com CRUD (ARQ-02)
-- [ ] 02-04-PLAN.md — ClienteDialog (4 campos) + ProdutoEditDialog com arquiteto + integração no Admin (CLI-01..03, PROD-03, PROD-04)
+- [x] 02-01-PLAN.md — Foundation: src/lib/masks.ts, src/lib/validators.ts, edge function create-colaborador expandida (USR-01..03 base)
+- [x] 02-02-PLAN.md — Signup expandido em Auth.tsx + Banner USR-04 + página /perfil/completar (USR-01..04)
+- [x] 02-03-PLAN.md — ArquitetoAutocomplete + ArquitetoDialog + 8ª aba Arquitetos no Admin com CRUD (ARQ-02)
+- [x] 02-04-PLAN.md — ClienteDialog (4 campos) + ProdutoEditDialog com arquiteto + integração no Admin (CLI-01..03, PROD-03, PROD-04)
 **UI hint**: yes
 
 ### Phase 3: Produtos & Importação

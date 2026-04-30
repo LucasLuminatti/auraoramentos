@@ -1,8 +1,8 @@
 ---
 phase: 02-cadastros-arquiteto-crud
 verified: 2026-04-27T00:00:00Z
-status: human_needed
-score: 5/5 must-haves verified (automated)
+status: passed
+score: 5/5 must-haves verified (automated + Playwright UAT 2026-04-30)
 overrides_applied: 0
 human_verification:
   - test: "Signup ponta-a-ponta com CPF/telefone/setor"
