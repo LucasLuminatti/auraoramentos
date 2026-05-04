@@ -9,9 +9,9 @@
 
 ## Phases
 
-- [ ] **Phase 1: Schema & Prep** — Limpar git pendente e aplicar todas as migrations aditivas (arquitetos, FKs, campos novos) que desbloqueiam as fases seguintes
-- [ ] **Phase 2: Cadastros & Arquiteto CRUD** — Signup expandido (CPF/telefone/setor), form de cliente com arquiteto, CRUD de arquitetos no admin e vinculação dos produtos existentes
-- [ ] **Phase 3: Produtos & Importação** — UI de cadastro manual de produto, cadastro dos 16 itens faltantes e importação CSV completa (create + preços + imagens + preview + erros por linha)
+- [x] **Phase 1: Schema & Prep** — Limpar git pendente e aplicar todas as migrations aditivas (arquitetos, FKs, campos novos) que desbloqueiam as fases seguintes
+- [x] **Phase 2: Cadastros & Arquiteto CRUD** — Signup expandido (CPF/telefone/setor), form de cliente com arquiteto, CRUD de arquitetos no admin e vinculação dos produtos existentes
+- [x] **Phase 3: Produtos & Importação** — UI de cadastro manual de produto, cadastro dos 16 itens faltantes e importação CSV completa (create + preços + imagens + preview + erros por linha)
 - [ ] **Phase 4: Drive RLS & Reorganização Admin** — RLS do Drive por colaborador, visualização detalhada de pedido, tela de preços, docs de exceção e reorganização das abas
 - [ ] **Phase 5: PDF Redesign** — Reconstrução do PDF com layout tipográfico limpo, remoção das 4 caixas e texto final formatado
 - [ ] **Phase 6: Filtros & Smoke** — Filtros por arquiteto (clientes/produtos/pedidos), filtros combináveis e smoke test manual em prod
@@ -31,7 +31,7 @@
 **Plans**: 3 plans
 - [x] 01-01-PLAN.md — PREP-01 preflight + git cleanup (config.toml, edge functions decision, .gitignore)
 - [x] 01-02-PLAN.md — 4 aditive migrations (arquitetos, FKs in clientes/produtos, cols in colaboradores/clientes) + db push + types regen
-- [ ] 01-03-PLAN.md — Smoke test in prod (wizard, admin, PDF, dashboard) — Phase 1 closure
+- [x] 01-03-PLAN.md — Smoke test in prod (wizard, admin, PDF, dashboard) — Phase 1 closure
 
 ### Phase 2: Cadastros & Arquiteto CRUD
 **Goal**: Usuários novos entram com dados completos (CPF/telefone/setor), clientes podem ser vinculados a arquitetos e admin gerencia arquitetos como entidade própria
@@ -56,17 +56,18 @@
 **Requirements**: PROD-01, PROD-02, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06
 **Success Criteria** (what must be TRUE):
   1. Admin tem formulário manual de produto com nome, descrição, upload de imagem, preço, preço mínimo e seletor de arquiteto — salva e aparece no catálogo
-  2. Os 16 produtos atuais sem descrição/foto/preço estão cadastrados em produção via UI
-  3. CSV importado cria produtos novos (não só atualiza) e atualiza preços via SKU/código
+  2. ~~Os 16 produtos atuais sem descrição/foto/preço estão cadastrados em produção via UI~~ — **OBSOLETO (D-09)**: DB tinha 0 produtos sem desc/preço em 2026-04-30. Substituído por 16 SKUs coringa AU001..AU016 (Plan 02)
+  3. CSV importado cria produtos novos (não só atualiza) e atualiza ~~preços~~ specs/nome/atributos via SKU/código — **preço deferido (D-18)**
   4. CSV aceita coluna de imagem (URL ou caminho) e correlaciona automaticamente ao produto correto
   5. Tela de importação mostra instruções, exemplo baixável, preview (created vs updated vs erros por linha) e falha em 1 linha não aborta o batch
 **Plans**: 5 plans
-- [ ] 03-01-PLAN.md — Schema (products + product_variants via rename + view de compat) + bucket Storage produtos-imagens + RLS + db push + types regen
-- [ ] 03-02-PLAN.md — Seed AU001..16 (D-10/D-11) + reconcile() (D-05..D-08) + parsers tensao/potencia + tests
-- [ ] 03-03-PLAN.md — ProdutoEditDialog estendido (mode=create + upload imagem) + Admin botão + Novo Produto
-- [ ] 03-04-PLAN.md — ImportMaster (one-shot xlsx) + ImportProdutos refatorada (CSV diário, preview create/update, template, imagem_url) + ImportImagens migrada para bucket plural + edge fn import-produtos refatorada
-- [ ] 03-05-PLAN.md — REQUIREMENTS.md (PROD-02 obsoleto, IMP-02 deferido) + STATE.md (Phase 3 Complete) + ROADMAP.md (checkboxes)
+- [x] 03-01-PLAN.md — Schema (products + product_variants via rename + view de compat) + bucket Storage produtos-imagens + RLS
+- [x] 03-02-PLAN.md — Seed AU001..16 (D-10/D-11) + reconcile() (D-05..D-08) + parsers tensao/potencia + tests
+- [x] 03-03-PLAN.md — ProdutoEditDialog estendido (mode=create + upload imagem) + Admin botão "+ Novo Produto"
+- [x] 03-04-PLAN.md — ImportMaster (one-shot xlsx) + ImportProdutos refatorada (CSV diário, preview create/update, template, imagem_url) + ImportImagens migrada para bucket plural + edge fn import-produtos refatorada
+- [x] 03-05-PLAN.md — REQUIREMENTS.md (PROD-02 obsoleto, IMP-02 deferido) + STATE.md (Phase 3 Complete) + ROADMAP.md (checkboxes)
 **UI hint**: yes
+**Status**: Complete (2026-04-30) — 6/8 requirements entregues + PROD-02 obsoleto + IMP-02 deferido
 
 ### Phase 4: Drive RLS & Reorganização Admin
 **Goal**: Drive isolado por colaborador (admin vê tudo, colab só o seu) e painel admin reorganizado com visualização de pedido, tela de preços e docs de exceção
@@ -111,9 +112,9 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Schema & Prep | 0/3 | Planned | - |
-| 2. Cadastros & Arquiteto CRUD | 0/4 | Planned | - |
-| 3. Produtos & Importação | 0/0 | Not started | - |
+| 1. Schema & Prep | 3/3 | Complete | 2026-04-27 |
+| 2. Cadastros & Arquiteto CRUD | 4/4 | Complete | 2026-04-27 |
+| 3. Produtos & Importação | 5/5 | Complete | 2026-04-30 |
 | 4. Drive RLS & Reorganização Admin | 0/0 | Not started | - |
 | 5. PDF Redesign | 0/0 | Not started | - |
 | 6. Filtros & Smoke | 0/0 | Not started | - |
@@ -139,3 +140,4 @@
 ---
 *Roadmap created: 2026-04-23 (pivô — escopo UAT descartado, melhorias v1 em vigor)*
 *Phase 2 planned: 2026-04-27*
+*Phase 3 planned + completed: 2026-04-30 (5 plans, 6 reqs entregues + PROD-02 obsoleto + IMP-02 deferido)*
