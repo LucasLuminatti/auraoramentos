@@ -49,7 +49,7 @@ interface Arquivo {
   nome: string;
   descricao: string | null;
   categoria: string;
-  arquivo_url: string;
+  arquivo_url: string | null; // legado pós Phase 4 — bucket privado, acesso via signed URL
   arquivo_path: string;
   tamanho: number;
   created_at: string;
@@ -213,11 +213,17 @@ const DriveExplorer = () => {
   // Create folder
   const handleCriarPasta = async () => {
     if (!novaPastaNome.trim() || !clienteId) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
     const { error } = await supabase.from("arquivo_pastas").insert({
       nome: novaPastaNome.trim(),
       cliente_id: clienteId,
       projeto_id: projetoId || null,
       pasta_pai_id: pastaId || null,
+      user_id: user.id, // Plan 04-01 RLS
     });
     if (error) {
       toast.error("Erro ao criar pasta");
@@ -227,6 +233,18 @@ const DriveExplorer = () => {
     setNovaPastaOpen(false);
     setNovaPastaNome("");
     fetchCurrentLevel();
+  };
+
+  // Download/open file via signed URL (bucket is private — D-06/D-07)
+  const handleDownload = async (arq: Arquivo) => {
+    const { data, error } = await supabase.storage
+      .from("cliente-arquivos")
+      .createSignedUrl(arq.arquivo_path, 86400); // 24h — D-07
+    if (error || !data?.signedUrl) {
+      toast.error("Erro ao gerar link de download");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
   // Upload file
@@ -247,9 +265,12 @@ const DriveExplorer = () => {
       return;
     }
 
-    const { data: urlData } = supabase.storage
-      .from("cliente-arquivos")
-      .getPublicUrl(path);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Usuário não autenticado");
+      setUploading(false);
+      return;
+    }
 
     const { error: insertError } = await supabase.from("cliente_arquivos").insert({
       cliente_id: clienteId,
@@ -259,8 +280,9 @@ const DriveExplorer = () => {
       descricao: uploadDescricao.trim() || null,
       categoria: uploadCategoria,
       arquivo_path: path,
-      arquivo_url: urlData.publicUrl,
+      arquivo_url: null, // legado — bucket privado pós-Phase 4 (D-06/D-08)
       tamanho: selectedFile.size,
+      user_id: user.id, // ACC-04 + Plan 04-01 RLS
     });
 
     if (insertError) {
@@ -404,9 +426,13 @@ const DriveExplorer = () => {
               className="group flex flex-col items-center gap-2 p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors relative"
             >
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                <a href={arq.arquivo_url} target="_blank" rel="noopener noreferrer" className="p-1 rounded hover:bg-muted">
+                <button
+                  type="button"
+                  onClick={() => handleDownload(arq)}
+                  className="p-1 rounded hover:bg-muted"
+                >
                   <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
+                </button>
                 <button
                   className="p-1 rounded hover:bg-destructive/10"
                   onClick={() => setDeleteTarget({ type: "arquivo", id: arq.id, nome: arq.nome })}
@@ -452,14 +478,13 @@ const DriveExplorer = () => {
             >
               <div className="flex items-center gap-3 min-w-0">
                 {fileIcon(arq.nome)}
-                <a
-                  href={arq.arquivo_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-foreground hover:underline truncate"
+                <button
+                  type="button"
+                  onClick={() => handleDownload(arq)}
+                  className="text-sm text-foreground hover:underline truncate text-left"
                 >
                   {arq.nome}
-                </a>
+                </button>
                 <span className="rounded px-1.5 py-0.5 text-xs bg-muted text-muted-foreground shrink-0">
                   {arq.categoria}
                 </span>
@@ -469,9 +494,13 @@ const DriveExplorer = () => {
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(arq.created_at), "dd/MM/yy", { locale: ptBR })}
                 </span>
-                <a href={arq.arquivo_url} target="_blank" rel="noopener noreferrer" className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all">
+                <button
+                  type="button"
+                  onClick={() => handleDownload(arq)}
+                  className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
+                >
                   <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
+                </button>
                 <button
                   className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all"
                   onClick={() => setDeleteTarget({ type: "arquivo", id: arq.id, nome: arq.nome })}
