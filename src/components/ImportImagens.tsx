@@ -138,10 +138,10 @@ const ImportImagens = () => {
       const results = await Promise.allSettled(
         batch.map(async ({ file, codigo, ext }) => {
           const path = `${codigo}.${ext}`;
-          const { error: uploadError } = await supabase.storage.from("produto-imagens").upload(path, file, { upsert: true });
+          const { error: uploadError } = await supabase.storage.from("produtos-imagens").upload(path, file, { upsert: true });
           if (uploadError) throw new Error(uploadError.message);
-          const { data: urlData } = supabase.storage.from("produto-imagens").getPublicUrl(path);
-          await supabase.from("produtos").update({ imagem_url: urlData.publicUrl } as any).eq("codigo", codigo);
+          const { data: urlData } = supabase.storage.from("produtos-imagens").getPublicUrl(path);
+          await supabase.from("product_variants").update({ imagem_url: urlData.publicUrl }).eq("codigo", codigo);
           return codigo;
         })
       );
