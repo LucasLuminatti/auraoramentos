@@ -1,4 +1,4 @@
-Initialising login role...
+npm warn exec The following package was not found and will be installed: supabase@2.98.1
 export type Json =
   | string
   | number
@@ -435,26 +435,31 @@ export type Database = {
           },
         ]
       }
-      produtos: {
+      product_variants: {
         Row: {
           aplicacao: string | null
           arquiteto_id: string | null
+          atributos: Json
           codigo: string
           cor: string | null
           created_at: string
           descricao: string
           driver_max_watts: number | null
           driver_tipo_permitido: string | null
+          editado_manualmente: boolean
           familia_perfil: string | null
           fator_spot: number | null
           id: string
           imagem_url: string | null
           largura_canal_mm: number | null
           largura_mm: number | null
+          nome: string | null
+          origem: string
           passadas_padrao: number | null
           potencia_watts: number | null
           preco_minimo: number
           preco_tabela: number
+          product_id: string
           sistema: string | null
           somente_baby: boolean | null
           subtipo: string | null
@@ -466,22 +471,27 @@ export type Database = {
         Insert: {
           aplicacao?: string | null
           arquiteto_id?: string | null
+          atributos?: Json
           codigo: string
           cor?: string | null
           created_at?: string
           descricao: string
           driver_max_watts?: number | null
           driver_tipo_permitido?: string | null
+          editado_manualmente?: boolean
           familia_perfil?: string | null
           fator_spot?: number | null
           id?: string
           imagem_url?: string | null
           largura_canal_mm?: number | null
           largura_mm?: number | null
+          nome?: string | null
+          origem?: string
           passadas_padrao?: number | null
           potencia_watts?: number | null
           preco_minimo?: number
           preco_tabela?: number
+          product_id: string
           sistema?: string | null
           somente_baby?: boolean | null
           subtipo?: string | null
@@ -493,22 +503,27 @@ export type Database = {
         Update: {
           aplicacao?: string | null
           arquiteto_id?: string | null
+          atributos?: Json
           codigo?: string
           cor?: string | null
           created_at?: string
           descricao?: string
           driver_max_watts?: number | null
           driver_tipo_permitido?: string | null
+          editado_manualmente?: boolean
           familia_perfil?: string | null
           fator_spot?: number | null
           id?: string
           imagem_url?: string | null
           largura_canal_mm?: number | null
           largura_mm?: number | null
+          nome?: string | null
+          origem?: string
           passadas_padrao?: number | null
           potencia_watts?: number | null
           preco_minimo?: number
           preco_tabela?: number
+          product_id?: string
           sistema?: string | null
           somente_baby?: boolean | null
           subtipo?: string | null
@@ -519,6 +534,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "produtos_arquiteto_id_fkey"
             columns: ["arquiteto_id"]
             isOneToOne: false
@@ -526,6 +548,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      products: {
+        Row: {
+          categoria: string | null
+          codigo_pai: string
+          created_at: string
+          id: string
+          nome: string
+          tipologia: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          codigo_pai: string
+          created_at?: string
+          id?: string
+          nome: string
+          tipologia?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          codigo_pai?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          tipologia?: string | null
+        }
+        Relationships: []
       }
       projetos: {
         Row: {
@@ -640,7 +689,21 @@ export type Database = {
             foreignKeyName: "vinculos_spot_lampada_codigo_lampada_fkey"
             columns: ["codigo_lampada"]
             isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["codigo"]
+          },
+          {
+            foreignKeyName: "vinculos_spot_lampada_codigo_lampada_fkey"
+            columns: ["codigo_lampada"]
+            isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["codigo"]
+          },
+          {
+            foreignKeyName: "vinculos_spot_lampada_codigo_spot_fkey"
+            columns: ["codigo_spot"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["codigo"]
           },
           {
@@ -654,7 +717,98 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      produtos: {
+        Row: {
+          aplicacao: string | null
+          arquiteto_id: string | null
+          codigo: string | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          driver_max_watts: number | null
+          driver_tipo_permitido: string | null
+          familia_perfil: string | null
+          fator_spot: number | null
+          id: string | null
+          imagem_url: string | null
+          largura_canal_mm: number | null
+          largura_mm: number | null
+          passadas_padrao: number | null
+          potencia_watts: number | null
+          preco_minimo: number | null
+          preco_tabela: number | null
+          sistema: string | null
+          somente_baby: boolean | null
+          subtipo: string | null
+          tamanho_rolo_m: number | null
+          tensao: number | null
+          tipo_produto: string | null
+          watts_por_metro: number | null
+        }
+        Insert: {
+          aplicacao?: string | null
+          arquiteto_id?: string | null
+          codigo?: string | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          driver_max_watts?: number | null
+          driver_tipo_permitido?: string | null
+          familia_perfil?: string | null
+          fator_spot?: number | null
+          id?: string | null
+          imagem_url?: string | null
+          largura_canal_mm?: number | null
+          largura_mm?: number | null
+          passadas_padrao?: number | null
+          potencia_watts?: number | null
+          preco_minimo?: number | null
+          preco_tabela?: number | null
+          sistema?: string | null
+          somente_baby?: boolean | null
+          subtipo?: string | null
+          tamanho_rolo_m?: number | null
+          tensao?: number | null
+          tipo_produto?: string | null
+          watts_por_metro?: number | null
+        }
+        Update: {
+          aplicacao?: string | null
+          arquiteto_id?: string | null
+          codigo?: string | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          driver_max_watts?: number | null
+          driver_tipo_permitido?: string | null
+          familia_perfil?: string | null
+          fator_spot?: number | null
+          id?: string | null
+          imagem_url?: string | null
+          largura_canal_mm?: number | null
+          largura_mm?: number | null
+          passadas_padrao?: number | null
+          potencia_watts?: number | null
+          preco_minimo?: number | null
+          preco_tabela?: number | null
+          sistema?: string | null
+          somente_baby?: boolean | null
+          subtipo?: string | null
+          tamanho_rolo_m?: number | null
+          tensao?: number | null
+          tipo_produto?: string | null
+          watts_por_metro?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_arquiteto_id_fkey"
+            columns: ["arquiteto_id"]
+            isOneToOne: false
+            referencedRelation: "arquitetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calcular_conectores_emenda: {
@@ -832,5 +986,4 @@ export const Constants = {
     },
   },
 } as const
-A new version of Supabase CLI is available: v2.90.0 (currently installed v2.78.1)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />
