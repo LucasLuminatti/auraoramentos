@@ -80,7 +80,13 @@
   4. Admin tem tela dedicada de atualização de preços com edição inline e salvamento em batch
   5. Abas do admin reorganizadas em agrupamentos claros (Cadastros / Pedidos / Preços / Exceções) e existe ajuda in-app explicando o fluxo de exceção
   6. Dashboard inicial do admin decidida (mantida simplificada ou removida) — decisão implementada, não pendente
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 04-01-PLAN.md — Migration drive RLS user_id + bucket privado + storage policies via tabela (foundation, [BLOCKING] db push)
+- [ ] 04-02-PLAN.md — DriveExplorer migrado para signed URLs + INSERT com user_id (ACC-03/04)
+- [ ] 04-03-PLAN.md — Admin reorg em 5 sub-tabs + dashboard limpo + ajuda Exceções (ADM-03/04/05)
+- [ ] 04-04-PLAN.md — PrecosBatch inline edit batch save (ADM-02)
+- [ ] 04-05-PLAN.md — OrcamentoDetalhe + linha clicável em Pedidos (ADM-01)
+- [ ] 04-06-PLAN.md — REQUIREMENTS/STATE/ROADMAP closure
 **UI hint**: yes
 
 ### Phase 5: PDF Redesign
@@ -115,7 +121,7 @@
 | 1. Schema & Prep | 3/3 | Complete | 2026-04-27 |
 | 2. Cadastros & Arquiteto CRUD | 4/4 | Complete | 2026-04-27 |
 | 3. Produtos & Importação | 5/5 | Complete | 2026-04-30 |
-| 4. Drive RLS & Reorganização Admin | 0/0 | Not started | - |
+| 4. Drive RLS & Reorganização Admin | 0/6 | Planned (2026-05-04) | - |
 | 5. PDF Redesign | 0/0 | Not started | - |
 | 6. Filtros & Smoke | 0/0 | Not started | - |
 
@@ -141,3 +147,4 @@
 *Roadmap created: 2026-04-23 (pivô — escopo UAT descartado, melhorias v1 em vigor)*
 *Phase 2 planned: 2026-04-27*
 *Phase 3 planned + completed: 2026-04-30 (5 plans, 6 reqs entregues + PROD-02 obsoleto + IMP-02 deferido)*
+*Phase 4 planned: 2026-05-04 (6 plans, 9 reqs — ACC-01..04 + ADM-01..05)*
