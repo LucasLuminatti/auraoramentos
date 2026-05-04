@@ -141,7 +141,7 @@ export type Database = {
       cliente_arquivos: {
         Row: {
           arquivo_path: string
-          arquivo_url: string
+          arquivo_url: string | null
           categoria: string
           cliente_id: string
           created_at: string
@@ -155,7 +155,7 @@ export type Database = {
         }
         Insert: {
           arquivo_path: string
-          arquivo_url: string
+          arquivo_url?: string | null
           categoria?: string
           cliente_id: string
           created_at?: string
@@ -169,7 +169,7 @@ export type Database = {
         }
         Update: {
           arquivo_path?: string
-          arquivo_url?: string
+          arquivo_url?: string | null
           categoria?: string
           cliente_id?: string
           created_at?: string
