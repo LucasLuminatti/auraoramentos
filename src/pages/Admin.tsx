@@ -14,8 +14,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
 import AdminExceptions from "@/components/AdminExceptions";
+import ImportMaster from "@/components/ImportMaster";
 import ImportProdutos from "@/components/ImportProdutos";
-import ImportPrecos from "@/components/ImportPrecos";
 import ImportImagens from "@/components/ImportImagens";
 import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
@@ -23,6 +23,7 @@ import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog
 import ClienteDialog, { type ClienteRow } from "@/components/ClienteDialog";
 import ProdutoEditDialog, { type ProdutoEditRow } from "@/components/ProdutoEditDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes", "arquitetos"] as const;
 type AdminTab = (typeof VALID_TABS)[number];
@@ -39,7 +40,7 @@ const Admin = () => {
     setSearchParams({ tab: value }, { replace: true });
   };
 
-  const [importSubTab, setImportSubTab] = useState<"produtos" | "precos" | "imagens">("produtos");
+  const [importSubTab, setImportSubTab] = useState<"master" | "produtos" | "imagens" | "precos">("master");
 
   // Produtos tab
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -212,9 +213,10 @@ const Admin = () => {
   const canEncerrar = (status: string) => status === "enviado" || status === "aprovado";
 
   const importSubTabs = [
-    { key: "produtos" as const, label: "Produtos", description: "Código + descrição", icon: FileSpreadsheet },
-    { key: "precos" as const, label: "Preços", description: "Atualizar preços", icon: DollarSign },
+    { key: "master" as const, label: "Master (one-shot)", description: "Sobe planilha master 2026", icon: FileSpreadsheet },
+    { key: "produtos" as const, label: "Produtos (CSV)", description: "Cria/atualiza por SKU", icon: FileSpreadsheet },
     { key: "imagens" as const, label: "Imagens", description: "Fotos dos produtos", icon: ImageIcon },
+    { key: "precos" as const, label: "Preços", description: "Indisponível neste marco", icon: DollarSign },
   ];
 
   return (
@@ -278,9 +280,26 @@ const Admin = () => {
               ))}
             </div>
 
+            {importSubTab === "master" && <ImportMaster />}
             {importSubTab === "produtos" && <ImportProdutos />}
-            {importSubTab === "precos" && <ImportPrecos />}
             {importSubTab === "imagens" && <ImportImagens />}
+            {importSubTab === "precos" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Importação de Preços</CardTitle>
+                  <CardDescription>Indisponível neste marco</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    A importação de preços (preco_tabela / preco_minimo via CSV) está deferida para uma phase futura.
+                    Em produção real, preço é atualizado ~1x por mês — fluxo periódico, não dia-a-dia (decisão D-18 do CONTEXT da Phase 3 / IMP-02 deferido).
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Por enquanto, edite preços individualmente via aba <strong>Produtos</strong> → Pencil → "Editar Produto".
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* PRODUTOS */}
