@@ -12,7 +12,7 @@
 - [x] **Phase 1: Schema & Prep** — Limpar git pendente e aplicar todas as migrations aditivas (arquitetos, FKs, campos novos) que desbloqueiam as fases seguintes
 - [x] **Phase 2: Cadastros & Arquiteto CRUD** — Signup expandido (CPF/telefone/setor), form de cliente com arquiteto, CRUD de arquitetos no admin e vinculação dos produtos existentes
 - [x] **Phase 3: Produtos & Importação** — UI de cadastro manual de produto, cadastro dos 16 itens faltantes e importação CSV completa (create + preços + imagens + preview + erros por linha)
-- [ ] **Phase 4: Drive RLS & Reorganização Admin** — RLS do Drive por colaborador, visualização detalhada de pedido, tela de preços, docs de exceção e reorganização das abas
+- [x] **Phase 4: Drive RLS & Reorganização Admin** — RLS do Drive por colaborador, visualização detalhada de pedido, tela de preços, docs de exceção e reorganização das abas
 - [ ] **Phase 5: PDF Redesign** — Reconstrução do PDF com layout tipográfico limpo, remoção das 4 caixas e texto final formatado
 - [ ] **Phase 6: Filtros & Smoke** — Filtros por arquiteto (clientes/produtos/pedidos), filtros combináveis e smoke test manual em prod
 
@@ -81,12 +81,13 @@
   5. Abas do admin reorganizadas em agrupamentos claros (Cadastros / Pedidos / Preços / Exceções) e existe ajuda in-app explicando o fluxo de exceção
   6. Dashboard inicial do admin decidida (mantida simplificada ou removida) — decisão implementada, não pendente
 **Plans**: 6 plans
-- [ ] 04-01-PLAN.md — Migration drive RLS user_id + bucket privado + storage policies via tabela (foundation, [BLOCKING] db push)
-- [ ] 04-02-PLAN.md — DriveExplorer migrado para signed URLs + INSERT com user_id (ACC-03/04)
-- [ ] 04-03-PLAN.md — Admin reorg em 5 sub-tabs + dashboard limpo + ajuda Exceções (ADM-03/04/05)
-- [ ] 04-04-PLAN.md — PrecosBatch inline edit batch save (ADM-02)
-- [ ] 04-05-PLAN.md — OrcamentoDetalhe + linha clicável em Pedidos (ADM-01)
-- [ ] 04-06-PLAN.md — REQUIREMENTS/STATE/ROADMAP closure
+- [x] 04-01-PLAN.md — Migration drive RLS user_id + bucket privado + storage policies via tabela (foundation, [BLOCKING] db push)
+- [x] 04-02-PLAN.md — DriveExplorer migrado para signed URLs + INSERT com user_id (ACC-03/04)
+- [x] 04-03-PLAN.md — Admin reorg em 5 sub-tabs + dashboard limpo + ajuda Exceções (ADM-03/04/05)
+- [x] 04-04-PLAN.md — PrecosBatch inline edit batch save (ADM-02)
+- [x] 04-05-PLAN.md — OrcamentoDetalhe + linha clicável em Pedidos (ADM-01)
+- [x] 04-06-PLAN.md — REQUIREMENTS/STATE/ROADMAP closure
+**Status**: Complete (2026-05-04) — 9/9 requirements entregues (ACC-01..04 + ADM-01..05)
 **UI hint**: yes
 
 ### Phase 5: PDF Redesign
@@ -121,7 +122,7 @@
 | 1. Schema & Prep | 3/3 | Complete | 2026-04-27 |
 | 2. Cadastros & Arquiteto CRUD | 4/4 | Complete | 2026-04-27 |
 | 3. Produtos & Importação | 5/5 | Complete | 2026-04-30 |
-| 4. Drive RLS & Reorganização Admin | 0/6 | Planned (2026-05-04) | - |
+| 4. Drive RLS & Reorganização Admin | 6/6 | Complete | 2026-05-04 |
 | 5. PDF Redesign | 0/0 | Not started | - |
 | 6. Filtros & Smoke | 0/0 | Not started | - |
 
@@ -147,4 +148,4 @@
 *Roadmap created: 2026-04-23 (pivô — escopo UAT descartado, melhorias v1 em vigor)*
 *Phase 2 planned: 2026-04-27*
 *Phase 3 planned + completed: 2026-04-30 (5 plans, 6 reqs entregues + PROD-02 obsoleto + IMP-02 deferido)*
-*Phase 4 planned: 2026-05-04 (6 plans, 9 reqs — ACC-01..04 + ADM-01..05)*
+*Phase 4 planned + completed: 2026-05-04 (6 plans, 9 reqs entregues — ACC-01..04 + ADM-01..05)*
