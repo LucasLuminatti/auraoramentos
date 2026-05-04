@@ -23,12 +23,12 @@ Drive isolado por colaborador (admin vê tudo, colaborador vê só o seu) + reor
 ### Drive RLS — Modelo de Acesso
 
 - **D-01:** Cada colaborador vê apenas seus próprios arquivos e projetos no Drive. Admin vê tudo. Comportamento de "site normal" (não shared/compartilhado).
-- **D-02:** Tabelas `cliente_arquivos` e `arquivo_pastas` ganham coluna `colaborador_id uuid` (FK → `colaboradores.id`, nullable durante transição mas backfill faz tudo virar `NOT NULL` antes do final da migration).
+- **D-02:** Tabelas `cliente_arquivos` e `arquivo_pastas` ganham coluna `user_id uuid` (FK → `auth.users(id)`, nullable durante transição mas backfill faz tudo virar `NOT NULL` antes do final da migration). **ERRATA pós-research:** decidido `user_id` em vez de `colaborador_id` porque `colaboradores.id` ≠ `auth.uid()` — RLS direta `user_id = auth.uid()` é limpa e performática (sem subquery).
 - **D-03:** Policies RLS:
-  - SELECT: `colaborador_id = auth.uid() OR has_role(auth.uid(), 'admin')`
-  - INSERT: `colaborador_id = auth.uid()` (auto-set, não vem do form)
-  - UPDATE/DELETE: `colaborador_id = auth.uid() OR has_role(auth.uid(), 'admin')`
-- **D-04:** Arquivos legados (sem `colaborador_id`) → atribuídos ao admin (Lenny) via UPDATE no momento da migration. Sem opção "shared".
+  - SELECT: `user_id = auth.uid() OR has_role(auth.uid(), 'admin')`
+  - INSERT: `user_id = auth.uid()` (auto-set, não vem do form)
+  - UPDATE/DELETE: `user_id = auth.uid() OR has_role(auth.uid(), 'admin')`
+- **D-04:** Arquivos legados (sem `user_id`) → atribuídos ao admin (Lenny) via UPDATE no momento da migration. Sem opção "shared".
 - **D-05:** Comportamento ao deletar colaborador → arquivos órfãos reatribuídos automaticamente ao admin (não cascade delete).
 
 ### Drive Storage — Privacidade do Bucket
@@ -36,10 +36,11 @@ Drive isolado por colaborador (admin vê tudo, colaborador vê só o seu) + reor
 - **D-06:** Bucket `cliente-arquivos` vira **privado** (deixa de ser `public read`).
 - **D-07:** Acesso aos arquivos via **signed URLs com 24h de expiração**. App gera URL temporária no momento do download.
 - **D-08:** URLs públicas antigas (em PDFs gerados anteriormente, links compartilhados externos) **vão quebrar** — decisão consciente. Quem precisar pede de novo dentro do app.
-- **D-09:** Storage policies ajustadas para mesmo padrão da RLS de tabela:
-  - SELECT (download): só dono ou admin (via path com prefixo `colaborador_id`)
-  - INSERT (upload): só authenticated, com path forçado para `${auth.uid()}/...`
-  - DELETE: só dono ou admin
+- **D-09:** Storage policies via tabela `cliente_arquivos` (não path-prefix). **ERRATA pós-research:** decidido NÃO migrar paths existentes. Policies do bucket fazem JOIN com `cliente_arquivos`:
+  - SELECT (download): permitido se existe registro em `cliente_arquivos` com `arquivo_path = name` AND (`user_id = auth.uid()` OR admin)
+  - INSERT (upload): só authenticated com `user_id` setado em `cliente_arquivos` no mesmo INSERT (transação app-side garante consistência)
+  - DELETE: dono ou admin
+  - Tabela `cliente_arquivos` é a fonte da verdade — bucket policy delega.
 
 ### Reorganização do Admin (ADM-04)
 
@@ -76,7 +77,7 @@ Drive isolado por colaborador (admin vê tudo, colaborador vê só o seu) + reor
 
 - **D-24:** **Simplificar** o dashboard atual. Manter as 6 métricas de topo (Receita Efetiva, Receita Prevista, Pipeline, Ticket Médio, Conversão, Ciclo Médio) + gráfico Receita Mensal + seletor de período.
 - **D-25:** **Remover** o gráfico "Distribuição por Status" (redundante com Pipeline).
-- **D-26:** Dashboard vira **página "Início"** separada do tab strip (rota `/admin` ou `/admin/inicio`). As 4 abas (Cadastros/Pedidos/Preços/Exceções) ficam abaixo.
+- **D-26:** Dashboard vira **sub-tab "Início"** dentro do mesmo TabsList superior (5 grupos no total: Início / Cadastros / Pedidos / Preços / Exceções). **ERRATA pós-research:** decidido `TabsContent value='inicio'` em vez de rota separada — consistência com o resto do tab strip, sem extra router level. Default ao abrir `/admin`.
 
 ### Claude's Discretion
 
