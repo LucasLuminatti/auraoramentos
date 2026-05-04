@@ -9,52 +9,52 @@
 
 ### Cadastro — Usuário e Cliente
 
-- [ ] **USR-01**: Signup pede CPF (obrigatório, validado pelo algoritmo brasileiro) além do email/senha atual
-- [ ] **USR-02**: Signup pede telefone (obrigatório, formato BR com máscara)
-- [ ] **USR-03**: Signup pede setor (enum: `comercial`, `projetos`, `logistica`, `financeiro`), obrigatório
-- [ ] **USR-04**: Colaborador existente consegue preencher os 3 campos (CPF/telefone/setor) após login caso ainda não tenha — sem bloquear os antigos
-- [ ] **CLI-01**: Formulário de criar cliente ganha campo **contato** (opcional, texto livre)
-- [ ] **CLI-02**: Formulário de criar cliente ganha campo **CPF/CNPJ** (opcional, sem validação semântica neste marco)
-- [ ] **CLI-03**: Formulário de criar cliente ganha seletor de **arquiteto** (opcional, autocomplete contra tabela `arquitetos`)
+- [x] **USR-01**: Signup pede CPF (obrigatório, validado pelo algoritmo brasileiro) além do email/senha atual
+- [x] **USR-02**: Signup pede telefone (obrigatório, formato BR com máscara)
+- [x] **USR-03**: Signup pede setor (enum: `comercial`, `projetos`, `logistica`, `financeiro`), obrigatório
+- [x] **USR-04**: Colaborador existente consegue preencher os 3 campos (CPF/telefone/setor) após login caso ainda não tenha — sem bloquear os antigos
+- [x] **CLI-01**: Formulário de criar cliente ganha campo **contato** (opcional, texto livre)
+- [x] **CLI-02**: Formulário de criar cliente ganha campo **CPF/CNPJ** (opcional, sem validação semântica neste marco)
+- [x] **CLI-03**: Formulário de criar cliente ganha seletor de **arquiteto** (opcional, autocomplete contra tabela `arquitetos`)
 
 ### Arquiteto (entidade nova)
 
-- [ ] **ARQ-01**: Tabela `arquitetos` criada no Supabase com campos: `id`, `nome`, `contato` (nullable), `created_at`
-- [ ] **ARQ-02**: CRUD de arquitetos no admin (nova aba ou seção): listar, criar, editar, excluir
-- [ ] **ARQ-03**: FK `arquiteto_id` (nullable) adicionada a `clientes`
-- [ ] **ARQ-04**: FK `arquiteto_id` (nullable) adicionada a `produtos`
-- [ ] **ARQ-05**: Orçamentos/pedidos expõem arquiteto via relação (cliente → arquiteto) — não precisa FK direta
+- [x] **ARQ-01**: Tabela `arquitetos` criada no Supabase com campos: `id`, `nome`, `contato` (nullable), `created_at`
+- [x] **ARQ-02**: CRUD de arquitetos no admin (nova aba ou seção): listar, criar, editar, excluir
+- [x] **ARQ-03**: FK `arquiteto_id` (nullable) adicionada a `clientes`
+- [x] **ARQ-04**: FK `arquiteto_id` (nullable) adicionada a `produtos`
+- [x] **ARQ-05**: Orçamentos/pedidos expõem arquiteto via relação (cliente → arquiteto) — não precisa FK direta
 
 ### Produtos
 
-- [ ] **PROD-01**: UI de cadastro manual de produto no admin — formulário com nome, descrição, imagem (upload), preço, preço mínimo, arquiteto (seletor)
+- [x] **PROD-01**: UI de cadastro manual de produto no admin — formulário com nome, descrição, imagem (upload), preço, preço mínimo, arquiteto (seletor)
 - [~] **PROD-02 (OBSOLETO — D-09)**: ~~16 produtos da base atual sem descrição/foto/preço cadastrados via UI~~ — Marcado **obsoleto / não aplicável** em 2026-04-30. SQL na produção em 2026-04-30 confirmou 0 produtos sem descrição e 0 produtos sem preço (CONTEXT Phase 3 D-09). Os 16 SKUs "coringa" mentais do Lenny viraram AU001..AU016 (Phase 3 Plan 02), independente desse requirement original
-- [ ] **PROD-03**: Produtos existentes no banco são vinculados a arquiteto (migração one-shot ou edição manual via admin — o que for mais pragmático)
-- [ ] **PROD-04**: Edição de produto existente no admin permite alterar arquiteto
+- [x] **PROD-03**: Produtos existentes no banco são vinculados a arquiteto (migração one-shot ou edição manual via admin — o que for mais pragmático)
+- [x] **PROD-04**: Edição de produto existente no admin permite alterar arquiteto
 
 ### Importação
 
-- [ ] **IMP-01**: Importação CSV no admin suporta **criação** de produtos novos (não só atualização)
+- [x] **IMP-01**: Importação CSV no admin suporta **criação** de produtos novos (não só atualização)
 - [~] **IMP-02 (DEFERIDO — D-18)**: Importação CSV aceita coluna de **preço** (e preço mínimo) e atualiza por chave de correlação — **Deferido para phase futura** (provável Phase 3.5 ou similar) em 2026-04-30. Justificativa: em produção real preço atualiza ~1x/mês (operação periódica, não dia-a-dia — CONTEXT Phase 3 D-18). Schema reserva `preco_tabela`/`preco_minimo` em product_variants intocados (D-19). Quando entrar: fluxo bloqueia upload se SKU desconhecido (D-20). UI atual da Phase 3 mostra sub-tab "Preços > Indisponível neste marco" com explicação
-- [ ] **IMP-03**: Importação CSV aceita coluna de **imagem** (URL pública ou caminho de arquivo) e associa ao produto correto automaticamente
-- [ ] **IMP-04**: Tela de importação tem **instruções claras em tela**: formato esperado, nome das colunas obrigatórias, chave de correlação (SKU ou código), exemplo baixável
-- [ ] **IMP-05**: Tela de importação mostra **preview** antes de confirmar: quantos produtos serão criados vs atualizados, quantas imagens casaram, quais linhas têm erro
-- [ ] **IMP-06**: Importação trata erros linha a linha — falha em 1 linha não aborta o batch inteiro; usuário vê relatório pós-import
+- [x] **IMP-03**: Importação CSV aceita coluna de **imagem** (URL pública ou caminho de arquivo) e associa ao produto correto automaticamente
+- [x] **IMP-04**: Tela de importação tem **instruções claras em tela**: formato esperado, nome das colunas obrigatórias, chave de correlação (SKU ou código), exemplo baixável
+- [x] **IMP-05**: Tela de importação mostra **preview** antes de confirmar: quantos produtos serão criados vs atualizados, quantas imagens casaram, quais linhas têm erro
+- [x] **IMP-06**: Importação trata erros linha a linha — falha em 1 linha não aborta o batch inteiro; usuário vê relatório pós-import
 
 ### Acesso / Visibilidade
 
-- [ ] **ACC-01**: Supabase Storage/tabela do Drive aplica RLS por `colaborador_id`: colaborador autenticado lê e grava apenas arquivos onde `colaborador_id = auth.uid()` (ou equivalente)
-- [ ] **ACC-02**: Admin tem policy que lê **todos** os arquivos do Drive (bypass de RLS ou policy ampla por role)
-- [ ] **ACC-03**: UI do Drive filtra a listagem conforme o usuário — colab não vê nem sombra de outro colab
-- [ ] **ACC-04**: Upload de arquivo associa automaticamente ao `colaborador_id` do usuário logado
+- [x] **ACC-01**: Supabase Storage/tabela do Drive aplica RLS por `colaborador_id`: colaborador autenticado lê e grava apenas arquivos onde `colaborador_id = auth.uid()` (ou equivalente)
+- [x] **ACC-02**: Admin tem policy que lê **todos** os arquivos do Drive (bypass de RLS ou policy ampla por role)
+- [x] **ACC-03**: UI do Drive filtra a listagem conforme o usuário — colab não vê nem sombra de outro colab
+- [x] **ACC-04**: Upload de arquivo associa automaticamente ao `colaborador_id` do usuário logado
 
 ### Painel Admin
 
-- [ ] **ADM-01**: Visualização detalhada de pedido/orçamento no admin — dados do cliente, arquiteto, ambientes, sistemas de iluminação, itens, totais
-- [ ] **ADM-02**: Tela dedicada de **atualização de preços** — lista de produtos com edição inline de preço/preço mínimo, salvar em batch
-- [ ] **ADM-03**: Documentação in-app (texto em tela, tooltip ou bloco de ajuda) explicando como funciona o fluxo de exceção de preço (quem solicita, quem aprova, o que acontece)
-- [ ] **ADM-04**: Estrutura do admin reorganizada: abas/seções mais claras, agrupamento lógico (Cadastros: produtos/arquitetos/clientes/colaboradores; Pedidos; Preços; Exceções)
-- [ ] **ADM-05**: Dashboard inicial do admin avaliada — se existir e não agregar valor, remover; se for útil, simplificar
+- [x] **ADM-01**: Visualização detalhada de pedido/orçamento no admin — dados do cliente, arquiteto, ambientes, sistemas de iluminação, itens, totais
+- [x] **ADM-02**: Tela dedicada de **atualização de preços** — lista de produtos com edição inline de preço/preço mínimo, salvar em batch
+- [x] **ADM-03**: Documentação in-app (texto em tela, tooltip ou bloco de ajuda) explicando como funciona o fluxo de exceção de preço (quem solicita, quem aprova, o que acontece)
+- [x] **ADM-04**: Estrutura do admin reorganizada: abas/seções mais claras, agrupamento lógico (Cadastros: produtos/arquitetos/clientes/colaboradores; Pedidos; Preços; Exceções)
+- [x] **ADM-05**: Dashboard inicial do admin avaliada — se existir e não agregar valor, remover; se for útil, simplificar
 
 ### PDF
 
@@ -73,7 +73,7 @@
 
 ### Preparação e Finalização
 
-- [ ] **PREP-01**: Mudanças não-commitadas no início do marco (edge functions `request-access`/`review-access`, `supabase/config.toml`) revisadas e decididas: commitadas ou revertidas
+- [x] **PREP-01**: Mudanças não-commitadas no início do marco (edge functions `request-access`/`review-access`, `supabase/config.toml`) revisadas e decididas: commitadas ou revertidas
 - [ ] **WRAP-01**: Smoke test manual em prod cobrindo: signup novo, criar cliente com arquiteto, criar orçamento, gerar PDF novo, importar CSV, Drive isolado por colaborador — sem bug visível
 
 ## v2 Requirements
@@ -144,15 +144,15 @@ Ficam pra marcos futuros, já previstos.
 | IMP-04 | Phase 3 | Complete (2026-04-30) |
 | IMP-05 | Phase 3 | Complete (2026-04-30) |
 | IMP-06 | Phase 3 | Complete (2026-04-30) |
-| ACC-01 | Phase 4 | Pending |
-| ACC-02 | Phase 4 | Pending |
-| ACC-03 | Phase 4 | Pending |
-| ACC-04 | Phase 4 | Pending |
-| ADM-01 | Phase 4 | Pending |
-| ADM-02 | Phase 4 | Pending |
-| ADM-03 | Phase 4 | Pending |
-| ADM-04 | Phase 4 | Pending |
-| ADM-05 | Phase 4 | Pending |
+| ACC-01 | Phase 4 | Complete (2026-05-04) |
+| ACC-02 | Phase 4 | Complete (2026-05-04) |
+| ACC-03 | Phase 4 | Complete (2026-05-04) |
+| ACC-04 | Phase 4 | Complete (2026-05-04) |
+| ADM-01 | Phase 4 | Complete (2026-05-04) |
+| ADM-02 | Phase 4 | Complete (2026-05-04) |
+| ADM-03 | Phase 4 | Complete (2026-05-04) |
+| ADM-04 | Phase 4 | Complete (2026-05-04) |
+| ADM-05 | Phase 4 | Complete (2026-05-04) |
 | PDF-01 | Phase 5 | Pending |
 | PDF-02 | Phase 5 | Pending |
 | PDF-03 | Phase 5 | Pending |
@@ -170,11 +170,11 @@ Ficam pra marcos futuros, já previstos.
 - Mapped to phases: 42 (100%)
 - Unmapped: 0
 
-**Status (atualizado em 2026-04-30 após Phase 3):**
-- Complete: 23 (Phase 1: 5, Phase 2: 10, Phase 3: 6 — PROD-01 + IMP-01/03/04/05/06)
+**Status (atualizado em 2026-05-04 após Phase 4):**
+- Complete: 30 (Phase 1: 5, Phase 2: 10, Phase 3: 6 — PROD-01 + IMP-01/03/04/05/06; Phase 4: 9 — ACC-01..04 + ADM-01..05)
 - Obsolete: 1 (PROD-02 — D-09)
 - Deferred: 1 (IMP-02 — D-18)
-- Pending: 17 (Phase 4: 9, Phase 5: 5, Phase 6: 5 — exceto WRAP-01 que é fechamento de marco)
+- Pending: 10 (Phase 5: 5, Phase 6: 5)
 
 **Distribution:**
 - Phase 1 (Schema & Prep): 5 requirements
@@ -186,4 +186,4 @@ Ficam pra marcos futuros, já previstos.
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-30 after Phase 3 closure (PROD-02 obsoleto via D-09, IMP-02 deferido via D-18; 6 reqs Phase 3 entregues)*
+*Last updated: 2026-05-04 after Phase 4 closure (9 reqs entregues — ACC-01..04 + ADM-01..05; checkboxes Phase 1-3 alinhados retroativamente com Traceability)*
