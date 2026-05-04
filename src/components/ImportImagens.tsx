@@ -59,7 +59,7 @@ const ImportImagens = () => {
     const pageSize = 1000;
     let hasMore = true;
     while (hasMore) {
-      const { data } = await supabase.from("produtos").select("codigo").range(from, from + pageSize - 1);
+      const { data } = await supabase.from("product_variants").select("codigo").range(from, from + pageSize - 1);
       if (data && data.length > 0) {
         data.forEach((r) => codes.add(r.codigo));
         from += pageSize;
