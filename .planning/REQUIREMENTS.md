@@ -28,14 +28,14 @@
 ### Produtos
 
 - [ ] **PROD-01**: UI de cadastro manual de produto no admin — formulário com nome, descrição, imagem (upload), preço, preço mínimo, arquiteto (seletor)
-- [ ] **PROD-02**: 16 produtos da base atual sem descrição/foto/preço são cadastrados via UI do admin (ação do Lenny, não automação)
+- [~] **PROD-02 (OBSOLETO — D-09)**: ~~16 produtos da base atual sem descrição/foto/preço cadastrados via UI~~ — Marcado **obsoleto / não aplicável** em 2026-04-30. SQL na produção em 2026-04-30 confirmou 0 produtos sem descrição e 0 produtos sem preço (CONTEXT Phase 3 D-09). Os 16 SKUs "coringa" mentais do Lenny viraram AU001..AU016 (Phase 3 Plan 02), independente desse requirement original
 - [ ] **PROD-03**: Produtos existentes no banco são vinculados a arquiteto (migração one-shot ou edição manual via admin — o que for mais pragmático)
 - [ ] **PROD-04**: Edição de produto existente no admin permite alterar arquiteto
 
 ### Importação
 
 - [ ] **IMP-01**: Importação CSV no admin suporta **criação** de produtos novos (não só atualização)
-- [ ] **IMP-02**: Importação CSV aceita coluna de **preço** (e preço mínimo) e atualiza o produto pela chave de correlação
+- [~] **IMP-02 (DEFERIDO — D-18)**: Importação CSV aceita coluna de **preço** (e preço mínimo) e atualiza por chave de correlação — **Deferido para phase futura** (provável Phase 3.5 ou similar) em 2026-04-30. Justificativa: em produção real preço atualiza ~1x/mês (operação periódica, não dia-a-dia — CONTEXT Phase 3 D-18). Schema reserva `preco_tabela`/`preco_minimo` em product_variants intocados (D-19). Quando entrar: fluxo bloqueia upload se SKU desconhecido (D-20). UI atual da Phase 3 mostra sub-tab "Preços > Indisponível neste marco" com explicação
 - [ ] **IMP-03**: Importação CSV aceita coluna de **imagem** (URL pública ou caminho de arquivo) e associa ao produto correto automaticamente
 - [ ] **IMP-04**: Tela de importação tem **instruções claras em tela**: formato esperado, nome das colunas obrigatórias, chave de correlação (SKU ou código), exemplo baixável
 - [ ] **IMP-05**: Tela de importação mostra **preview** antes de confirmar: quantos produtos serão criados vs atualizados, quantas imagens casaram, quais linhas têm erro
@@ -134,16 +134,16 @@ Ficam pra marcos futuros, já previstos.
 | ARQ-03 | Phase 1 | Pending |
 | ARQ-04 | Phase 1 | Pending |
 | ARQ-05 | Phase 1 | Pending |
-| PROD-01 | Phase 3 | Pending |
-| PROD-02 | Phase 3 | Pending |
+| PROD-01 | Phase 3 | Complete (2026-04-30) |
+| PROD-02 | Phase 3 | OBSOLETE (D-09 — DB já tinha 0 produtos sem desc/preço; AU001..16 cobrem o uso real) |
 | PROD-03 | Phase 2 | Pending |
 | PROD-04 | Phase 2 | Pending |
-| IMP-01 | Phase 3 | Pending |
-| IMP-02 | Phase 3 | Pending |
-| IMP-03 | Phase 3 | Pending |
-| IMP-04 | Phase 3 | Pending |
-| IMP-05 | Phase 3 | Pending |
-| IMP-06 | Phase 3 | Pending |
+| IMP-01 | Phase 3 | Complete (2026-04-30) |
+| IMP-02 | Phase 3 | DEFERRED (D-18 — phase de preços futura) |
+| IMP-03 | Phase 3 | Complete (2026-04-30) |
+| IMP-04 | Phase 3 | Complete (2026-04-30) |
+| IMP-05 | Phase 3 | Complete (2026-04-30) |
+| IMP-06 | Phase 3 | Complete (2026-04-30) |
 | ACC-01 | Phase 4 | Pending |
 | ACC-02 | Phase 4 | Pending |
 | ACC-03 | Phase 4 | Pending |
@@ -170,6 +170,12 @@ Ficam pra marcos futuros, já previstos.
 - Mapped to phases: 42 (100%)
 - Unmapped: 0
 
+**Status (atualizado em 2026-04-30 após Phase 3):**
+- Complete: 23 (Phase 1: 5, Phase 2: 10, Phase 3: 6 — PROD-01 + IMP-01/03/04/05/06)
+- Obsolete: 1 (PROD-02 — D-09)
+- Deferred: 1 (IMP-02 — D-18)
+- Pending: 17 (Phase 4: 9, Phase 5: 5, Phase 6: 5 — exceto WRAP-01 que é fechamento de marco)
+
 **Distribution:**
 - Phase 1 (Schema & Prep): 5 requirements
 - Phase 2 (Cadastros & Arquiteto CRUD): 10 requirements
@@ -180,4 +186,4 @@ Ficam pra marcos futuros, já previstos.
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after roadmap creation (42/42 mapped to 6 phases)*
+*Last updated: 2026-04-30 after Phase 3 closure (PROD-02 obsoleto via D-09, IMP-02 deferido via D-18; 6 reqs Phase 3 entregues)*
