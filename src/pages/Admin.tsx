@@ -25,19 +25,79 @@ import ProdutoEditDialog, { type ProdutoEditRow } from "@/components/ProdutoEdit
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-const VALID_TABS = ["dashboard", "excecoes", "importacao", "produtos", "colaboradores", "orcamentos", "clientes", "arquitetos"] as const;
-type AdminTab = (typeof VALID_TABS)[number];
+const TOP_TABS = ["inicio", "cadastros", "pedidos", "precos", "excecoes"] as const;
+type TopTab = (typeof TOP_TABS)[number];
+
+const SUB_TABS_BY_TAB: Record<TopTab, readonly string[]> = {
+  inicio: [],
+  cadastros: ["produtos", "arquitetos", "clientes", "colaboradores"],
+  pedidos: [],
+  precos: ["atualizacao", "importacao"],
+  excecoes: [],
+};
+
+const DEFAULT_SUB_BY_TAB: Partial<Record<TopTab, string>> = {
+  cadastros: "produtos",
+  precos: "atualizacao",
+};
+
+// Backward-compat: tabs antigas → novo (?tab=X&sub=Y)
+const LEGACY_TAB_MAP: Record<string, { tab: TopTab; sub?: string }> = {
+  dashboard: { tab: "inicio" },
+  produtos: { tab: "cadastros", sub: "produtos" },
+  clientes: { tab: "cadastros", sub: "clientes" },
+  arquitetos: { tab: "cadastros", sub: "arquitetos" },
+  colaboradores: { tab: "cadastros", sub: "colaboradores" },
+  orcamentos: { tab: "pedidos" },
+  importacao: { tab: "precos", sub: "importacao" },
+  excecoes: { tab: "excecoes" },
+};
 
 const Admin = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const tabParam = searchParams.get("tab") as AdminTab | null;
-  const activeTab: AdminTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "dashboard";
+  const rawTab = searchParams.get("tab");
+  const rawSub = searchParams.get("sub");
+
+  // Normalize legacy tabs
+  const legacy = rawTab ? LEGACY_TAB_MAP[rawTab] : undefined;
+  const activeTab: TopTab = legacy
+    ? legacy.tab
+    : rawTab && (TOP_TABS as readonly string[]).includes(rawTab)
+      ? (rawTab as TopTab)
+      : "inicio";
+
+  const validSubs = SUB_TABS_BY_TAB[activeTab];
+  const candidateSub = legacy?.sub ?? rawSub ?? DEFAULT_SUB_BY_TAB[activeTab] ?? "";
+  const activeSub = validSubs.includes(candidateSub) ? candidateSub : (DEFAULT_SUB_BY_TAB[activeTab] ?? "");
+
+  // Effect: se URL veio com legacy ou inválido, normaliza (replace)
+  useEffect(() => {
+    const isLegacy = !!(rawTab && LEGACY_TAB_MAP[rawTab]);
+    const isInvalidTab = !!(rawTab && !(TOP_TABS as readonly string[]).includes(rawTab) && !LEGACY_TAB_MAP[rawTab]);
+    const subMismatch =
+      (validSubs.length > 0 && rawSub !== activeSub) ||
+      (validSubs.length === 0 && !!rawSub);
+    if (isLegacy || isInvalidTab || subMismatch) {
+      const next: Record<string, string> = { tab: activeTab };
+      if (validSubs.length > 0) next.sub = activeSub;
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawTab, rawSub]);
 
   const handleTabChange = (value: string) => {
-    setSearchParams({ tab: value }, { replace: true });
+    const t = value as TopTab;
+    const next: Record<string, string> = { tab: t };
+    const defSub = DEFAULT_SUB_BY_TAB[t];
+    if (defSub) next.sub = defSub;
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleSubChange = (sub: string) => {
+    setSearchParams({ tab: activeTab, sub }, { replace: true });
   };
 
   const [importSubTab, setImportSubTab] = useState<"master" | "produtos" | "imagens" | "precos">("master");
@@ -242,171 +302,238 @@ const Admin = () => {
       <main className="mx-auto max-w-6xl px-4 py-6">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="mb-6">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="excecoes">Exceções de Preço</TabsTrigger>
-            <TabsTrigger value="importacao">Importação</TabsTrigger>
-            <TabsTrigger value="produtos">Produtos</TabsTrigger>
-            <TabsTrigger value="colaboradores">Colaboradores</TabsTrigger>
-            <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
-            <TabsTrigger value="clientes">Clientes</TabsTrigger>
-            <TabsTrigger value="arquitetos">Arquitetos</TabsTrigger>
+            <TabsTrigger value="inicio">Início</TabsTrigger>
+            <TabsTrigger value="cadastros">Cadastros</TabsTrigger>
+            <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
+            <TabsTrigger value="precos">Preços</TabsTrigger>
+            <TabsTrigger value="excecoes">Exceções</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard">
+          {/* INÍCIO — D-26 (dashboard como sub-tab) */}
+          <TabsContent value="inicio">
             <AdminDashboard orcamentos={orcamentos} />
           </TabsContent>
 
-          <TabsContent value="excecoes">
-            <AdminExceptions />
-          </TabsContent>
+          {/* CADASTROS — sub-tabs Produtos / Arquitetos / Clientes / Colaboradores */}
+          <TabsContent value="cadastros">
+            <Tabs value={activeSub} onValueChange={handleSubChange}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="produtos">Produtos</TabsTrigger>
+                <TabsTrigger value="arquitetos">Arquitetos</TabsTrigger>
+                <TabsTrigger value="clientes">Clientes</TabsTrigger>
+                <TabsTrigger value="colaboradores">Colaboradores</TabsTrigger>
+              </TabsList>
 
-          {/* IMPORTAÇÃO */}
-          <TabsContent value="importacao" className="space-y-6">
-            <div className="flex justify-center gap-4">
-              {importSubTabs.map(({ key, label, description, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setImportSubTab(key)}
-                  className={`flex w-[180px] flex-col items-center gap-2 rounded-xl border p-5 transition-colors ${
-                    importSubTab === key
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-foreground"
-                  }`}
-                >
-                  <Icon className="h-7 w-7" />
-                  <span className="font-semibold text-sm">{label}</span>
-                  <span className="text-xs text-muted-foreground">{description}</span>
-                </button>
-              ))}
-            </div>
-
-            {importSubTab === "master" && <ImportMaster />}
-            {importSubTab === "produtos" && <ImportProdutos />}
-            {importSubTab === "imagens" && <ImportImagens />}
-            {importSubTab === "precos" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Importação de Preços</CardTitle>
-                  <CardDescription>Indisponível neste marco</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    A importação de preços (preco_tabela / preco_minimo via CSV) está deferida para uma phase futura.
-                    Em produção real, preço é atualizado ~1x por mês — fluxo periódico, não dia-a-dia (decisão D-18 do CONTEXT da Phase 3 / IMP-02 deferido).
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Por enquanto, edite preços individualmente via aba <strong>Produtos</strong> → Pencil → "Editar Produto".
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* PRODUTOS */}
-          <TabsContent value="produtos" className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-1">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Buscar produto por código ou descrição..." value={produtoSearch} onChange={(e) => setProdutoSearch(e.target.value)} className="max-w-sm" />
+              {/* CADASTROS > PRODUTOS */}
+              <TabsContent value="produtos" className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Buscar produto por código ou descrição..." value={produtoSearch} onChange={(e) => setProdutoSearch(e.target.value)} className="max-w-sm" />
+                    </div>
+                    <Button onClick={() => setProdutoCreateOpen(true)} className="gap-2">
+                      <Plus className="h-4 w-4" /> Novo Produto
+                    </Button>
+                  </div>
+                  <div className="rounded-xl border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Arquiteto</TableHead>
+                          <TableHead className="text-right">Preço Tabela</TableHead>
+                          <TableHead className="text-right">Preço Mínimo</TableHead>
+                          <TableHead className="w-20 text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loadingProdutos ? (
+                          <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Buscando...</TableCell></TableRow>
+                        ) : produtos.length === 0 ? (
+                          <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
+                        ) : (
+                          produtos.map((p) => (
+                            <TableRow key={p.id}>
+                              <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
+                              <TableCell>{p.descricao}</TableCell>
+                              <TableCell>{p.arquiteto_id ? (arquitetosMap[p.arquiteto_id] || "—") : "—"}</TableCell>
+                              <TableCell className="text-right">{p.preco_tabela ? `R$ ${Number(p.preco_tabela).toFixed(2)}` : "—"}</TableCell>
+                              <TableCell className="text-right">{p.preco_minimo ? `R$ ${Number(p.preco_minimo).toFixed(2)}` : "—"}</TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setProdutoEditTarget({
+                                      id: p.id,
+                                      codigo: p.codigo,
+                                      descricao: p.descricao,
+                                      nome: p.nome ?? null,
+                                      preco_tabela: p.preco_tabela,
+                                      preco_minimo: p.preco_minimo,
+                                      arquiteto_id: p.arquiteto_id ?? null,
+                                      imagem_url: p.imagem_url ?? null,
+                                    });
+                                    setProdutoEditOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      Mostrando {produtos.length} de {totalProdutos} produtos
+                    </p>
+                  </div>
                 </div>
-                <Button onClick={() => setProdutoCreateOpen(true)} className="gap-2">
-                  <Plus className="h-4 w-4" /> Novo Produto
-                </Button>
-              </div>
-              <div className="rounded-xl border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Arquiteto</TableHead>
-                      <TableHead className="text-right">Preço Tabela</TableHead>
-                      <TableHead className="text-right">Preço Mínimo</TableHead>
-                      <TableHead className="w-20 text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loadingProdutos ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Buscando...</TableCell></TableRow>
-                    ) : produtos.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
-                    ) : (
-                      produtos.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
-                          <TableCell>{p.descricao}</TableCell>
-                          <TableCell>{p.arquiteto_id ? (arquitetosMap[p.arquiteto_id] || "—") : "—"}</TableCell>
-                          <TableCell className="text-right">{p.preco_tabela ? `R$ ${Number(p.preco_tabela).toFixed(2)}` : "—"}</TableCell>
-                          <TableCell className="text-right">{p.preco_minimo ? `R$ ${Number(p.preco_minimo).toFixed(2)}` : "—"}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setProdutoEditTarget({
-                                  id: p.id,
-                                  codigo: p.codigo,
-                                  descricao: p.descricao,
-                                  nome: p.nome ?? null,
-                                  preco_tabela: p.preco_tabela,
-                                  preco_minimo: p.preco_minimo,
-                                  arquiteto_id: p.arquiteto_id ?? null,
-                                  imagem_url: p.imagem_url ?? null,
-                                });
-                                setProdutoEditOpen(true);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
+              </TabsContent>
+
+              {/* CADASTROS > ARQUITETOS */}
+              <TabsContent value="arquitetos">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Arquitetos</h3>
+                    <Button size="sm" onClick={openCreateArquiteto} className="gap-1.5">
+                      <Plus className="h-4 w-4" /> Novo Arquiteto
+                    </Button>
+                  </div>
+                  <div className="rounded-xl border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Contato</TableHead>
+                          <TableHead className="w-28 text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {arquitetos.map((a) => (
+                          <TableRow key={a.id}>
+                            <TableCell className="font-medium">{a.nome}</TableCell>
+                            <TableCell>{a.contato || "—"}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" onClick={() => openEditArquiteto(a)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => { setArquitetoDeleteTarget(a); setArquitetoDeleteOpen(true); }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {arquitetos.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                              Nenhum arquiteto cadastrado
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* CADASTROS > CLIENTES */}
+              <TabsContent value="clientes">
+                <div className="space-y-3">
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={() => setClienteCreateOpen(true)} className="gap-1.5">
+                      <Plus className="h-4 w-4" /> Novo Cliente
+                    </Button>
+                  </div>
+                  <div className="rounded-xl border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Telefone</TableHead>
+                          <TableHead>Arquiteto</TableHead>
+                          <TableHead className="w-28 text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {clientes.map((c) => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-medium">{c.nome}</TableCell>
+                            <TableCell>{c.email || "—"}</TableCell>
+                            <TableCell>{c.telefone || "—"}</TableCell>
+                            <TableCell>{c.arquiteto_id ? (arquitetosMap[c.arquiteto_id] || "—") : "—"}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setClienteEditTarget(c as ClienteRow);
+                                  setClienteEditOpen(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setDeleteTarget({ id: c.id, nome: c.nome }); setDeleteDialogOpen(true); }}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {clientes.length === 0 && (
+                          <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* CADASTROS > COLABORADORES */}
+              <TabsContent value="colaboradores">
+                <div className="rounded-xl border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Cargo</TableHead>
+                        <TableHead>Departamento</TableHead>
+                        <TableHead className="w-20"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {colaboradores.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium">{c.nome}</TableCell>
+                          <TableCell>{c.cargo || "—"}</TableCell>
+                          <TableCell>{c.departamento || "—"}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteColaborador(c.id)}>
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                <p className="text-xs text-muted-foreground text-center py-2">
-                  Mostrando {produtos.length} de {totalProdutos} produtos
-                </p>
-              </div>
-            </div>
+                      ))}
+                      {colaboradores.length === 0 && (
+                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhum colaborador</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
-          {/* COLABORADORES */}
-          <TabsContent value="colaboradores">
-            <div className="rounded-xl border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Cargo</TableHead>
-                    <TableHead>Departamento</TableHead>
-                    <TableHead className="w-20"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {colaboradores.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.nome}</TableCell>
-                      <TableCell>{c.cargo || "—"}</TableCell>
-                      <TableCell>{c.departamento || "—"}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteColaborador(c.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {colaboradores.length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhum colaborador</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-
-          {/* ORCAMENTOS */}
-          <TabsContent value="orcamentos">
+          {/* PEDIDOS — lista de orçamentos (Plan 05 vai adicionar link para /admin/orcamento/:id) */}
+          <TabsContent value="pedidos">
             <div className="rounded-xl border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -455,107 +582,77 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          {/* CLIENTES */}
-          <TabsContent value="clientes">
-            <div className="space-y-3">
-              <div className="flex justify-end">
-                <Button size="sm" onClick={() => setClienteCreateOpen(true)} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo Cliente
-                </Button>
-              </div>
-              <div className="rounded-xl border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Telefone</TableHead>
-                      <TableHead>Arquiteto</TableHead>
-                      <TableHead className="w-28 text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clientes.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.nome}</TableCell>
-                        <TableCell>{c.email || "—"}</TableCell>
-                        <TableCell>{c.telefone || "—"}</TableCell>
-                        <TableCell>{c.arquiteto_id ? (arquitetosMap[c.arquiteto_id] || "—") : "—"}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setClienteEditTarget(c as ClienteRow);
-                              setClienteEditOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setDeleteTarget({ id: c.id, nome: c.nome }); setDeleteDialogOpen(true); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {clientes.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+          {/* PREÇOS — sub-tabs Atualização (placeholder Plan 04) / Importação */}
+          <TabsContent value="precos">
+            <Tabs value={activeSub} onValueChange={handleSubChange}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="atualizacao">Atualização</TabsTrigger>
+                <TabsTrigger value="importacao">Importação</TabsTrigger>
+              </TabsList>
+
+              {/* PREÇOS > ATUALIZAÇÃO (placeholder — Plan 04 desta phase entrega) */}
+              <TabsContent value="atualizacao">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Atualização de Preços</CardTitle>
+                    <CardDescription>Em construção — entregue pelo Plan 04 desta phase.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Tela de edição inline em batch para preço de tabela e preço mínimo.
+                      Por enquanto, edite individualmente em <strong>Cadastros &gt; Produtos</strong>.
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* PREÇOS > IMPORTAÇÃO (mantém comportamento existente — sub-sub-tab interno via importSubTab) */}
+              <TabsContent value="importacao" className="space-y-6">
+                <div className="flex justify-center gap-4">
+                  {importSubTabs.map(({ key, label, description, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setImportSubTab(key)}
+                      className={`flex w-[180px] flex-col items-center gap-2 rounded-xl border p-5 transition-colors ${
+                        importSubTab === key
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-7 w-7" />
+                      <span className="font-semibold text-sm">{label}</span>
+                      <span className="text-xs text-muted-foreground">{description}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {importSubTab === "master" && <ImportMaster />}
+                {importSubTab === "produtos" && <ImportProdutos />}
+                {importSubTab === "imagens" && <ImportImagens />}
+                {importSubTab === "precos" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Importação de Preços</CardTitle>
+                      <CardDescription>Indisponível neste marco</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        A importação de preços (preco_tabela / preco_minimo via CSV) está deferida para uma phase futura.
+                        Em produção real, preço é atualizado ~1x por mês — fluxo periódico, não dia-a-dia (decisão D-18 do CONTEXT da Phase 3 / IMP-02 deferido).
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Por enquanto, edite preços individualmente via aba <strong>Cadastros &gt; Produtos</strong> → Pencil → "Editar Produto".
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
-          {/* ARQUITETOS */}
-          <TabsContent value="arquitetos">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Arquitetos</h3>
-                <Button size="sm" onClick={openCreateArquiteto} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Novo Arquiteto
-                </Button>
-              </div>
-              <div className="rounded-xl border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead className="w-28 text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {arquitetos.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-medium">{a.nome}</TableCell>
-                        <TableCell>{a.contato || "—"}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEditArquiteto(a)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => { setArquitetoDeleteTarget(a); setArquitetoDeleteOpen(true); }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {arquitetos.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          Nenhum arquiteto cadastrado
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+          {/* EXCEÇÕES */}
+          <TabsContent value="excecoes">
+            <AdminExceptions />
           </TabsContent>
         </Tabs>
       </main>
