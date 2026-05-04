@@ -1,4 +1,3 @@
-npm warn exec The following package was not found and will be installed: supabase@2.98.1
 export type Json =
   | string
   | number
@@ -95,6 +94,7 @@ export type Database = {
           nome: string
           pasta_pai_id: string | null
           projeto_id: string | null
+          user_id: string
         }
         Insert: {
           cliente_id: string
@@ -103,6 +103,7 @@ export type Database = {
           nome: string
           pasta_pai_id?: string | null
           projeto_id?: string | null
+          user_id: string
         }
         Update: {
           cliente_id?: string
@@ -111,6 +112,7 @@ export type Database = {
           nome?: string
           pasta_pai_id?: string | null
           projeto_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -149,6 +151,7 @@ export type Database = {
           pasta_id: string | null
           projeto_id: string | null
           tamanho: number
+          user_id: string
         }
         Insert: {
           arquivo_path: string
@@ -162,6 +165,7 @@ export type Database = {
           pasta_id?: string | null
           projeto_id?: string | null
           tamanho?: number
+          user_id: string
         }
         Update: {
           arquivo_path?: string
@@ -175,6 +179,7 @@ export type Database = {
           pasta_id?: string | null
           projeto_id?: string | null
           tamanho?: number
+          user_id?: string
         }
         Relationships: [
           {
@@ -986,4 +991,3 @@ export const Constants = {
     },
   },
 } as const
-<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />
