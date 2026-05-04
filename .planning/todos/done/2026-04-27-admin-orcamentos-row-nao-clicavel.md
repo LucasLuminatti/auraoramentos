@@ -44,3 +44,14 @@ Ambos navegam pra mesma rota de visualização.
 
 Considerar se faz sentido permitir só visualização (read-only) pra
 orçamentos `fechado`/`perdido` e edição pra `rascunho`/`enviado`.
+
+---
+
+## Resolution
+
+- **Closed:** 2026-05-04 (Phase 4 / Plan 05)
+- **Where:** `src/pages/Admin.tsx` TabsContent value="pedidos" — TableRow recebeu `onClick={() => navigate(`/admin/orcamento/${o.id}`)}` + cursor-pointer + hover:bg-muted/50.
+- **Side effect:** Botão Flag (encerrar negociação) recebeu `e.stopPropagation()` para não conflitar com a navegação da linha.
+- **Solution chosen:** Read-only no v1 (D-19 do Phase 4 CONTEXT) — `/admin/orcamento/:id` mostra orçamento completo + botão "Re-emitir PDF". Edição inline de pedido fica deferida para phase futura.
+- **Verified:** Plan 05 smoke checkpoint via Playwright MCP.
+- **Commit:** `acf2e99` (Plan 04-05 Task 3 — atomic move pending → done + onClick + stopPropagation).
