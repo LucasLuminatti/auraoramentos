@@ -17,6 +17,7 @@ import AdminExceptions from "@/components/AdminExceptions";
 import ImportMaster from "@/components/ImportMaster";
 import ImportProdutos from "@/components/ImportProdutos";
 import ImportImagens from "@/components/ImportImagens";
+import PrecosBatch from "@/components/PrecosBatch";
 import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
@@ -590,20 +591,9 @@ const Admin = () => {
                 <TabsTrigger value="importacao">Importação</TabsTrigger>
               </TabsList>
 
-              {/* PREÇOS > ATUALIZAÇÃO (placeholder — Plan 04 desta phase entrega) */}
+              {/* PREÇOS > ATUALIZAÇÃO — ADM-02 (D-12..D-17) */}
               <TabsContent value="atualizacao">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Atualização de Preços</CardTitle>
-                    <CardDescription>Em construção — entregue pelo Plan 04 desta phase.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Tela de edição inline em batch para preço de tabela e preço mínimo.
-                      Por enquanto, edite individualmente em <strong>Cadastros &gt; Produtos</strong>.
-                    </p>
-                  </CardContent>
-                </Card>
+                <PrecosBatch />
               </TabsContent>
 
               {/* PREÇOS > IMPORTAÇÃO (mantém comportamento existente — sub-sub-tab interno via importSubTab) */}
