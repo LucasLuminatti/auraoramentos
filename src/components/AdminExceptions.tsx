@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, MessageSquare, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, MessageSquare, Loader2, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -88,6 +89,34 @@ const AdminExceptions = () => {
 
   return (
     <div className="space-y-4">
+      <Card className="border-blue-200 bg-blue-50/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <HelpCircle className="h-4 w-4 text-blue-700" />
+            Como funciona o fluxo de exceção de preço
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground space-y-1">
+          <p>
+            <strong>Solicitação:</strong> O colaborador identifica uma violação no Step 3 do orçamento (preço cotado abaixo do mínimo)
+            e clica em <em>"Solicitar exceção"</em> no item violado, justificando.
+          </p>
+          <p>
+            <strong>Aprovação:</strong> Você (admin) recebe notificação em tempo real e pode aprovar ou rejeitar usando os botões
+            <CheckCircle className="inline h-3 w-3 mx-1 text-green-600" /> /
+            <XCircle className="inline h-3 w-3 mx-1 text-red-600" /> abaixo, ou abrir o chat
+            <MessageSquare className="inline h-3 w-3 mx-1" /> para conversar antes de decidir.
+          </p>
+          <p>
+            <strong>Após aprovação:</strong> O colaborador consegue gerar PDF com o preço acordado. O histórico fica visível
+            na visualização detalhada de pedido (admin &gt; Pedidos &gt; clique no pedido).
+          </p>
+          <p>
+            <strong>Filtre acima por status</strong> para ver pendências, aprovadas ou rejeitadas.
+          </p>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-foreground">Exceções de Preço</h3>
