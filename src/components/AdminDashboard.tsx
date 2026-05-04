@@ -7,7 +7,7 @@ import { differenceInDays, subDays, startOfMonth, subMonths, format, isAfter } f
 import { ptBR } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  Cell, Legend,
 } from "recharts";
 
 interface Orcamento {
@@ -28,14 +28,6 @@ interface AdminDashboardProps {
 
 const formatCurrency = (v: number) =>
   `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const PIE_COLORS = [
-  "hsl(var(--muted-foreground))",
-  "hsl(45, 93%, 47%)",
-  "hsl(217, 91%, 60%)",
-  "hsl(142, 71%, 45%)",
-  "hsl(0, 72%, 51%)",
-];
 
 const MOTIVO_LABELS: Record<string, string> = {
   preco: "Preço",
@@ -148,21 +140,6 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
     });
   }, [filtered, period]);
 
-  // Distribuição por status (inclui perdido)
-  const statusData = useMemo(() => {
-    const counts = { rascunho: 0, enviado: 0, aprovado: 0, fechado: 0, perdido: 0 };
-    filtered.forEach((o) => {
-      if (o.status in counts) counts[o.status as keyof typeof counts]++;
-    });
-    return [
-      { name: "Rascunho", value: counts.rascunho },
-      { name: "Enviado", value: counts.enviado },
-      { name: "Aprovado", value: counts.aprovado },
-      { name: "Fechado", value: counts.fechado },
-      { name: "Perdido", value: counts.perdido },
-    ].filter((d) => d.value > 0);
-  }, [filtered]);
-
   // Motivos de perda
   const motivosData = useMemo(() => {
     const counts = new Map<string, number>();
@@ -219,7 +196,7 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
       </div>
 
       {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="space-y-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Receita Mensal</CardTitle>
@@ -235,25 +212,6 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
                 <Bar dataKey="aprovado" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="fechado" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Distribuição por Status</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {statusData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
