@@ -14,6 +14,7 @@ import Admin from "./pages/Admin";
 import RequestAccess from "./pages/RequestAccess";
 import NotFound from "./pages/NotFound";
 import AdminUploadImagens from "./pages/AdminUploadImagens";
+import OrcamentoDetalhe from "./pages/OrcamentoDetalhe";
 import Drive from "./pages/Drive";
 import PerfilCompletar from "./pages/PerfilCompletar";
 
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/perfil/completar" element={<ProtectedRoute><PerfilCompletar /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/admin/upload-imagens" element={<AdminRoute><AdminUploadImagens /></AdminRoute>} />
+          <Route path="/admin/orcamento/:id" element={<AdminRoute><OrcamentoDetalhe /></AdminRoute>} />
           <Route path="/drive" element={<ProtectedRoute><Drive /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
