@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-04-30T12:23:26.162Z"
+status: in_progress
+last_updated: "2026-04-30T18:00:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  completed_phases: 3
+  total_plans: 12
+  completed_plans: 12
+  percent: 50
 ---
 
 # STATE: AURA — Marco 1 (Melhorias v1)
 
-**Last updated:** 2026-04-27 (after Phase 1 close)
+**Last updated:** 2026-04-30 (after Phase 3 close)
 
 ## Project Reference
 
@@ -23,38 +23,38 @@ progress:
 - **Current Milestone:** Marco 1 — Melhorias v1
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 02 — Cadastros & Arquiteto CRUD (próxima)
+- **Current Focus:** Phase 04 — Drive RLS & Reorganização Admin (próxima)
 
 ## Current Position
 
-Phase: 01 (schema-prep) — COMPLETE
-Plan: 3/3 done
+Phase: 03 (produtos-importa-o) — COMPLETE (2026-04-30)
+Plan: 5/5 done
 
-- **Phase:** 3
+- **Phase:** 4
 - **Plan:** Not started
 - **Status:** Ready to plan
-- **Progress:** `[■□□□□□]` 1/6 phases complete
+- **Progress:** `[■■■□□□]` 3/6 phases complete
 
 ## Milestone Progress
 
 | Phase | Requirements | Status |
 |-------|--------------|--------|
 | 1. Schema & Prep | 5 | Complete (2026-04-27) |
-| 2. Cadastros & Arquiteto CRUD | 10 | Not started |
-| 3. Produtos & Importação | 8 | Not started |
+| 2. Cadastros & Arquiteto CRUD | 10 | Complete (2026-04-27) |
+| 3. Produtos & Importação | 8 | Complete (2026-04-30) — 6 entregues, PROD-02 obsoleto (D-09), IMP-02 deferido (D-18) |
 | 4. Drive RLS & Reorganização Admin | 9 | Not started |
 | 5. PDF Redesign | 5 | Not started |
 | 6. Filtros & Smoke | 5 | Not started |
 
-**Total:** 42/42 requirements mapped (100% coverage)
+**Total:** 42/42 requirements mapped (100% coverage); 23 Complete + 1 Obsolete + 1 Deferred + 17 Pending
 
 ## Performance Metrics
 
-- **Phases completed:** 1/6
-- **Requirements validated:** 5/42 (PREP-01, ARQ-01, ARQ-03, ARQ-04, ARQ-05)
-- **Plans completed:** 3 (01-01, 01-02, 01-03)
-- **Migrations aplicadas:** 4 (20260423000001..04)
-- **Commits do marco:** 13 (5 schema + 5 docs/state + 3 hotfix/todos)
+- **Phases completed:** 3/6
+- **Requirements validated:** 23/42 (Phase 1: PREP-01, ARQ-01/03/04/05; Phase 2: USR-01/02/03/04, CLI-01/02/03, ARQ-02, PROD-03/04; Phase 3: PROD-01, IMP-01/03/04/05/06)
+- **Plans completed:** 12 (Phase 1: 3, Phase 2: 4, Phase 3: 5)
+- **Migrations aplicadas:** 7 (20260423000001..04 + 20260501000001 products_and_variants + 20260501000002 storage_bucket_produtos_imagens + 20260501000003 seed_au_coringa)
+- **Edge fns deployadas:** create-colaborador (Phase 2) + import-produtos refatorada (Phase 3 Plan 04)
 
 ## Accumulated Context
 
@@ -70,12 +70,12 @@ Plan: 3/3 done
 | Reescrever PDF do zero | Redesign + remover caixas + texto limpo não se resolve com patch |
 | Schema aditivo, nunca destrutivo | Dados de produção existem — colunas nullable, tabelas novas |
 | UAT descartado, escopo reescrito sobre commits existentes | Histórico preservado, zero risco de reset destrutivo |
+| D-09: PROD-02 obsoleto | DB já tinha 0 produtos sem desc/preço; AU001..16 cobrem uso real |
+| D-18: IMP-02 deferido | Preço atualiza 1x/mês em produção — operação periódica, não diária |
 
 ### Open Todos
 
-- Executar Phase 1 (começando por PREP-01 — limpar git pendente antes de qualquer migration)
-- Decidir destino das mudanças pendentes em `supabase/config.toml`, `supabase/functions/request-access/`, `supabase/functions/review-access/`, `supabase/.temp/` (commit ou revert)
-- Planejar ordem das migrations aditivas (arquitetos primeiro, depois FKs em clientes/produtos, depois colunas em colaboradores/clientes)
+- Phase 4 (Drive RLS & Reorganização Admin) — começa pelo `/gsd-discuss-phase 4` para capturar contexto
 - [todo] Admin > Orçamentos linha não clicável (`.planning/todos/pending/2026-04-27-admin-orcamentos-row-nao-clicavel.md`)
 - [todo] PDF zuado — input pra Phase 5 (`.planning/todos/pending/2026-04-27-pdf-zuado-input-para-phase-5.md`)
 
@@ -89,20 +89,21 @@ Plan: 3/3 done
 - **Infra:** Supabase `jkewlaezvrbuicmncqbj` (sa-east-1); Resend com `onboarding@resend.dev` (domínio próprio pendente, não bloqueia marco)
 - **Stack congelada:** React 18 + Vite + TypeScript + Supabase + shadcn-ui — sem troca
 - **Out of scope reforçado:** margem, refatoração de cálculos, comissões, role "representante", validação de CPF/CNPJ em cliente, testes automatizados, redesign geral de UI, integração ERP
-- **Estado atual do codebase:** Wizard 3 steps funcional; admin com 5 abas; Drive sem RLS por colaborador; PDF com as 4 caixas a remover; 16 produtos "mentais" do Lenny ainda não cadastrados
+- **Estado atual do codebase:** Wizard 3 steps funcional; admin com abas reorganizadas; Drive sem RLS por colaborador; PDF com as 4 caixas a remover; schema products+product_variants em prod; AU001..16 seedados; ImportMaster + ImportProdutos operacionais
+- **Bucket antigo:** `produto-imagens` (singular) não deletado na Phase 3 — decisão futura Phase 4 ou Quick
 
 ## Session Continuity
 
 ### Last Session
 
-- **Date:** 2026-04-27
-- **Action:** Phase 1 smoke (Plan 03) — 5 testes manuais executados em prod (Vercel kappa + Supabase Dashboard); hotfix `b8dfc40` aplicado pra persistir aba de admin no F5; bugs pré-existentes capturados como todos
-- **Outcome:** Phase 1 fechada. Schema novo (arquitetos + FKs + colunas em colaboradores/clientes) confirmado em prod sem regressão. 4 gaps documentados (orçamento não-clicável, PDF zuado, create-colaborador 401 fora do signup, request-access 409 UX) — nenhum bloqueia Phase 2
+- **Date:** 2026-04-30
+- **Action:** Phase 3 (Produtos & Importação) fechada — 5 plans aplicados (schema redesign products+product_variants com view de compat; seed AU001..16; ProdutoEditDialog estendido; ImportMaster + ImportProdutos refatorado + Imagens migrada para bucket plural; REQUIREMENTS atualizado)
+- **Outcome:** Phase 3 entregue. 6/8 requirements feitos (PROD-01 + IMP-01/03/04/05/06), PROD-02 marcado obsoleto via D-09 (DB já tinha 0 produtos sem desc/preço), IMP-02 deferido via D-18 (preço entra em phase futura). Schema aditivo OK; snapshots antigos preservados; wizard de orçamento e admin continuam funcionais
 
 ### Next Session
 
-- **Suggested next action:** `/gsd-plan-phase 2`
-- **Expected outcome:** Plano de execução para Phase 02 — Cadastros & Arquiteto CRUD (10 requirements: ARQ-02 admin CRUD + USR-01..03 frontend + CLI-01..02 frontend + autocomplete arquiteto no Step 1, etc.)
+- **Suggested next action:** `/gsd-discuss-phase 4`
+- **Expected outcome:** Captura de contexto da Phase 4 — Drive RLS & Reorganização Admin (9 requirements: ACC-01..04 + ADM-01..05). Decisões locked sobre RLS por colaborador, visualização de pedido, tela de preços (que depende de IMP-02 deferido), abas reorganizadas, dashboard inicial
 
 ---
-*STATE refreshed: 2026-04-27 após fechamento de Phase 1*
+*STATE refreshed: 2026-04-30 após fechamento de Phase 3 — 23/42 requirements validated, 50% das phases completed*
