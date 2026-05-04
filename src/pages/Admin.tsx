@@ -95,7 +95,7 @@ const Admin = () => {
 
   const fetchProdutos = async (search: string) => {
     setLoadingProdutos(true);
-    let query = supabase.from("produtos").select("id, codigo, descricao, nome, preco_tabela, preco_minimo, arquiteto_id, imagem_url, created_at", { count: "exact" });
+    let query = supabase.from("product_variants").select("id, codigo, descricao, nome, preco_tabela, preco_minimo, arquiteto_id, imagem_url, created_at", { count: "exact" });
     if (search.trim().length >= 2) {
       query = query.or(`codigo.ilike.%${search}%,descricao.ilike.%${search}%`);
     }
