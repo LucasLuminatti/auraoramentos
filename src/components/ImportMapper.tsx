@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,9 +25,10 @@ interface ImportMapperProps {
   fields: ImportField[];
   onImport: (mappedRows: Record<string, any>[], onProgress: (processed: number, total: number) => void) => Promise<ImportResult>;
   importLabel?: string;
+  classifyRows?: (codigos: string[]) => Promise<Map<string, "create" | "update">>;
 }
 
-const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapperProps) => {
+const ImportMapper = ({ fields, onImport, importLabel = "Importar", classifyRows }: ImportMapperProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -39,6 +40,8 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
   const [progressLabel, setProgressLabel] = useState("");
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showInvalidRows, setShowInvalidRows] = useState(false);
+  const [classification, setClassification] = useState<Map<string, "create" | "update"> | null>(null);
+  const [classifying, setClassifying] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,6 +79,30 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
   };
 
   const allRequiredMapped = fields.every((f) => !f.required || mapping[f.name]);
+
+  // IMP-05: classifica linhas em "create" vs "update" antes do submit
+  useEffect(() => {
+    if (!classifyRows || !allRequiredMapped || rawRows.length === 0 || importResult) {
+      setClassification(null);
+      return;
+    }
+    const headerIndexMap: Record<string, number> = {};
+    headers.forEach((h, i) => (headerIndexMap[h] = i));
+    const codigoCol = mapping["codigo"];
+    if (!codigoCol) {
+      setClassification(null);
+      return;
+    }
+    const codigos = rawRows
+      .map((r) => String(r[headerIndexMap[codigoCol]] ?? "").trim())
+      .filter((c) => c);
+    setClassifying(true);
+    classifyRows(codigos)
+      .then((map) => setClassification(map))
+      .catch(() => setClassification(null))
+      .finally(() => setClassifying(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapping, rawRows, allRequiredMapped, importResult]);
 
   const getMappedPreview = () => {
     if (!allRequiredMapped) return [];
@@ -278,6 +305,28 @@ const ImportMapper = ({ fields, onImport, importLabel = "Importar" }: ImportMapp
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+            )}
+
+            {/* IMP-05: contadores create / update / erros */}
+            {classifyRows && (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3">
+                  <div className="text-xs text-green-700">Criar</div>
+                  <div className="text-2xl font-bold text-green-700">
+                    {classifying ? "..." : classification ? Array.from(classification.values()).filter((v) => v === "create").length : "—"}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
+                  <div className="text-xs text-blue-700">Atualizar</div>
+                  <div className="text-2xl font-bold text-blue-700">
+                    {classifying ? "..." : classification ? Array.from(classification.values()).filter((v) => v === "update").length : "—"}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                  <div className="text-xs text-destructive">Erros (linhas inválidas)</div>
+                  <div className="text-2xl font-bold text-destructive">{totalInvalid}</div>
+                </div>
+              </div>
             )}
 
             {/* Amostra */}
