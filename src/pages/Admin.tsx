@@ -48,6 +48,7 @@ const Admin = () => {
   const [totalProdutos, setTotalProdutos] = useState(0);
   const [produtoEditOpen, setProdutoEditOpen] = useState(false);
   const [produtoEditTarget, setProdutoEditTarget] = useState<ProdutoEditRow | null>(null);
+  const [produtoCreateOpen, setProdutoCreateOpen] = useState(false);
 
   // Colaboradores tab
   const [colaboradores, setColaboradores] = useState<any[]>([]);
@@ -93,7 +94,7 @@ const Admin = () => {
 
   const fetchProdutos = async (search: string) => {
     setLoadingProdutos(true);
-    let query = supabase.from("produtos").select("*", { count: "exact" });
+    let query = supabase.from("produtos").select("id, codigo, descricao, nome, preco_tabela, preco_minimo, arquiteto_id, imagem_url, created_at", { count: "exact" });
     if (search.trim().length >= 2) {
       query = query.or(`codigo.ilike.%${search}%,descricao.ilike.%${search}%`);
     }
@@ -285,9 +286,14 @@ const Admin = () => {
           {/* PRODUTOS */}
           <TabsContent value="produtos" className="space-y-6">
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar produto por código ou descrição..." value={produtoSearch} onChange={(e) => setProdutoSearch(e.target.value)} className="max-w-sm" />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Buscar produto por código ou descrição..." value={produtoSearch} onChange={(e) => setProdutoSearch(e.target.value)} className="max-w-sm" />
+                </div>
+                <Button onClick={() => setProdutoCreateOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" /> Novo Produto
+                </Button>
               </div>
               <div className="rounded-xl border overflow-hidden">
                 <Table>
@@ -323,9 +329,11 @@ const Admin = () => {
                                   id: p.id,
                                   codigo: p.codigo,
                                   descricao: p.descricao,
+                                  nome: p.nome ?? null,
                                   preco_tabela: p.preco_tabela,
                                   preco_minimo: p.preco_minimo,
                                   arquiteto_id: p.arquiteto_id ?? null,
+                                  imagem_url: p.imagem_url ?? null,
                                 });
                                 setProdutoEditOpen(true);
                               }}
@@ -579,8 +587,16 @@ const Admin = () => {
       />
 
       <ProdutoEditDialog
+        open={produtoCreateOpen}
+        onOpenChange={setProdutoCreateOpen}
+        mode="create"
+        produto={null}
+        onSuccess={() => fetchProdutos(produtoSearch)}
+      />
+      <ProdutoEditDialog
         open={produtoEditOpen}
         onOpenChange={setProdutoEditOpen}
+        mode="edit"
         produto={produtoEditTarget}
         onSuccess={() => fetchProdutos(produtoSearch)}
       />
