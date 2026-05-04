@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-04-30T18:00:00.000Z"
+status: planning
+last_updated: "2026-05-04T13:37:20.113Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 12
   completed_plans: 12
-  percent: 50
+  percent: 100
 ---
 
 # STATE: AURA — Marco 1 (Melhorias v1)
