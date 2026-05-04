@@ -17,7 +17,6 @@ interface ProdutoRow {
   preco_tabela: number | null;
   preco_minimo: number | null;
   arquiteto_id: string | null;
-  categoria: string | null;
   tipo_produto: string | null;
 }
 
@@ -78,12 +77,12 @@ const PrecosBatch = () => {
 
       const { data: cats, error: catErr } = await supabase
         .from("product_variants")
-        .select("categoria")
-        .not("categoria", "is", null);
+        .select("tipo_produto")
+        .not("tipo_produto", "is", null);
       if (!catErr && cats) {
         const set = new Set<string>();
-        for (const r of cats as Array<{ categoria: string | null }>) {
-          if (r.categoria) set.add(r.categoria);
+        for (const r of cats as Array<{ tipo_produto: string | null }>) {
+          if (r.tipo_produto) set.add(r.tipo_produto);
         }
         setCategorias([...set].sort((a, b) => a.localeCompare(b, "pt-BR")));
       }
@@ -95,12 +94,12 @@ const PrecosBatch = () => {
     let q = supabase
       .from("product_variants")
       .select(
-        "id, codigo, descricao, nome, preco_tabela, preco_minimo, arquiteto_id, categoria, tipo_produto",
+        "id, codigo, descricao, nome, preco_tabela, preco_minimo, arquiteto_id, tipo_produto",
         { count: "exact" },
       )
       .order("codigo");
     if (filterArquitetoId) q = q.eq("arquiteto_id", filterArquitetoId);
-    if (filterCategoria) q = q.eq("categoria", filterCategoria);
+    if (filterCategoria) q = q.eq("tipo_produto", filterCategoria);
     if (filterSemPreco) q = q.or("preco_tabela.is.null,preco_tabela.eq.0");
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -303,7 +302,7 @@ const PrecosBatch = () => {
                     <TableCell className="max-w-md truncate" title={p.descricao ?? ""}>
                       {p.descricao || "—"}
                     </TableCell>
-                    <TableCell className="text-sm">{p.categoria || "—"}</TableCell>
+                    <TableCell className="text-sm">{p.tipo_produto || "—"}</TableCell>
                     <TableCell className="text-sm">
                       {p.arquiteto_id ? arquitetosMap[p.arquiteto_id] || "—" : "—"}
                     </TableCell>
