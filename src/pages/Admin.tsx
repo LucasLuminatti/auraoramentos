@@ -550,7 +550,12 @@ const Admin = () => {
                 </TableHeader>
                 <TableBody>
                   {orcamentos.map((o) => (
-                    <TableRow key={o.id}>
+                    <TableRow
+                      key={o.id}
+                      role="button"
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/admin/orcamento/${o.id}`)}
+                    >
                       <TableCell>{format(new Date(o.data), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                       <TableCell>{(o as any).clientes?.nome || "—"}</TableCell>
                       <TableCell>{(o as any).projetos?.nome || "—"}</TableCell>
@@ -564,7 +569,8 @@ const Admin = () => {
                           <button
                             className="p-1 rounded hover:bg-muted transition-colors"
                             title="Encerrar negociação"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEncerrarOrcId(o.id);
                               setEncerrarOpen(true);
                             }}
