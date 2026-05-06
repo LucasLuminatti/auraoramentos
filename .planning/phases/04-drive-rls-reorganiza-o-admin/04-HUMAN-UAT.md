@@ -1,9 +1,9 @@
 ---
-status: partial
+status: complete
 phase: 04-drive-rls-reorganiza-o-admin
 source: [04-VERIFICATION.md]
 started: 2026-05-04T18:55:00Z
-updated: 2026-05-06T12:15:00Z
+updated: 2026-05-06T12:25:00Z
 ---
 
 ## Current Test
@@ -29,8 +29,8 @@ result: ✓ Validado pelo orchestrator via Playwright MCP (Wave 3 smoke):
 
 ### 3. Re-emitir PDF (ADM-01)
 expected: Botão "Re-emitir PDF" em /admin/orcamento/:id baixa PDF refletindo snapshot dos ambientes.
-result: [pending — orchestrator pulou pra não poluir downloads de teste]
-notes: Reusa `gerarOrcamentoHtml` + `html2pdf` já em produção desde Phase 1. Risco baixo.
+result: ✓ Validado por Lenny (2026-05-06): PDF baixa e reflete snapshot. Funcionalmente correto.
+notes: Estética do PDF está ruim — não é regressão de Phase 4 (mesmo template do Phase 1). Capturado em todo separado para fase futura de polish visual.
 
 ### 4. PrecosBatch end-to-end (ADM-02)
 expected: Inline edit + save em produto → DB grava `editado_manualmente=true`.
@@ -42,12 +42,16 @@ result: ✓ Validado pelo orchestrator via Playwright MCP (Wave 4 smoke):
 ## Summary
 
 total: 4
-passed: 3
+passed: 4
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- **Re-emitir PDF download smoke** — não bloqueador; reuso de código (`gerarOrcamentoHtml` + `html2pdf`) já validado em prod desde Phase 1.
+(none — todos validados)
+
+## Out of scope (capturado em todos)
+
+- **PDF estética horrível** — issue pré-existente do template Phase 1, não é regressão de Phase 4. Capturado em `.planning/todos/` para polish em fase futura.
