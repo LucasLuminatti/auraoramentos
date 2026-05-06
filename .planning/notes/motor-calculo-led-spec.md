@@ -20,19 +20,19 @@
 - L > 2·limite → **múltiplos pontos de injeção** (segmentado)
 - pontos = `ceil(L / limite)` — função apenas de comprimento + tensão
 
-### Classificação (agrupador funcional)
-- Campo **criado pelo usuário** no orçamento.
-- Não substitui `aplicacao` nem `tipo_produto` do produto.
+### Classificação (agrupador funcional novo)
+- **Campo NOVO** criado pelo usuário no orçamento, **não substitui** `aplicacao` nem `tipo_produto` do produto (esses continuam existindo nos cadastros).
+- Função: **agrupador operacional** para drivers e perfis dentro do orçamento.
 - Drivers **não cruzam classificações**.
 - Perfis dentro da mesma classificação **podem** ser agrupados.
 - Exemplos: `teto`, `mobiliário` (mas é livre).
 
 ### Estratégia de drivers (INVERTE comportamento atual)
-- **Preferir 1 driver por perfil**.
-- Evitar agrupamento automático agressivo.
-- Agrupamento só **dentro da mesma classificação**.
-- Justificativa: simplicidade de obra > otimização de custo.
-- ⚠️ Mudança esperada no orçamento: **mais drivers, mais cabo, mais custo** vs. código atual.
+- Cálculo é **por perfil OU por grupo/classificação** — não é regra absoluta.
+- **Preferência padrão: separar (1 driver por perfil)** para reduzir erro de obra.
+- Agrupamento permitido só **dentro da mesma classificação** quando fizer sentido.
+- Justificativa: simplicidade/segurança de obra > otimização de custo.
+- ⚠️ Mudança esperada vs. código atual: **mais drivers, mais cabo, mais custo** (porque o atual agrupa agressivo por capacidade).
 
 ### Padronização dentro da classificação
 - Se houver múltiplos drivers na mesma classificação → **tentar mesma potência**.
@@ -62,7 +62,7 @@
 
 ## 🚫 Fora do escopo v1 (NÃO entra)
 
-- **48V** — fica em fluxo paralelo como hoje (`analisarMagneto48V`).
+- **48V** — motor novo cobre apenas 12V e 24V. Se 48V continuar no código atual (ex: `analisarMagneto48V`), é **outro fluxo separado**, não parte do motor v1.
 - **Limite de potência por ponto de injeção** — pontos = só função de comprimento. Sem teto numérico de W/ponto no v1.
 - **Iteração do ajuste de pontos** — bloqueado pela decisão acima (não existe a regra).
 - **Bitola / corrente** — fora.
@@ -76,10 +76,11 @@
 
 | Tema | Hoje | v1 do motor |
 |---|---|---|
-| Estratégia de drivers | Junta perfis até atingir capacidade do driver (otimiza) | 1 driver por perfil (preferência), agrupa só dentro da classificação |
+| Estratégia de drivers | Junta perfis até atingir capacidade do driver (otimiza custo) | Por perfil OU por grupo/classificação — separação como **preferência padrão** (segurança de obra), agrupamento só dentro da mesma classificação quando fizer sentido |
+| Agrupador operacional | `aplicacao` / `tipo_produto` (do produto) | **Classificação** (campo novo do orçamento, criado pelo usuário). `aplicacao` e `tipo_produto` continuam existindo nos cadastros |
 | Margem de segurança | Constante `MARGEM_SEGURANCA_DRIVER` configurável | 10% fixo, hardcoded |
 | Agrupamento de rolos | Dentro de `calcularDemandaFita` (5/10/15m) | Sai do motor — vira etapa posterior |
-| Tensão | Tem `analisarMagneto48V` | Motor só 12V/24V; 48V continua paralelo |
+| Tensão | 12V/24V/48V no mesmo fluxo (`analisarMagneto48V`) | Motor v1 cobre **só 12V/24V**. 48V (se mantido) é **outro fluxo separado**, não parte do motor novo |
 | Passadas por largura | Cálculo automático | Heurística automática + override manual obrigatório |
 
 ---
@@ -95,8 +96,8 @@
 
 ## Frase-resumo (uma linha)
 
-Motor v1 cobre **12V/24V**, agrupa por **classificação criada pelo usuário**, prefere **1 driver por perfil**, padroniza potência dentro do grupo, usa **5m/10m fixos** para topologia, margem **10% fixo**, e entrega **fita total consolidada** — agrupamento de rolos e 48V ficam fora.
+Motor v1 cobre **só 12V/24V**, agrupa por **classificação criada pelo usuário** (campo novo, não substitui `aplicacao`/`tipo_produto`), calcula drivers **por perfil ou por grupo** com **separação como preferência padrão**, padroniza potência dentro do grupo, usa **5m/10m fixos** para topologia, margem **10% fixo**, entrega **fita total consolidada** — agrupamento de rolos e 48V ficam fora (48V, se mantido, é fluxo separado).
 
 ---
 
-*Última atualização: 2026-05-04 — spec fechado para v1, aguardando Marco 1 + CALC-01 baseline antes de virar fase.*
+*Última atualização: 2026-05-06 — 3 correções pós-revisão Lenny (drivers como preferência ≠ regra absoluta; 48V é fluxo separado, não parte do motor v1; classificação é agrupador novo, não substituto de `aplicacao`/`tipo_produto`).*
