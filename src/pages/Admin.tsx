@@ -115,6 +115,20 @@ const Admin = () => {
     setSearchParams(params, { replace: true });
   };
 
+  // Filtro arquiteto — Cadastros > Produtos (Phase 6 Plan 03, D-04)
+  // URL: ?arq_produtos=<uuid> → filtra product_variants.arquiteto_id = <uuid>
+  //      ?arq_produtos=none   → filtra product_variants.arquiteto_id IS NULL
+  //      (ausente)            → sem filtro (Todos)
+  // Combina com produtoSearch (search por código/descrição) via AND-chain na query.
+  const arqProdutosParam = searchParams.get("arq_produtos"); // null | "none" | "<uuid>"
+
+  const setArqProdutosParam = (next: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === null) params.delete("arq_produtos");
+    else params.set("arq_produtos", next);
+    setSearchParams(params, { replace: true });
+  };
+
   const [importSubTab, setImportSubTab] = useState<"master" | "produtos" | "imagens" | "precos">("master");
 
   // Produtos tab
@@ -125,6 +139,7 @@ const Admin = () => {
   const [produtoEditOpen, setProdutoEditOpen] = useState(false);
   const [produtoEditTarget, setProdutoEditTarget] = useState<ProdutoEditRow | null>(null);
   const [produtoCreateOpen, setProdutoCreateOpen] = useState(false);
+  const [arqProdutosNome, setArqProdutosNome] = useState("");
 
   // Colaboradores tab
   const [colaboradores, setColaboradores] = useState<any[]>([]);
@@ -155,11 +170,11 @@ const Admin = () => {
   const [encerrarOrcId, setEncerrarOrcId] = useState("");
 
   useEffect(() => {
-    fetchProdutos("");
     fetchColaboradores();
     fetchOrcamentos();
     fetchArquitetos();
     // fetchClientes é disparado por effect dedicado abaixo (reage a arq_clientes da URL)
+    // fetchProdutos é disparado pelo effect de debounce (reage a produtoSearch + arq_produtos)
   }, []);
 
   // Refetch clientes quando o filtro arquiteto muda (ou no mount inicial, com param vazio)
@@ -183,16 +198,34 @@ const Admin = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchProdutos(produtoSearch);
+      fetchProdutos(produtoSearch, arqProdutosParam);
     }, 300);
     return () => clearTimeout(timer);
-  }, [produtoSearch]);
+  }, [produtoSearch, arqProdutosParam]);
 
-  const fetchProdutos = async (search: string) => {
+  // Sincroniza o nome exibido no input do autocomplete (Produtos) com o param da URL
+  useEffect(() => {
+    if (!arqProdutosParam) {
+      setArqProdutosNome("");
+      return;
+    }
+    if (arqProdutosParam === "none") {
+      setArqProdutosNome("Nenhum arquiteto");
+      return;
+    }
+    setArqProdutosNome(arquitetosMap[arqProdutosParam] || "");
+  }, [arqProdutosParam, arquitetosMap]);
+
+  const fetchProdutos = async (search: string, arqFilter?: string | null) => {
     setLoadingProdutos(true);
     let query = supabase.from("product_variants").select("id, codigo, descricao, nome, preco_tabela, preco_minimo, arquiteto_id, imagem_url, created_at", { count: "exact" });
     if (search.trim().length >= 2) {
       query = query.or(`codigo.ilike.%${search}%,descricao.ilike.%${search}%`);
+    }
+    if (arqFilter === "none") {
+      query = query.is("arquiteto_id", null);
+    } else if (arqFilter && arqFilter !== "none") {
+      query = query.eq("arquiteto_id", arqFilter);
     }
     const { data, count } = await query.order("codigo").limit(100);
     setProdutos(data || []);
@@ -371,14 +404,35 @@ const Admin = () => {
               {/* CADASTROS > PRODUTOS */}
               <TabsContent value="produtos" className="space-y-6">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3 flex-1">
                       <Search className="h-4 w-4 text-muted-foreground" />
                       <Input placeholder="Buscar produto por código ou descrição..." value={produtoSearch} onChange={(e) => setProdutoSearch(e.target.value)} className="max-w-sm" />
                     </div>
-                    <Button onClick={() => setProdutoCreateOpen(true)} className="gap-2">
-                      <Plus className="h-4 w-4" /> Novo Produto
-                    </Button>
+                    <div className="flex items-center gap-3">
+                      <div className="w-full sm:w-64">
+                        <ArquitetoAutocomplete
+                          mode="filter"
+                          value={arqProdutosNome}
+                          onSelect={(arq, kind) => {
+                            if (kind === 'all') {
+                              setArqProdutosParam(null);
+                              setArqProdutosNome("");
+                            } else if (kind === 'none') {
+                              setArqProdutosParam("none");
+                              setArqProdutosNome("Nenhum arquiteto");
+                            } else if (arq) {
+                              setArqProdutosParam(arq.id);
+                              setArqProdutosNome(arq.nome);
+                            }
+                          }}
+                          placeholder="Filtrar por arquiteto..."
+                        />
+                      </div>
+                      <Button onClick={() => setProdutoCreateOpen(true)} className="gap-2 whitespace-nowrap">
+                        <Plus className="h-4 w-4" /> Novo Produto
+                      </Button>
+                    </div>
                   </div>
                   <div className="rounded-xl border overflow-hidden">
                     <Table>
@@ -396,7 +450,13 @@ const Admin = () => {
                         {loadingProdutos ? (
                           <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Buscando...</TableCell></TableRow>
                         ) : produtos.length === 0 ? (
-                          <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            {arqProdutosParam
+                              ? (arqProdutosParam === "none"
+                                  ? (produtoSearch ? "Nenhum produto sem arquiteto bate com a busca" : "Nenhum produto sem arquiteto")
+                                  : (produtoSearch ? "Nenhum produto deste arquiteto bate com a busca" : "Nenhum produto vinculado a este arquiteto"))
+                              : "Nenhum produto encontrado"}
+                          </TableCell></TableRow>
                         ) : (
                           produtos.map((p) => (
                             <TableRow key={p.id}>
@@ -773,14 +833,14 @@ const Admin = () => {
         onOpenChange={setProdutoCreateOpen}
         mode="create"
         produto={null}
-        onSuccess={() => fetchProdutos(produtoSearch)}
+        onSuccess={() => fetchProdutos(produtoSearch, arqProdutosParam)}
       />
       <ProdutoEditDialog
         open={produtoEditOpen}
         onOpenChange={setProdutoEditOpen}
         mode="edit"
         produto={produtoEditTarget}
-        onSuccess={() => fetchProdutos(produtoSearch)}
+        onSuccess={() => fetchProdutos(produtoSearch, arqProdutosParam)}
       />
 
       <AlertDialog open={arquitetoDeleteOpen} onOpenChange={setArquitetoDeleteOpen}>
