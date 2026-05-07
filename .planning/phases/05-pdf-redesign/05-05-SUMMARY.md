@@ -2,10 +2,27 @@
 plan: 05-05
 phase: 05-pdf-redesign
 type: execute
-status: human-verify-pending
-tasks-completed: 4-of-5
-checkpoint: task-5-uat-visual
+status: complete
+tasks-completed: 5-of-5
+uat: approved-via-playwright
 ---
+
+## UAT Result (2026-05-07, via Playwright MCP)
+
+Bug crítico encontrado e corrigido durante UAT:
+- `ALTER TABLE ADD COLUMN ... DEFAULT 2` preencheu rows existentes com 2 (não NULL como o comentário do SQL afirmava). Quebraria PDF-05 (compat retroativa de snapshots legacy).
+- Fix em `20260507180000_backfill_pdf_template_version_legacy.sql`: UPDATE NULL em rows pré-Phase-5 + DROP DEFAULT.
+
+Pós-fix:
+
+| Cenário | DB state | Template gerado | Resultado |
+|---------|----------|-----------------|-----------|
+| Snapshot antigo (`f39ca4b4`, created 2026-04-27) | `pdf_template_version=NULL` | v1 (Outfit + info-grid + Google Fonts CDN + dark total) | ✅ |
+| Mesmo snapshot com `v=2` (PATCH simulando Phase 5+) | `pdf_template_version=2` | v2 (Playfair + amb-name + doc-title + total-card + 5× orange + sem info-grid/CDN/Outfit) | ✅ |
+| Re-emit após PATCH | `pdf_template_version=2` | v2 (idem) | ✅ |
+| Console errors relacionados à Phase 5 | — | 0 | ✅ |
+
+Lenny validou via passagem de credenciais para teste autônomo via Playwright MCP. Orçamento de teste revertido para `NULL` ao final (não contamina prod).
 
 ## What was built
 
