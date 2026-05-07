@@ -69,7 +69,7 @@
 - [x] **FIL-01**: Lista de clientes no admin filtrável por arquiteto
 - [x] **FIL-02**: Lista de produtos no admin filtrável por arquiteto
 - [x] **FIL-03**: Lista de orçamentos/pedidos no admin filtrável por arquiteto
-- [ ] **FIL-04**: Filtros combináveis onde fizer sentido (arquiteto + cliente, arquiteto + período, etc.)
+- [x] **FIL-04**: Filtros combináveis onde fizer sentido (arquiteto + cliente, arquiteto + período, etc.)
 
 ### Preparação e Finalização
 
@@ -161,7 +161,7 @@ Ficam pra marcos futuros, já previstos.
 | FIL-01 | Phase 6 | Complete |
 | FIL-02 | Phase 6 | Complete |
 | FIL-03 | Phase 6 | Complete |
-| FIL-04 | Phase 6 | Pending |
+| FIL-04 | Phase 6 | Complete |
 | PREP-01 | Phase 1 | Pending |
 | WRAP-01 | Phase 6 | Pending |
 

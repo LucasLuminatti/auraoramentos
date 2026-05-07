@@ -121,7 +121,7 @@
 - [x] 06-01-PLAN.md — ArquitetoAutocomplete ganha prop `mode: select | filter` (foundation reutilizável)
 - [x] 06-02-PLAN.md — Filtro arquiteto em Cadastros > Clientes + URL state `arq_clientes` (FIL-01)
 - [x] 06-03-PLAN.md — Filtro arquiteto em Cadastros > Produtos + URL state `arq_produtos` combinável com search (FIL-02)
-- [ ] 06-04-PLAN.md — Filtros combinados em Pedidos (arquiteto + cliente + período + status) via JOIN clientes!inner + popover mobile (FIL-03, FIL-04)
+- [x] 06-04-PLAN.md — Filtros combinados em Pedidos (arquiteto + cliente + período + status) via JOIN clientes!inner + popover mobile (FIL-03, FIL-04)
 - [ ] 06-05-PLAN.md — 06-WRAP-UAT.md (8 smoke items, 6 auto via Playwright + 2 manuais) e fechamento do Marco 1 (WRAP-01)
 **UI hint**: yes
 

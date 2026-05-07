@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 4
+current_plan: 5
 status: executing
-last_updated: "2026-05-07T20:01:17.743Z"
+last_updated: "2026-05-07T20:10:12.305Z"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 28
-  completed_plans: 26
-  percent: 93
+  completed_plans: 27
+  percent: 96
 ---
 
 # STATE: AURA — Marco 1 (Melhorias v1)
@@ -29,13 +29,13 @@ progress:
 ## Current Position
 
 Phase: 06 (filtros-smoke) — EXECUTING
-Current Plan: 4
+Current Plan: 5
 Total Plans in Phase: 5
 
 - **Phase:** 6
 - **Plan:** 06-03 complete (filtro arquiteto em Cadastros > Produtos com search combinado)
-- **Status:** Executing Phase 06 — next is Plan 06-04 (filtros Pedidos com JOIN + cliente + período + status)
-- **Progress:** [█████████░] 93%
+- **Status:** Ready to execute
+- **Progress:** [██████████] 96%
 
 ## Milestone Progress
 
@@ -81,6 +81,7 @@ Total Plans in Phase: 5
 | Phase 06 P01: ArquitetoAutocomplete com prop opcional `mode='filter'` + callback estendido com `kind` ('arquiteto'\|'none'\|'all') | Foundation reutilizável para filtros das tabs Cadastros/Pedidos (Plans 02/03/04); retro-compat total com ClienteDialog/ProdutoEditDialog |
 | Phase 06 P02: filtro Cadastros>Clientes via URL `?arq_clientes=<uuid\|none>`; `fetchClientes(arqFilter)` com `.eq()` / `.is(null)` / sem cláusula; pattern reaplicado nos Plans 03/04 | Filtro Supabase-side (D-07), URL como source of truth (D-03/D-04), 3 estados claros, empty state diferenciado |
 | Phase 06 P03: filtro Cadastros>Produtos via URL `?arq_produtos=<uuid\|none>` AND-chained com search por código/descrição; `fetchProdutos(search, arqFilter)` refatorado; effect debounce único `[produtoSearch, arqProdutosParam]`; empty state com 4 branches | Combinação search+filter na mesma query Supabase (PostgREST AND natural); pattern de matriz de empty state escalável para Plan 04 (Pedidos com cliente+período+status) |
+| Phase 06 P06-04 | 4min | 2 tasks | 2 files |
 
 ### Open Todos
 
