@@ -101,11 +101,11 @@
   4. Card "TOTAL GERAL" revisto visualmente e consistente com o novo design
   5. Orçamento antigo (snapshot já persistido em `orcamentos`) continua renderizando no novo PDF sem crash nem campos quebrados
 **Plans**: 5 plans
-- [ ] 05-01-PLAN.md — Migration pdf_template_version + supabase db push + types regen (PDF-05)
-- [ ] 05-02-PLAN.md — Campo SistemaIluminacao.local + input "Local (opcional)" no AmbienteCard (PDF-01)
-- [ ] 05-03-PLAN.md — Helpers pdfFonts + pdfImages + install @fontsource/inter + @fontsource/playfair-display (PDF-01)
-- [ ] 05-04-PLAN.md — Template v2 editorial (Playfair+Inter, 5-níveis, chips, total redesenhado, prose final) (PDF-01..04)
-- [ ] 05-05-PLAN.md — Router v1/v2 + Step3 persist + OrcamentoDetalhe lê versão + UAT visual (PDF-05)
+- [x] 05-01-PLAN.md — Migration pdf_template_version + supabase db push + types regen (PDF-05)
+- [x] 05-02-PLAN.md — Campo SistemaIluminacao.local + input "Local (opcional)" no AmbienteCard (PDF-01)
+- [x] 05-03-PLAN.md — Helpers pdfFonts + pdfImages + install @fontsource/inter + @fontsource/playfair-display (PDF-01)
+- [x] 05-04-PLAN.md — Template v2 editorial (Playfair+Inter, 5-níveis, chips, total redesenhado, prose final) (PDF-01..04)
+- [x] 05-05-PLAN.md — Router v1/v2 + Step3 persist + OrcamentoDetalhe lê versão + UAT visual (PDF-05)
 **UI hint**: yes
 
 ### Phase 6: Filtros & Smoke
