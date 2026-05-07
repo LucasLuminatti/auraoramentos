@@ -82,6 +82,8 @@ export interface SistemaIluminacao {
   driver: ItemDriver;
   metragemManual: number | null;   // usado quando perfil = null
   passadasManual: 1 | 2 | 3;       // usado quando perfil = null
+  /** Sub-ambiente / agrupamento opcional (ex: "Sanca", "Rasgo", "Pé-direito"). Phase 5 / PDF-01. */
+  local?: string | null;
 }
 
 /** @deprecated Use SistemaIluminacao */
