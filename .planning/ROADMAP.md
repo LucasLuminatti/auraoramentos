@@ -117,7 +117,12 @@
   2. Filtros combináveis (arquiteto + cliente, arquiteto + período, arquiteto + status) retornam resultado coerente
   3. Smoke test em produção executado cobrindo: signup novo, criar cliente com arquiteto, criar orçamento completo, gerar PDF novo, importar CSV e Drive isolado por colaborador
   4. Nenhum bug visível ou regressão encontrada no smoke — ou, se encontrada, registrada e corrigida antes do fechamento do marco
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 06-01-PLAN.md — ArquitetoAutocomplete ganha prop `mode: select | filter` (foundation reutilizável)
+- [ ] 06-02-PLAN.md — Filtro arquiteto em Cadastros > Clientes + URL state `arq_clientes` (FIL-01)
+- [ ] 06-03-PLAN.md — Filtro arquiteto em Cadastros > Produtos + URL state `arq_produtos` combinável com search (FIL-02)
+- [ ] 06-04-PLAN.md — Filtros combinados em Pedidos (arquiteto + cliente + período + status) via JOIN clientes!inner + popover mobile (FIL-03, FIL-04)
+- [ ] 06-05-PLAN.md — 06-WRAP-UAT.md (8 smoke items, 6 auto via Playwright + 2 manuais) e fechamento do Marco 1 (WRAP-01)
 **UI hint**: yes
 
 ## Progress
@@ -129,7 +134,7 @@
 | 3. Produtos & Importação | 5/5 | Complete | 2026-04-30 |
 | 4. Drive RLS & Reorganização Admin | 6/6 | Complete | 2026-05-04 |
 | 5. PDF Redesign | 0/0 | Not started | - |
-| 6. Filtros & Smoke | 0/0 | Not started | - |
+| 6. Filtros & Smoke | 0/5 | Planned | - |
 
 ## Coverage Summary
 
