@@ -40,6 +40,8 @@ interface Violacao {
   precoMinimo: number;
 }
 
+// Helper local para converter asset Vite-imported (logo) — fetch de URL externa
+// (thumbnails de produtos) usa src/lib/pdfImages.ts via inlineImagensSnapshot.
 async function imageToBase64(src: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -204,6 +206,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
             tipo: dados.tipo || null,
             ambientes: ambientesJson,
             valor: totalGeral,
+            pdf_template_version: 2,
           })
           .eq("id", orcamentoId);
         if (error) throw error;
@@ -219,6 +222,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
           ambientes: ambientesJson,
           valor: totalGeral,
           status: "rascunho" satisfies StatusOrcamento,
+          pdf_template_version: 2,
         })
         .select("id")
         .single();
@@ -252,11 +256,25 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
     if (pdfInFlightRef.current) return;
     pdfInFlightRef.current = true;
     try {
-      const [, logoBase64] = await Promise.all([
+      // Phase 5: pre-resolver fontes + imagens antes de rasterizar (Pitfalls 1 e 2 do RESEARCH).
+      const { ensureFontsReady } = await import("@/lib/pdfFonts");
+      const { inlineImagensSnapshot } = await import("@/lib/pdfImages");
+      const [, logoBase64, ambientesInline] = await Promise.all([
         persistirOrcamento(),
         carregarLogoBase64(),
+        inlineImagensSnapshot(ambientes),
       ]);
-      const html = gerarOrcamentoHtml({ clienteNome, projetoNome, colaborador: dados.colaborador, tipo: dados.tipo, ambientes, logoBase64 });
+      await ensureFontsReady();
+
+      const html = gerarOrcamentoHtml({
+        clienteNome,
+        projetoNome,
+        colaborador: dados.colaborador,
+        tipo: dados.tipo,
+        ambientes: ambientesInline,
+        logoBase64,
+        templateVersion: 2,
+      });
 
       // Renderiza o HTML num container oculto e converte para PDF download via html2pdf.
       const container = document.createElement("div");
@@ -278,7 +296,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
             image: { type: "jpeg", quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true, logging: false },
             jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-            pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+            pagebreak: { mode: ["css", "legacy"] },
           })
           .save();
         toast.success("PDF baixado!");
