@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, ListFilter } from "lucide-react";
 
 export interface ArquitetoOption {
   id: string;
@@ -11,9 +11,13 @@ export interface ArquitetoOption {
 
 interface ArquitetoAutocompleteProps {
   value: string;
-  onSelect: (arquiteto: ArquitetoOption | null) => void;
+  onSelect: (
+    arquiteto: ArquitetoOption | null,
+    kind?: 'arquiteto' | 'none' | 'all'
+  ) => void;
   placeholder?: string;
   className?: string;
+  mode?: 'select' | 'filter';
 }
 
 const ArquitetoAutocomplete = ({
@@ -21,7 +25,9 @@ const ArquitetoAutocomplete = ({
   onSelect,
   placeholder = "Buscar arquiteto...",
   className,
+  mode,
 }: ArquitetoAutocompleteProps) => {
+  const m = mode ?? 'select';
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<ArquitetoOption[]>([]);
@@ -74,11 +80,22 @@ const ArquitetoAutocomplete = ({
       </div>
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border bg-popover p-1 shadow-lg">
+          {/* "[Todos]" prepended apenas em mode='filter' (D-01 da Phase 6) */}
+          {m === 'filter' && (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground hover:bg-accent transition-colors"
+              onClick={() => { onSelect(null, 'all'); setQuery(""); setOpen(false); }}
+            >
+              <ListFilter className="h-3.5 w-3.5" />
+              Todos
+            </button>
+          )}
           {/* "Nenhum arquiteto" fixo no topo (D-17) — sem criar inline */}
           <button
             type="button"
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent transition-colors"
-            onClick={() => { onSelect(null); setQuery(""); setOpen(false); }}
+            onClick={() => { onSelect(null, 'none'); setQuery(""); setOpen(false); }}
           >
             <X className="h-3.5 w-3.5" />
             Nenhum arquiteto
@@ -98,7 +115,7 @@ const ArquitetoAutocomplete = ({
               key={a.id}
               type="button"
               className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => { onSelect(a); setQuery(a.nome); setOpen(false); }}
+              onClick={() => { onSelect(a, 'arquiteto'); setQuery(a.nome); setOpen(false); }}
             >
               <span className="font-medium text-foreground">{a.nome}</span>
             </button>
