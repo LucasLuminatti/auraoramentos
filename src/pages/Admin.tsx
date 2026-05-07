@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Flag, Plus, Pencil } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Flag, Plus, Pencil, Filter } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
@@ -24,8 +24,12 @@ import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog
 import ClienteDialog, { type ClienteRow } from "@/components/ClienteDialog";
 import ProdutoEditDialog, { type ProdutoEditRow } from "@/components/ProdutoEditDialog";
 import ArquitetoAutocomplete from "@/components/ArquitetoAutocomplete";
+import ClienteFilterAutocomplete from "@/components/ClienteFilterAutocomplete";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 const TOP_TABS = ["inicio", "cadastros", "pedidos", "precos", "excecoes"] as const;
 type TopTab = (typeof TOP_TABS)[number];
@@ -42,6 +46,16 @@ const DEFAULT_SUB_BY_TAB: Partial<Record<TopTab, string>> = {
   cadastros: "produtos",
   precos: "atualizacao",
 };
+
+// Status options para o filtro Pedidos (Phase 6 Plan 04, D-05)
+const STATUS_OPTIONS = [
+  { value: "all", label: "Todos" },
+  { value: "rascunho", label: "Rascunho" },
+  { value: "enviado", label: "Enviado" },
+  { value: "aprovado", label: "Aprovado" },
+  { value: "fechado", label: "Fechado" },
+  { value: "perdido", label: "Perdido" },
+] as const;
 
 // Backward-compat: tabs antigas → novo (?tab=X&sub=Y)
 const LEGACY_TAB_MAP: Record<string, { tab: TopTab; sub?: string }> = {
@@ -129,6 +143,23 @@ const Admin = () => {
     setSearchParams(params, { replace: true });
   };
 
+  // Filtros Pedidos — Phase 6 Plan 04 (D-04, D-05, D-06, D-07, D-11)
+  // URL params: arq_pedidos, cli_pedidos, data_de, data_ate, status_pedidos
+  // Combinados via AND na query Supabase. Arquiteto via JOIN clientes!inner (sem migration nova).
+  const arqPedidosParam = searchParams.get("arq_pedidos");        // null | "none" | "<uuid>"
+  const cliPedidosParam = searchParams.get("cli_pedidos");        // null | "<uuid>"
+  const dataDeParam = searchParams.get("data_de");                // null | "YYYY-MM-DD"
+  const dataAteParam = searchParams.get("data_ate");              // null | "YYYY-MM-DD"
+  const statusPedidosParam = searchParams.get("status_pedidos");  // null | enum
+
+  // Helper genérico — substitui setArqClientesParam/setArqProdutosParam quando útil; mantidos pra retro-compat com Plans 02/03
+  const setUrlParam = (key: string, next: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === null || next === "") params.delete(key);
+    else params.set(key, next);
+    setSearchParams(params, { replace: true });
+  };
+
   const [importSubTab, setImportSubTab] = useState<"master" | "produtos" | "imagens" | "precos">("master");
 
   // Produtos tab
@@ -146,6 +177,8 @@ const Admin = () => {
 
   // Orcamentos tab
   const [orcamentos, setOrcamentos] = useState<any[]>([]);
+  const [arqPedidosNome, setArqPedidosNome] = useState("");
+  const [cliPedidosNome, setCliPedidosNome] = useState("");
 
   // Clientes tab
   const [clientes, setClientes] = useState<any[]>([]);
@@ -171,10 +204,10 @@ const Admin = () => {
 
   useEffect(() => {
     fetchColaboradores();
-    fetchOrcamentos();
     fetchArquitetos();
     // fetchClientes é disparado por effect dedicado abaixo (reage a arq_clientes da URL)
     // fetchProdutos é disparado pelo effect de debounce (reage a produtoSearch + arq_produtos)
+    // fetchOrcamentos é disparado por effect dedicado abaixo (reage aos 5 params Pedidos)
   }, []);
 
   // Refetch clientes quando o filtro arquiteto muda (ou no mount inicial, com param vazio)
@@ -216,6 +249,49 @@ const Admin = () => {
     setArqProdutosNome(arquitetosMap[arqProdutosParam] || "");
   }, [arqProdutosParam, arquitetosMap]);
 
+  // Refetch Pedidos quando QUALQUER filtro Pedidos muda (e no mount inicial, com params vazios)
+  useEffect(() => {
+    fetchOrcamentos({
+      arq: arqPedidosParam,
+      cli: cliPedidosParam,
+      dataDe: dataDeParam,
+      dataAte: dataAteParam,
+      status: statusPedidosParam,
+    });
+  }, [arqPedidosParam, cliPedidosParam, dataDeParam, dataAteParam, statusPedidosParam]);
+
+  // Sync nome do arquiteto no input do filtro Pedidos
+  useEffect(() => {
+    if (!arqPedidosParam) {
+      setArqPedidosNome("");
+      return;
+    }
+    if (arqPedidosParam === "none") {
+      setArqPedidosNome("Nenhum arquiteto");
+      return;
+    }
+    setArqPedidosNome(arquitetosMap[arqPedidosParam] || "");
+  }, [arqPedidosParam, arquitetosMap]);
+
+  // Sync nome do cliente no input do filtro Pedidos — não temos um clientesMap global,
+  // então buscamos pontualmente quando o param vem da URL (paste/bookmark).
+  useEffect(() => {
+    if (!cliPedidosParam) {
+      setCliPedidosNome("");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("clientes")
+        .select("nome")
+        .eq("id", cliPedidosParam)
+        .maybeSingle();
+      if (!cancelled) setCliPedidosNome(data?.nome ?? "");
+    })();
+    return () => { cancelled = true; };
+  }, [cliPedidosParam]);
+
   const fetchProdutos = async (search: string, arqFilter?: string | null) => {
     setLoadingProdutos(true);
     let query = supabase.from("product_variants").select("id, codigo, descricao, nome, preco_tabela, preco_minimo, arquiteto_id, imagem_url, created_at", { count: "exact" });
@@ -238,11 +314,31 @@ const Admin = () => {
     setColaboradores(data || []);
   };
 
-  const fetchOrcamentos = async () => {
-    const { data } = await supabase
+  // Pedidos — fetch parametrizado (Phase 6 Plan 04, D-11)
+  // Arquiteto via JOIN clientes!inner(arquiteto_id) — sem migration nova; cliente_id é NOT NULL
+  // em orcamentos, então INNER JOIN não muda o resultset em produção.
+  const fetchOrcamentos = async (filters?: {
+    arq?: string | null;
+    cli?: string | null;
+    dataDe?: string | null;
+    dataAte?: string | null;
+    status?: string | null;
+  }) => {
+    const f = filters ?? {};
+    let q = supabase
       .from("orcamentos")
-      .select("*, clientes(nome), colaboradores(nome), projetos(nome)")
-      .order("created_at", { ascending: false });
+      .select("*, clientes!inner(nome, arquiteto_id), colaboradores(nome), projetos(nome)");
+    if (f.arq === "none") q = q.is("clientes.arquiteto_id", null);
+    else if (f.arq && f.arq !== "none") q = q.eq("clientes.arquiteto_id", f.arq);
+    if (f.cli) q = q.eq("cliente_id", f.cli);
+    if (f.dataDe) q = q.gte("data", f.dataDe);
+    if (f.dataAte) q = q.lte("data", f.dataAte);
+    if (f.status && f.status !== "all") q = q.eq("status", f.status);
+    const { data, error } = await q.order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Erro ao carregar pedidos");
+      return;
+    }
     setOrcamentos(data || []);
   };
 
@@ -348,6 +444,15 @@ const Admin = () => {
   };
 
   const canEncerrar = (status: string) => status === "enviado" || status === "aprovado";
+
+  // Contador de filtros ativos em Pedidos (para badge mobile e botão "Limpar filtros")
+  const pedidosFilterCount = [
+    arqPedidosParam,
+    cliPedidosParam,
+    dataDeParam,
+    dataAteParam,
+    statusPedidosParam && statusPedidosParam !== "all" ? statusPedidosParam : null,
+  ].filter(Boolean).length;
 
   const importSubTabs = [
     { key: "master" as const, label: "Master (one-shot)", description: "Sobe planilha master 2026", icon: FileSpreadsheet },
@@ -663,8 +768,197 @@ const Admin = () => {
             </Tabs>
           </TabsContent>
 
-          {/* PEDIDOS — lista de orçamentos (Plan 05 vai adicionar link para /admin/orcamento/:id) */}
+          {/* PEDIDOS — Phase 6 Plan 04: filtros [Arquiteto + Cliente + Período + Status] AND-chained */}
           <TabsContent value="pedidos">
+            {/* Bloco de filtros */}
+            <div className="mb-4 space-y-3">
+              {/* Desktop: 1 linha com todos os filtros */}
+              <div className="hidden sm:flex sm:items-end sm:gap-3 sm:flex-wrap">
+                <div className="w-56">
+                  <Label className="text-xs text-muted-foreground">Arquiteto</Label>
+                  <ArquitetoAutocomplete
+                    mode="filter"
+                    value={arqPedidosNome}
+                    onSelect={(arq, kind) => {
+                      if (kind === 'all') {
+                        setUrlParam("arq_pedidos", null);
+                        setArqPedidosNome("");
+                      } else if (kind === 'none') {
+                        setUrlParam("arq_pedidos", "none");
+                        setArqPedidosNome("Nenhum arquiteto");
+                      } else if (arq) {
+                        setUrlParam("arq_pedidos", arq.id);
+                        setArqPedidosNome(arq.nome);
+                      }
+                    }}
+                    placeholder="Filtrar por arquiteto..."
+                  />
+                </div>
+                <div className="w-56">
+                  <Label className="text-xs text-muted-foreground">Cliente</Label>
+                  <ClienteFilterAutocomplete
+                    value={cliPedidosNome}
+                    onSelect={(cli, kind) => {
+                      if (kind === 'all') {
+                        setUrlParam("cli_pedidos", null);
+                        setCliPedidosNome("");
+                      } else if (cli) {
+                        setUrlParam("cli_pedidos", cli.id);
+                        setCliPedidosNome(cli.nome);
+                      }
+                    }}
+                    placeholder="Filtrar por cliente..."
+                  />
+                </div>
+                <div className="w-36">
+                  <Label className="text-xs text-muted-foreground">De</Label>
+                  <Input
+                    type="date"
+                    value={dataDeParam ?? ""}
+                    onChange={(e) => setUrlParam("data_de", e.target.value || null)}
+                  />
+                </div>
+                <div className="w-36">
+                  <Label className="text-xs text-muted-foreground">Até</Label>
+                  <Input
+                    type="date"
+                    value={dataAteParam ?? ""}
+                    onChange={(e) => setUrlParam("data_ate", e.target.value || null)}
+                  />
+                </div>
+                <div className="w-40">
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Select
+                    value={statusPedidosParam ?? "all"}
+                    onValueChange={(v) => setUrlParam("status_pedidos", v === "all" ? null : v)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {pedidosFilterCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const p = new URLSearchParams(searchParams);
+                      ["arq_pedidos", "cli_pedidos", "data_de", "data_ate", "status_pedidos"].forEach((k) => p.delete(k));
+                      setSearchParams(p, { replace: true });
+                      setArqPedidosNome("");
+                      setCliPedidosNome("");
+                    }}
+                  >
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+
+              {/* Mobile: Arquiteto sempre visível + popover com os outros filtros */}
+              <div className="flex sm:hidden items-center gap-2">
+                <div className="flex-1">
+                  <ArquitetoAutocomplete
+                    mode="filter"
+                    value={arqPedidosNome}
+                    onSelect={(arq, kind) => {
+                      if (kind === 'all') {
+                        setUrlParam("arq_pedidos", null);
+                        setArqPedidosNome("");
+                      } else if (kind === 'none') {
+                        setUrlParam("arq_pedidos", "none");
+                        setArqPedidosNome("Nenhum arquiteto");
+                      } else if (arq) {
+                        setUrlParam("arq_pedidos", arq.id);
+                        setArqPedidosNome(arq.nome);
+                      }
+                    }}
+                    placeholder="Arquiteto..."
+                  />
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="relative">
+                      <Filter className="h-4 w-4" />
+                      {pedidosFilterCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                          {pedidosFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 space-y-3" align="end">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Cliente</Label>
+                      <ClienteFilterAutocomplete
+                        value={cliPedidosNome}
+                        onSelect={(cli, kind) => {
+                          if (kind === 'all') {
+                            setUrlParam("cli_pedidos", null);
+                            setCliPedidosNome("");
+                          } else if (cli) {
+                            setUrlParam("cli_pedidos", cli.id);
+                            setCliPedidosNome(cli.nome);
+                          }
+                        }}
+                        placeholder="Filtrar por cliente..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">De</Label>
+                        <Input
+                          type="date"
+                          value={dataDeParam ?? ""}
+                          onChange={(e) => setUrlParam("data_de", e.target.value || null)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Até</Label>
+                        <Input
+                          type="date"
+                          value={dataAteParam ?? ""}
+                          onChange={(e) => setUrlParam("data_ate", e.target.value || null)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status</Label>
+                      <Select
+                        value={statusPedidosParam ?? "all"}
+                        onValueChange={(v) => setUrlParam("status_pedidos", v === "all" ? null : v)}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {pedidosFilterCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          const p = new URLSearchParams(searchParams);
+                          ["arq_pedidos", "cli_pedidos", "data_de", "data_ate", "status_pedidos"].forEach((k) => p.delete(k));
+                          setSearchParams(p, { replace: true });
+                          setArqPedidosNome("");
+                          setCliPedidosNome("");
+                        }}
+                      >
+                        Limpar filtros
+                      </Button>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <div className="rounded-xl border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -712,7 +1006,13 @@ const Admin = () => {
                     </TableRow>
                   ))}
                   {orcamentos.length === 0 && (
-                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum orçamento</TableCell></TableRow>
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        {pedidosFilterCount > 0
+                          ? "Nenhum pedido bate com os filtros aplicados"
+                          : "Nenhum orçamento"}
+                      </TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -802,7 +1102,13 @@ const Admin = () => {
         open={encerrarOpen}
         onOpenChange={setEncerrarOpen}
         orcamentoId={encerrarOrcId}
-        onSuccess={fetchOrcamentos}
+        onSuccess={() => fetchOrcamentos({
+          arq: arqPedidosParam,
+          cli: cliPedidosParam,
+          dataDe: dataDeParam,
+          dataAte: dataAteParam,
+          status: statusPedidosParam,
+        })}
       />
 
       <ArquitetoDialog
