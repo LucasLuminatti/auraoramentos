@@ -16,11 +16,18 @@ Não foi necessário rodar SQL: 2 orçamentos pré-2026-05-07 já existiam em pr
 
 ---
 
-## Smoke #1: Signup novo  [MANUAL — Lenny]
+## Smoke #1: Signup novo  [AUTO — Playwright + Lenny passou link]
 
 - **Expected:** Aba anônima → solicitar acesso (`request-access`) → admin aprova em `allowed_users` → novo user faz signup completo (CPF/telefone/setor obrigatórios) → login OK.
-- **Result:** [pending]
-- **Notes:** Item manual — depende de provider externo (Resend) + 2 sessões. Lenny executa.
+- **Result:** passed
+- **Notes:** End-to-end completo:
+  1. `/request-access` → submit form com `lennywajcberg18+smoke07@gmail.com` → edge fn 200 → "Pedido enviado!".
+  2. Lenny encaminhou print do email recebido pelo Lucas (`noreply@orcamentosaura.com.br` → ADMIN_EMAIL); link de aprovação HMAC válido.
+  3. Cliquei no link `review-access?action=approve` → "Acesso aprovado, Smoke Test 2026-05-07!" + email de confirmação Supabase Auth disparado.
+  4. `/auth?mode=signup` → fill form completo (Nome + Email + Confirm + CPF 529.982.247-25 + Telefone (11) 98765-4321 + Setor=Comercial + Cargo + Departamento + Senha forte) → submit → "Verifique seu e-mail".
+  5. Lenny confirmou link na inbox → conta ativada (Supabase consumed hash → `/#`).
+  6. Login com email + senha → redirecionou para `/` → header mostrou "Boa noite, Smoke!" — colaborador auto-criado via edge fn `create-colaborador` (Phase 2 D-22).
+  - Validação completa do gate de allowed_users + signup CPF + telefone + setor + email confirmation flow.
 
 ---
 
@@ -95,11 +102,15 @@ Não foi necessário rodar SQL: 2 orçamentos pré-2026-05-07 já existiam em pr
 
 ---
 
-## Smoke #7: Drive isolado por colaborador  [MANUAL — Lenny]
+## Smoke #7: Drive isolado por colaborador  [AUTO — Playwright]
 
 - **Expected:** RLS Phase 4 (D-02 errata: `user_id`) garante isolamento entre colaboradores; admin vê tudo.
-- **Result:** [pending]
-- **Notes:** Item manual — requer 2 contas distintas. Não automatizável trivialmente sem 2 sessions Playwright paralelas.
+- **Result:** passed
+- **Notes:** Validado com 2 contas reais (Lenny admin + Smoke colaborador novo criado em #1):
+  1. Como **Smoke (colaborador)** em `/drive` → cliente David → "Esta pasta está vazia" (não vê arquivos antigos `Smoke 04-02` pasta + `aura-smoke-04-02.txt` que foram subidos pelo Lenny admin).
+  2. Como Smoke → upload `smoke-from-smoke.txt` (31 B) na pasta David → arquivo aparece pra ele.
+  3. Logout → login **Lenny admin** → `/drive` → David → vê **todos os 3**: `Smoke 04-02` (pasta antiga admin) + `aura-smoke-04-02.txt` (admin antigo) + `smoke-from-smoke.txt` (do colaborador Smoke).
+  - **Conclusão:** ACC-03 (colaborador isolado) ✅ + ADM-04 (admin vê tudo) ✅. RLS Phase 4 D-02 errata (`user_id` em vez de `colaborador_id`) funcionando em prod com 2 users reais.
 
 ---
 
@@ -125,33 +136,51 @@ Não foi necessário rodar SQL: 2 orçamentos pré-2026-05-07 já existiam em pr
 
 ## Closure summary
 
-- **Items passed (auto + visual confirmado):** 6 / 8 (#2, #3, #4, #5, #6, #8)
-- **Items pending (manual — Lenny):** 2 / 8 (#1 signup, #7 Drive 2 contas)
+- **Items passed (auto):** 8 / 8 (todos #1..#8) — incluindo signup end-to-end e Drive isolation com 2 contas reais
 - **Items failed:** 0
 - **Regressões reais encontradas:** nenhuma
 - **Cosméticos virados TODO:** nenhum
-- **Marco 1 — fechamento:** **aprovado parcialmente** — só restam #1 e #7 que dependem de provider externo + 2 contas reais
+- **Marco 1 — fechamento:** **APROVADO** ✅
 
 ### Cleanup pós-smoke (TODOs sugeridos)
 
-Ficaram em prod 4 entidades de teste com prefixo `smoke-`:
+Ficaram em prod entidades de teste com prefixo `smoke-` / `Smoke`:
 
+**Cadastros + transações (Smoke #2/#3/#6):**
 - Arquiteto `smoke-arq-2026-05-07` (id `3bce8f11-ab2c-481f-9fce-1d87d4a01f66`)
 - Cliente `smoke-cliente-2026-05-07`
 - Projeto `smoke-projeto-2026-05-07`
 - Orçamento smoke (id `11b7a0cc-c5c3-4a2a-9850-1da3946cf52c`, R$ 300,00)
 - Produto `SMOKE-001-2026-05-07` (variant + product)
 
+**Conta de teste + Drive (Smoke #1/#7):**
+- access_request com email `lennywajcberg18+smoke07@gmail.com` (já consumido na aprovação)
+- entrada em `allowed_users` com email `lennywajcberg18+smoke07@gmail.com`
+- `auth.users` com email `lennywajcberg18+smoke07@gmail.com` (Supabase Auth)
+- `colaboradores` com nome "Smoke Test 2026-05-07" (auto-criado por edge fn)
+- `cliente_arquivos` row: arquivo `smoke-from-smoke.txt` no cliente David (subido pelo Smoke)
+- Storage object: `smoke-from-smoke.txt` no bucket privado de cliente_arquivos
+
 **SQL de limpeza (executar no SQL Editor quando Lenny aprovar):**
 
 ```sql
--- Ordem (FK): orcamento → projeto → cliente → arquiteto, e produto separado
+-- Smoke #2/#3/#6 — entidades de teste (ordem FK: orçamento → projeto → cliente → arquiteto, produto separado)
 delete from orcamentos where id = '11b7a0cc-c5c3-4a2a-9850-1da3946cf52c';
 delete from projetos where nome = 'smoke-projeto-2026-05-07';
 delete from clientes where nome = 'smoke-cliente-2026-05-07';
 delete from arquitetos where id = '3bce8f11-ab2c-481f-9fce-1d87d4a01f66';
 delete from product_variants where codigo = 'SMOKE-001-2026-05-07';
 delete from produtos where nome = 'Smoke Produto Teste';
+
+-- Smoke #1/#7 — conta de teste e Drive
+-- IMPORTANTE: deletar storage object antes do row de cliente_arquivos
+-- Pegar o path do storage no SQL: select arquivo_url from cliente_arquivos where cliente_id = (select id from clientes where nome='David') and arquivo_url like '%smoke-from-smoke%';
+delete from cliente_arquivos where arquivo_url like '%smoke-from-smoke%';
+-- (Apagar o objeto no Storage manual via dashboard ou via API)
+delete from colaboradores where email = 'lennywajcberg18+smoke07@gmail.com';
+delete from access_requests where email = 'lennywajcberg18+smoke07@gmail.com';
+delete from allowed_users where email = 'lennywajcberg18+smoke07@gmail.com';
+-- auth.users: deletar via Supabase Auth dashboard (ou: select auth.uid() do user e delete user via auth API)
 ```
 
 *Generated by /gsd-execute-phase 06 — Plan 05*
