@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-05-07T18:52:42.163Z"
+current_plan: 2 of 5
+status: executing
+last_updated: "2026-05-07T19:48:01.825Z"
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 23
-  completed_plans: 23
-  percent: 100
+  total_plans: 28
+  completed_plans: 24
+  percent: 86
 ---
 
 # STATE: AURA — Marco 1 (Melhorias v1)
@@ -23,16 +24,17 @@ progress:
 - **Current Milestone:** Marco 1 — Melhorias v1
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 05 — pdf-redesign
+- **Current Focus:** Phase 06 — filtros-smoke
 
 ## Current Position
 
-Phase: 05 (pdf-redesign) — EXECUTING
-Plan: 1 of 5
+Phase: 06 (filtros-smoke) — EXECUTING
+Current Plan: 2 of 5
+Total Plans in Phase: 5
 
 - **Phase:** 6
-- **Plan:** Not started
-- **Status:** Ready to plan
+- **Plan:** 06-01 complete (ArquitetoAutocomplete mode='filter')
+- **Status:** Executing Phase 06
 - **Progress:** `[■■■■□□]` 4/6 phases complete
 
 ## Milestone Progress
@@ -52,7 +54,8 @@ Plan: 1 of 5
 
 - **Phases completed:** 4/6
 - **Requirements validated:** 30/42 (Phase 1: PREP-01, ARQ-01/03/04/05; Phase 2: USR-01/02/03/04, CLI-01/02/03, ARQ-02, PROD-03/04; Phase 3: PROD-01, IMP-01/03/04/05/06; Phase 4: ACC-01/02/03/04, ADM-01/02/03/04/05)
-- **Plans completed:** 18 (Phase 1: 3, Phase 2: 4, Phase 3: 5, Phase 4: 6)
+- **Plans completed:** 19 (Phase 1: 3, Phase 2: 4, Phase 3: 5, Phase 4: 6, Phase 6: 1)
+- **Phase 6 metrics:** P01 — 1min, 1 task, 1 file
 - **Migrations aplicadas:** 9 (20260423000001..04 + 20260501000001 products_and_variants + 20260501000002 storage_bucket_produtos_imagens + 20260501000003 seed_au_coringa + 20260504000001 drive_rls_user_id + 20260504000002 arquivo_url_nullable)
 - **Edge fns deployadas:** create-colaborador (Phase 2) + import-produtos refatorada (Phase 3 Plan 04)
 
@@ -75,6 +78,7 @@ Plan: 1 of 5
 | Phase 4 D-02 errata: user_id em vez de colaborador_id em cliente_arquivos/arquivo_pastas | RLS direta com auth.uid(), evita confusão entre colaboradores.id e auth.uid() (Pitfall 1 do RESEARCH) |
 | Phase 4 D-09 errata: Storage policy via tabela cliente_arquivos, não path-prefix | Não migrar paths de objetos legados; Estratégia B do RESEARCH evita Pitfall 3 |
 | Phase 4 D-26 errata: Dashboard como sub-tab Início, não rota separada | Consistência com tab strip; ?tab=inicio default |
+| Phase 06 P01: ArquitetoAutocomplete com prop opcional `mode='filter'` + callback estendido com `kind` ('arquiteto'\|'none'\|'all') | Foundation reutilizável para filtros das tabs Cadastros/Pedidos (Plans 02/03/04); retro-compat total com ClienteDialog/ProdutoEditDialog |
 
 ### Open Todos
 
@@ -98,14 +102,14 @@ Plan: 1 of 5
 
 ### Last Session
 
-- **Date:** 2026-05-04
-- **Action:** Phase 4 (Drive RLS & Reorganização Admin) fechada — 6 plans aplicados (drive RLS user_id + bucket privado + storage policies via tabela; DriveExplorer migrado para signed URLs + INSERT com user_id; admin reorg em 5 sub-tabs Início/Cadastros/Pedidos/Preços/Exceções com URL state + dashboard limpo + ajuda inline em Exceções; PrecosBatch ADM-02 inline edit batch save; OrcamentoDetalhe ADM-01 + linha clicável em Pedidos; REQUIREMENTS/STATE/ROADMAP closure)
-- **Outcome:** Phase 4 entregue. 9 reqs feitos (ACC-01..04 + ADM-01..05); 1 todo fechado (`2026-04-27-admin-orcamentos-row-nao-clicavel.md` movido para done/ no Plan 05); 2 migrations aplicadas em prod (drive_rls_user_id + arquivo_url_nullable); types regenerados; URLs antigas do Admin redirecionadas via LEGACY_TAB_MAP
+- **Date:** 2026-05-07
+- **Action:** Phase 6 Plan 01 executado (ArquitetoAutocomplete mode='filter') — prop opcional `mode: 'select' | 'filter'` adicionada (default 'select'); item `[Todos]` (ícone ListFilter) prepended em mode='filter'; callback estendido com 2º arg opcional `kind: 'arquiteto' | 'none' | 'all'` para desambiguar `null`. ClienteDialog/ProdutoEditDialog não tocados (retro-compat via TypeScript)
+- **Outcome:** Foundation pronta para Plans 02/03/04 (filtros nas tabs Cadastros > Clientes, Cadastros > Produtos, Pedidos). 1 commit (`18de780`); FIL-01/02/03 marcados como provided pelo plan (validação real virá ao consumir nos Plans 02/03/04). TypeScript clean nos 3 arquivos relacionados; ESLint clean
 
 ### Next Session
 
-- **Suggested next action:** `/gsd-discuss-phase 5`
-- **Expected outcome:** Captura de contexto da Phase 5 — PDF Redesign (5 requirements: PDF-01..05). Decisões locked sobre layout tipográfico, remoção das 4 caixas (Prazo/Garantia/Pagamento/Observações), texto formatado ao final, compatibilidade com snapshots antigos
+- **Suggested next action:** `/gsd-execute-phase 06` continuando com Plan 06-02 (filtro arquiteto em Cadastros > Clientes)
+- **Expected outcome:** Plan 02 consome `<ArquitetoAutocomplete mode="filter" />` no header da tab Cadastros > Clientes; sincroniza estado com URL param `?arq_clientes=<uuid|none>`; query Supabase filtra `clientes.arquiteto_id` via `.eq()` / `.is(null)` ou ausente conforme D-04/D-07 do CONTEXT
 
 ---
-*STATE refreshed: 2026-05-04 após fechamento de Phase 4 — 30/42 requirements validated, 4/6 phases completed*
+*STATE refreshed: 2026-05-07 após Phase 6 Plan 01 — ArquitetoAutocomplete pronto para reuso como filtro*

@@ -118,7 +118,7 @@
   3. Smoke test em produção executado cobrindo: signup novo, criar cliente com arquiteto, criar orçamento completo, gerar PDF novo, importar CSV e Drive isolado por colaborador
   4. Nenhum bug visível ou regressão encontrada no smoke — ou, se encontrada, registrada e corrigida antes do fechamento do marco
 **Plans**: 5 plans
-- [ ] 06-01-PLAN.md — ArquitetoAutocomplete ganha prop `mode: select | filter` (foundation reutilizável)
+- [x] 06-01-PLAN.md — ArquitetoAutocomplete ganha prop `mode: select | filter` (foundation reutilizável)
 - [ ] 06-02-PLAN.md — Filtro arquiteto em Cadastros > Clientes + URL state `arq_clientes` (FIL-01)
 - [ ] 06-03-PLAN.md — Filtro arquiteto em Cadastros > Produtos + URL state `arq_produtos` combinável com search (FIL-02)
 - [ ] 06-04-PLAN.md — Filtros combinados em Pedidos (arquiteto + cliente + período + status) via JOIN clientes!inner + popover mobile (FIL-03, FIL-04)
