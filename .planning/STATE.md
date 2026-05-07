@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-07T16:35:21.838Z"
+last_updated: "2026-05-07T16:39:11.447Z"
 progress:
   total_phases: 6
   completed_phases: 4
@@ -23,16 +23,16 @@ progress:
 - **Current Milestone:** Marco 1 — Melhorias v1
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 05 — PDF Redesign (próxima)
+- **Current Focus:** Phase 05 — pdf-redesign
 
 ## Current Position
 
-Phase: 04 (drive-rls-reorganiza-o-admin) — COMPLETE (2026-05-04)
-Plan: 6/6 done
+Phase: 05 (pdf-redesign) — EXECUTING
+Plan: 1 of 5
 
 - **Phase:** 5
 - **Plan:** Not started
-- **Status:** Ready to execute
+- **Status:** Executing Phase 05
 - **Progress:** `[■■■■□□]` 4/6 phases complete
 
 ## Milestone Progress
