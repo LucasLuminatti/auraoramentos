@@ -46,7 +46,9 @@ Não foi necessário rodar SQL: 2 orçamentos pré-2026-05-07 já existiam em pr
   - Wizard: Step1 (Primeiro Orçamento) → Step2 (Ambiente 1 + 1 luminária AU006 qtd 2 × R$ 150) → Step3.
   - Total Geral: R$ 300,00.
   - PDF baixado: `Proposta_smoke-cliente-2026-05-07_smoke-projeto-2026-05-07.pdf` (506 KB) — salvo em `.playwright-mcp/Proposta-smoke-cliente-2026-05-07-smoke-projeto-2026-05-07.pdf`.
-  - **Inspeção visual do PDF (Playfair/Inter/sem 4 caixas/prose final):** PENDENTE — Lenny abrir o arquivo `.playwright-mcp/Proposta-smoke-*.pdf` para confirmar tipografia v2.
+  - **Inspeção visual confirmada via PyMuPDF render → PNG:**
+    - Page 1: "Proposta Comercial" em Playfair (serifada), header limpo (sem 4 caixas info-grid), "AMBIENTE 1" com tracking-wide + linha horizontal, TOTAL GERAL com barra dourada lateral + valor serifado grande (NÃO card escuro). PDF-01..03 confirmados.
+    - Page 2: "Termos e Condições" em Playfair com 4 seções (PRAZO/GARANTIA/PAGAMENTO/OBSERVAÇÕES) como **prose corrida** com headers laranja uppercase tracking-wide — NÃO 4 caixas. PDF-04 confirmado.
   - Console JS: 0 errors, 2 warnings.
   - Não testado: sistema com Local + luminária com imagem (CONTEXT pediu mas o smoke priorizou ter um orçamento minimamente completo; todos os campos avançados ficam pra teste manual se necessário).
 
@@ -59,19 +61,25 @@ Não foi necessário rodar SQL: 2 orçamentos pré-2026-05-07 já existiam em pr
 - **Notes:**
   - Linha do orçamento smoke clicada em `/admin?tab=pedidos` → navegação correta para `/admin/orcamento/11b7a0cc-c5c3-4a2a-9850-1da3946cf52c` (ADM-01 preservado).
   - Botão "Re-emitir PDF" disparou download `Proposta_smoke_cliente_2026_05_07_smoke_projeto_2026_05_07.pdf`.
-  - Inspeção comparativa visual do PDF: PENDENTE Lenny.
+  - Visual do re-emit é o mesmo arquivo de #3 (PDF v2 confirmado via render PNG — ver #3).
 
 ---
 
-## Smoke #5: Snapshot legacy renderiza PDF v1  [AUTO — Playwright + visual pending]
+## Smoke #5: Snapshot legacy renderiza PDF v1  [AUTO — Playwright]
 
 - **Expected:** Orçamento pré-2026-05-07 com `pdf_template_version IS NULL` → "Re-emitir PDF" → sai v1 (Outfit + info-grid + total escuro + 4 caixas).
-- **Result:** passed-pending-visual
+- **Result:** passed
 - **Notes:**
   - Orçamento legacy: ID `f39ca4b4-b5e0-4809-8eb8-6c3cb2d5fe74` (JOAQUIM/CASA, 26/04/2026).
   - Re-emit disparou download `Proposta_JOAQUIM_CASA.pdf` (604 KB) — salvo em `.playwright-mcp/Proposta-JOAQUIM-CASA.pdf`.
-  - **Inspeção visual (v1 layout):** PENDENTE Lenny — abrir arquivo, confirmar fonte Outfit, info-grid, total escuro, 4 caixas (Prazo/Garantia/Pagamento/Observações).
-  - Se visual mostrar v2 em vez de v1, é regressão Phase 5 — abrir gap-closure plan.
+  - **Inspeção visual confirmada via PyMuPDF render → PNG:**
+    - Fonte sans-serif (Outfit, não Playfair).
+    - Info-grid de 4 caixas no topo (CLIENTE/PROJETO/DATA/COLABORADOR) presente.
+    - Pills laranjas "Validade: 15 dias" + "Primeiro Orçamento" presentes.
+    - Total Geral em **card escuro** (preto com R$ 25,90 em laranja).
+    - **As 4 caixas Prazo/Garantia/Pagamento/Observações** presentes em quadrantes 2x2.
+    - Caixa "Informações Importantes" com bullets no final.
+  - Roteador v1/v2 OK: `pdf_template_version IS NULL` → v1; novo orçamento → v2. Sem regressão Phase 5.
 
 ---
 
@@ -117,13 +125,12 @@ Não foi necessário rodar SQL: 2 orçamentos pré-2026-05-07 já existiam em pr
 
 ## Closure summary
 
-- **Items passed (auto):** 5 / 8 (#2, #3, #4, #6, #8)
-- **Items passed-pending-visual:** 1 / 8 (#5 — download OK, inspeção visual v1 pendente)
-- **Items pending (manual — Lenny):** 2 / 8 (#1, #7)
+- **Items passed (auto + visual confirmado):** 6 / 8 (#2, #3, #4, #5, #6, #8)
+- **Items pending (manual — Lenny):** 2 / 8 (#1 signup, #7 Drive 2 contas)
 - **Items failed:** 0
 - **Regressões reais encontradas:** nenhuma
 - **Cosméticos virados TODO:** nenhum
-- **Marco 1 — fechamento:** **aprovado parcialmente** — pending humano em #1, #7 e visual #5
+- **Marco 1 — fechamento:** **aprovado parcialmente** — só restam #1 e #7 que dependem de provider externo + 2 contas reais
 
 ### Cleanup pós-smoke (TODOs sugeridos)
 
