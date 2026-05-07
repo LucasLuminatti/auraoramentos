@@ -328,6 +328,7 @@ export type Database = {
           id: string
           motivo_perda: string | null
           motivo_perda_detalhe: string | null
+          pdf_template_version: number | null
           projeto_id: string | null
           status: string
           tipo: string | null
@@ -343,6 +344,7 @@ export type Database = {
           id?: string
           motivo_perda?: string | null
           motivo_perda_detalhe?: string | null
+          pdf_template_version?: number | null
           projeto_id?: string | null
           status?: string
           tipo?: string | null
@@ -358,6 +360,7 @@ export type Database = {
           id?: string
           motivo_perda?: string | null
           motivo_perda_detalhe?: string | null
+          pdf_template_version?: number | null
           projeto_id?: string | null
           status?: string
           tipo?: string | null
