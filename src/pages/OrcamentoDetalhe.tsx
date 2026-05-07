@@ -36,6 +36,7 @@ interface OrcamentoFull {
   motivo_perda: string | null;
   fechado_at: string | null;
   created_at: string;
+  pdf_template_version: number | null;
   clientes: {
     nome: string;
     email: string | null;
@@ -104,7 +105,7 @@ const OrcamentoDetalhe = () => {
       const { data, error } = await supabase
         .from("orcamentos")
         .select(`
-          id, data, valor, status, tipo, ambientes, motivo_perda, fechado_at, created_at,
+          id, data, valor, status, tipo, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
           clientes ( nome, email, telefone, contato, cpf_cnpj,
             arquitetos ( nome, contato )
           ),
@@ -164,13 +165,22 @@ const OrcamentoDetalhe = () => {
     const container = document.createElement("div");
     let appended = false;
     try {
+      // Phase 5: pre-resolver fontes + imagens antes de rasterizar (Pitfalls 1 e 2 do RESEARCH).
+      const { ensureFontsReady } = await import("@/lib/pdfFonts");
+      const { inlineImagensSnapshot } = await import("@/lib/pdfImages");
+      const ambientesInline = await inlineImagensSnapshot(orc.ambientes ?? []);
+      await ensureFontsReady();
+
       const params: PdfParams = {
         clienteNome: orc.clientes?.nome ?? "—",
         projetoNome: orc.projetos?.nome ?? "—",
         colaborador: orc.colaboradores?.nome ?? "—",
         tipo: orc.tipo,
-        ambientes: orc.ambientes ?? [],
+        ambientes: ambientesInline,
         logoBase64: logoBase64 || undefined,
+        // PDF-05: rows criadas antes da Phase 5 têm pdf_template_version NULL — coage para 1 (legacy).
+        // Rows criadas pela Phase 5 em diante têm 2 explicitamente persistido em Step3Revisao.
+        templateVersion: orc.pdf_template_version ?? 1,
       };
       const html = gerarOrcamentoHtml(params);
 
@@ -193,7 +203,7 @@ const OrcamentoDetalhe = () => {
           image: { type: "jpeg", quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, logging: false },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+          pagebreak: { mode: ["css", "legacy"] },
         })
         .save();
 
