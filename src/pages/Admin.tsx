@@ -23,6 +23,7 @@ import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
 import ClienteDialog, { type ClienteRow } from "@/components/ClienteDialog";
 import ProdutoEditDialog, { type ProdutoEditRow } from "@/components/ProdutoEditDialog";
+import ArquitetoAutocomplete from "@/components/ArquitetoAutocomplete";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -101,6 +102,19 @@ const Admin = () => {
     setSearchParams({ tab: activeTab, sub }, { replace: true });
   };
 
+  // Filtro arquiteto — Cadastros > Clientes (Phase 6 Plan 02, D-03/D-04)
+  // URL: ?arq_clientes=<uuid>  → filtra clientes.arquiteto_id = <uuid>
+  //      ?arq_clientes=none    → filtra clientes.arquiteto_id IS NULL
+  //      (ausente)             → sem filtro (Todos)
+  const arqClientesParam = searchParams.get("arq_clientes"); // null | "none" | "<uuid>"
+
+  const setArqClientesParam = (next: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === null) params.delete("arq_clientes");
+    else params.set("arq_clientes", next);
+    setSearchParams(params, { replace: true });
+  };
+
   const [importSubTab, setImportSubTab] = useState<"master" | "produtos" | "imagens" | "precos">("master");
 
   // Produtos tab
@@ -125,6 +139,7 @@ const Admin = () => {
   const [clienteCreateOpen, setClienteCreateOpen] = useState(false);
   const [clienteEditOpen, setClienteEditOpen] = useState(false);
   const [clienteEditTarget, setClienteEditTarget] = useState<ClienteRow | null>(null);
+  const [arqClientesNome, setArqClientesNome] = useState("");
 
   // Arquitetos tab
   const [arquitetos, setArquitetos] = useState<ArquitetoRow[]>([]);
@@ -143,9 +158,28 @@ const Admin = () => {
     fetchProdutos("");
     fetchColaboradores();
     fetchOrcamentos();
-    fetchClientes();
     fetchArquitetos();
+    // fetchClientes é disparado por effect dedicado abaixo (reage a arq_clientes da URL)
   }, []);
+
+  // Refetch clientes quando o filtro arquiteto muda (ou no mount inicial, com param vazio)
+  useEffect(() => {
+    fetchClientes(arqClientesParam);
+  }, [arqClientesParam]);
+
+  // Sincroniza o nome exibido no input do autocomplete com o param da URL
+  useEffect(() => {
+    if (!arqClientesParam) {
+      setArqClientesNome("");
+      return;
+    }
+    if (arqClientesParam === "none") {
+      setArqClientesNome("Nenhum arquiteto");
+      return;
+    }
+    // arqClientesParam é UUID — buscar nome no arquitetosMap (carregado por fetchArquitetos)
+    setArqClientesNome(arquitetosMap[arqClientesParam] || "");
+  }, [arqClientesParam, arquitetosMap]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -179,11 +213,20 @@ const Admin = () => {
     setOrcamentos(data || []);
   };
 
-  const fetchClientes = async () => {
-    const { data } = await supabase
+  const fetchClientes = async (arqFilter?: string | null) => {
+    let q = supabase
       .from("clientes")
-      .select("id, nome, email, telefone, contato, cpf_cnpj, arquiteto_id")
-      .order("nome");
+      .select("id, nome, email, telefone, contato, cpf_cnpj, arquiteto_id");
+    if (arqFilter === "none") {
+      q = q.is("arquiteto_id", null);
+    } else if (arqFilter && arqFilter !== "none") {
+      q = q.eq("arquiteto_id", arqFilter);
+    }
+    const { data, error } = await q.order("nome");
+    if (error) {
+      toast.error("Erro ao carregar clientes");
+      return;
+    }
     setClientes(data || []);
   };
 
@@ -237,7 +280,7 @@ const Admin = () => {
     toast.success("Cliente excluído!");
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
-    fetchClientes();
+    fetchClientes(arqClientesParam);
   };
 
   const handleDeleteColaborador = async (id: string) => {
@@ -449,7 +492,26 @@ const Admin = () => {
               {/* CADASTROS > CLIENTES */}
               <TabsContent value="clientes">
                 <div className="space-y-3">
-                  <div className="flex justify-end">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="w-full sm:max-w-xs">
+                      <ArquitetoAutocomplete
+                        mode="filter"
+                        value={arqClientesNome}
+                        onSelect={(arq, kind) => {
+                          if (kind === 'all') {
+                            setArqClientesParam(null);
+                            setArqClientesNome("");
+                          } else if (kind === 'none') {
+                            setArqClientesParam("none");
+                            setArqClientesNome("Nenhum arquiteto");
+                          } else if (arq) {
+                            setArqClientesParam(arq.id);
+                            setArqClientesNome(arq.nome);
+                          }
+                        }}
+                        placeholder="Filtrar por arquiteto..."
+                      />
+                    </div>
                     <Button size="sm" onClick={() => setClienteCreateOpen(true)} className="gap-1.5">
                       <Plus className="h-4 w-4" /> Novo Cliente
                     </Button>
@@ -490,7 +552,15 @@ const Admin = () => {
                           </TableRow>
                         ))}
                         {clientes.length === 0 && (
-                          <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente</TableCell></TableRow>
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              {arqClientesParam
+                                ? (arqClientesParam === "none"
+                                    ? "Nenhum cliente sem arquiteto"
+                                    : "Nenhum cliente vinculado a este arquiteto")
+                                : "Nenhum cliente cadastrado"}
+                            </TableCell>
+                          </TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -687,7 +757,7 @@ const Admin = () => {
         open={clienteCreateOpen}
         onOpenChange={setClienteCreateOpen}
         mode="create"
-        onSuccess={fetchClientes}
+        onSuccess={() => fetchClientes(arqClientesParam)}
       />
 
       <ClienteDialog
@@ -695,7 +765,7 @@ const Admin = () => {
         onOpenChange={setClienteEditOpen}
         mode="edit"
         cliente={clienteEditTarget}
-        onSuccess={fetchClientes}
+        onSuccess={() => fetchClientes(arqClientesParam)}
       />
 
       <ProdutoEditDialog
