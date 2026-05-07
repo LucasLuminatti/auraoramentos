@@ -21,5 +21,18 @@ import "@fontsource/playfair-display/400-italic.css";
  */
 export async function ensureFontsReady(): Promise<void> {
   if (typeof document === "undefined" || !document.fonts) return;
+  // Force-trigger load para os pesos críticos do template v2 ANTES de awaitar `.ready`.
+  // Sem isso, `.ready` pode resolver instantaneamente se o browser ainda não começou
+  // a carregar os @font-face injetados pelos imports CSS acima (race do CSSOM).
+  await Promise.all([
+    document.fonts.load("400 11px Inter"),
+    document.fonts.load("600 11px Inter"),
+    document.fonts.load("700 11px Inter"),
+    document.fonts.load("400 18px \"Playfair Display\""),
+    document.fonts.load("italic 400 18px \"Playfair Display\""),
+  ]).catch(() => {
+    // Fallback silencioso — se algum peso falhar, o template degrada para a fonte de fallback
+    // do CSS sem quebrar a geração do PDF.
+  });
   await document.fonts.ready;
 }

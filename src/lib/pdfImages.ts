@@ -17,7 +17,10 @@ async function urlToBase64(url: string): Promise<string | null> {
     const blob = await res.blob();
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
+      reader.onload = () => {
+        if (typeof reader.result === "string") resolve(reader.result);
+        else reject(new Error("FileReader returned non-string result"));
+      };
       reader.onerror = () => reject(new Error("FileReader error"));
       reader.readAsDataURL(blob);
     });
