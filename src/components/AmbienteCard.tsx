@@ -62,7 +62,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
   const addSistema = () => {
     const novaFita: ItemFitaLED = { id: uid(), codigo: "", descricao: "", wm: 0, voltagem: 24, metragemRolo: 5, precoUnitario: 0, precoMinimo: 0 };
     const novoDriver: ItemDriver = { id: uid(), codigo: "", descricao: "", potencia: 0, voltagem: 24, precoUnitario: 0, precoMinimo: 0 };
-    const novoSistema: SistemaIluminacao = { id: uid(), perfil: null, fita: novaFita, driver: novoDriver, metragemManual: null, passadasManual: 1 };
+    const novoSistema: SistemaIluminacao = { id: uid(), perfil: null, fita: novaFita, driver: novoDriver, metragemManual: null, passadasManual: 1, local: null };
     onChange({ ...ambiente, sistemas: [...ambiente.sistemas, novoSistema] });
   };
   const updateSistema = (index: number, sis: SistemaIluminacao) => {
@@ -357,6 +357,21 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                     </div>
 
                     <div className="p-4 space-y-3">
+
+                      {/* ── LOCAL (opcional, Phase 5 PDF-01) ── */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Local</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">Opcional</Badge>
+                        </div>
+                        <Input
+                          value={sis.local ?? ""}
+                          onChange={(e) => updateSistema(si, { ...sis, local: e.target.value || null })}
+                          placeholder="Sanca, Rasgo, Pé-direito... (deixe em branco se não aplicar)"
+                          maxLength={40}
+                          className="h-8 text-sm"
+                        />
+                      </div>
 
                       {/* ── FITA LED ── */}
                       <div className="space-y-2">
