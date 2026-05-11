@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
             error: "pending",
             message: "Seu pedido já está aguardando aprovação. Verifique seu e-mail.",
           }),
-          { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
       if (existing.status === "APPROVED") {
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
             error: "approved",
             message: "Seu acesso já foi aprovado! Acesse a página de login para criar sua conta.",
           }),
-          { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
       // REJECTED — delete old entry and allow re-request
