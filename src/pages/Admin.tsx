@@ -571,25 +571,48 @@ const Admin = () => {
                               <TableCell className="text-right">{p.preco_tabela ? `R$ ${Number(p.preco_tabela).toFixed(2)}` : "—"}</TableCell>
                               <TableCell className="text-right">{p.preco_minimo ? `R$ ${Number(p.preco_minimo).toFixed(2)}` : "—"}</TableCell>
                               <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setProdutoEditTarget({
-                                      id: p.id,
-                                      codigo: p.codigo,
-                                      descricao: p.descricao,
-                                      nome: p.nome ?? null,
-                                      preco_tabela: p.preco_tabela,
-                                      preco_minimo: p.preco_minimo,
-                                      arquiteto_id: p.arquiteto_id ?? null,
-                                      imagem_url: p.imagem_url ?? null,
-                                    });
-                                    setProdutoEditOpen(true);
-                                  }}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
+                                <div className="inline-flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Anexar/trocar imagem"
+                                    onClick={() => {
+                                      setProdutoEditTarget({
+                                        id: p.id,
+                                        codigo: p.codigo,
+                                        descricao: p.descricao,
+                                        nome: p.nome ?? null,
+                                        preco_tabela: p.preco_tabela,
+                                        preco_minimo: p.preco_minimo,
+                                        arquiteto_id: p.arquiteto_id ?? null,
+                                        imagem_url: p.imagem_url ?? null,
+                                      });
+                                      setProdutoEditOpen(true);
+                                    }}
+                                  >
+                                    <ImageIcon className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Editar produto"
+                                    onClick={() => {
+                                      setProdutoEditTarget({
+                                        id: p.id,
+                                        codigo: p.codigo,
+                                        descricao: p.descricao,
+                                        nome: p.nome ?? null,
+                                        preco_tabela: p.preco_tabela,
+                                        preco_minimo: p.preco_minimo,
+                                        arquiteto_id: p.arquiteto_id ?? null,
+                                        imagem_url: p.imagem_url ?? null,
+                                      });
+                                      setProdutoEditOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))
