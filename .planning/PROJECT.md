@@ -8,6 +8,21 @@ Sistema web de criação de orçamentos de iluminação da Luminatti, em produç
 
 Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com dados organizados por arquiteto e filtráveis — e o admin consegue controlar preços, pedidos e margens sem planilha paralela.
 
+## Current Milestone: v1.1 — Polimento UAT + Multi-tenancy + Automação
+
+**Goal:** Resolver as fricções que apareceram no uso real do v1.0 — opcionalizar campos de cadastro, isolar dados por colaborador (RLS), permitir edição de rascunho + preço no wizard, lapidar PDF e dashboard, abrir automação de aniversário e dar ao admin upload manual de imagens em qualquer produto.
+
+**Target features (6 frentes):**
+
+1. **Cadastros — opcionalizar e expandir** — Cliente (Contato/CPF/Arquiteto opcionais), Arquiteto (+ data nascimento, endereço escritório, dados bancários), Produtos coringa AU001..AU016 editáveis, anexo de imagens manual em qualquer SKU pelo admin
+2. **Multi-tenancy por colaborador** — RLS aditivo replicando padrão Drive (`user_id` em `arquitetos` e `clientes`); cada colab vê só seus, admin vê tudo
+3. **Wizard / Orçamento — edição** — Step 3 ajustar preço (≥ mínimo) + qtd, editar rascunho via wizard, status no orçamento (aprovado/perdido/pendente), descrição do produto puxando temperatura(K)+potência+IRC+nicho da planilha master ImportMaster
+4. **PDF v2 — ajustes** — Não renderizar bloco "Sistemas" vazio (0m/0W/0 driver), "Prazo de Entrega" acrescentar "prazo médio de 20 dias úteis"
+5. **Dashboard — métrica única** — Substituir 6 cards por **somatório de orçamentos em aberto** (todos os reps) só na tab Início
+6. **Automação — aniversário do cliente** — 5 dias antes → email pro colab dono + admin David Grabarz; requer `data_nascimento` + pg_cron + edge fn Resend
+
+**Pré-requisito bloqueante (fix por fora do marco):** `request-access` quebrado em prod (2026-05-11) — David Grabarz + Lenny não conseguem solicitar convite. Fix via `/gsd-quick` ou `/gsd-debug` antes da execução do v1.1.
+
 ## Current State
 
 **Latest milestone shipped:** v1.0 — Melhorias v1 (2026-04-23 → 2026-05-07)
@@ -45,13 +60,11 @@ Migradas pra `.planning/milestones/v1.0-REQUIREMENTS.md`. Resumo: 40 entregues +
 | Redesign geral de UI | Ajustes pontuais sim (PDF, admin), redesign não |
 | Testes automatizados (Vitest/Playwright) | Marco de qualidade próprio |
 
-## Next Milestone Goals
+## Next Milestone Goals (post-v1.1)
 
-_Definidos via `/gsd-new-milestone` quando o próximo ciclo abrir._
-
-Candidatos provisórios derivados de v1.0:
+Candidatos provisórios derivados de v1.0 ainda na fila pra v1.2+:
 - **Preços via CSV** (IMP-02 deferido) + tabela de custos pra desbloquear margem
-- **Margem no pedido** (marco 2 nominal) — exibir margem por orçamento, agregada por arquiteto/colaborador/período
+- **Margem no pedido** — exibir margem por orçamento, agregada por arquiteto/colaborador/período
 - **Documentação + testes das fórmulas de cálculo** (fita/driver/perfil/agrupamento de rolos) antes de qualquer refactor
 
 ## Constraints (perpetual)
@@ -98,4 +111,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Current State + Validated Requirements + Key Decisions
 
 ---
-*Last updated: 2026-05-07 — milestone v1.0 archived (40 reqs validated, 1 obsolete, 1 deferred); ready for `/gsd-new-milestone`*
+*Last updated: 2026-05-11 — milestone v1.1 opened (Polimento UAT + Multi-tenancy + Automação)*

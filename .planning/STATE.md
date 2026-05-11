@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: idle
-last_updated: "2026-05-07T21:15:00.000Z"
+milestone: v1.1
+milestone_name: Polimento UAT + Multi-tenancy + Automação
+status: defining_requirements
+last_updated: "2026-05-11T12:00:00.000Z"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -14,22 +14,27 @@ progress:
 
 # STATE: AURA
 
-**Last updated:** 2026-05-07 (after v1.0 milestone archived)
+**Last updated:** 2026-05-11 (milestone v1.1 opened)
 
 ## Project Reference
 
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
-- **Current Milestone:** _none — v1.0 shipped, aguardando `/gsd-new-milestone`_
+- **Current Milestone:** v1.1 — Polimento UAT + Multi-tenancy + Automação
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Idle — pronto para próximo marco
+- **Current Focus:** Definindo requirements
 
 ## Current Position
 
-- **Phase:** —
+- **Phase:** Not started (defining requirements)
 - **Plan:** —
-- **Status:** Idle (milestone v1.0 archived)
+- **Status:** Defining requirements
+- **Last activity:** 2026-05-11 — Milestone v1.1 iniciado
+
+## Blocker conhecido (fora do escopo do marco)
+
+`request-access` quebrado em prod em 2026-05-11 (David Grabarz + Lenny não conseguem solicitar convite). Fix via `/gsd-quick` ou `/gsd-debug` antes da primeira execução de fase.
 
 ## Latest Milestone Shipped
 
@@ -41,12 +46,7 @@ progress:
 
 ## Next Action
 
-Rodar `/gsd-new-milestone` pra abrir o próximo ciclo (gathering → research → requirements → roadmap).
-
-Candidatos derivados de v1.0:
-- Preços via CSV (IMP-02 deferido) + tabela de custos
-- Margem no pedido (marco 2 nominal)
-- Documentação + testes das fórmulas de cálculo
+Definir REQUIREMENTS.md a partir do escopo confirmado, depois spawn `gsd-roadmapper` pra criar ROADMAP.md (continua numeração a partir da Phase 7).
 
 ---
-*STATE refreshed: 2026-05-07 após arquivar v1.0*
+*STATE refreshed: 2026-05-11 ao abrir v1.1*
