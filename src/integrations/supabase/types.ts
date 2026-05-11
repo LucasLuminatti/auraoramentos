@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       access_requests: {
@@ -67,22 +92,46 @@ export type Database = {
       }
       arquitetos: {
         Row: {
+          agencia: string | null
+          banco: string | null
+          conta: string | null
           contato: string | null
           created_at: string
+          data_nascimento: string | null
+          endereco: string | null
           id: string
           nome: string
+          pix: string | null
+          tipo_conta: string | null
+          user_id: string
         }
         Insert: {
+          agencia?: string | null
+          banco?: string | null
+          conta?: string | null
           contato?: string | null
           created_at?: string
+          data_nascimento?: string | null
+          endereco?: string | null
           id?: string
           nome: string
+          pix?: string | null
+          tipo_conta?: string | null
+          user_id: string
         }
         Update: {
+          agencia?: string | null
+          banco?: string | null
+          conta?: string | null
           contato?: string | null
           created_at?: string
+          data_nascimento?: string | null
+          endereco?: string | null
           id?: string
           nome?: string
+          pix?: string | null
+          tipo_conta?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -211,30 +260,36 @@ export type Database = {
           contato: string | null
           cpf_cnpj: string | null
           created_at: string
+          data_nascimento: string | null
           email: string | null
           id: string
           nome: string
           telefone: string | null
+          user_id: string
         }
         Insert: {
           arquiteto_id?: string | null
           contato?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          data_nascimento?: string | null
           email?: string | null
           id?: string
           nome: string
           telefone?: string | null
+          user_id: string
         }
         Update: {
           arquiteto_id?: string | null
           contato?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          data_nascimento?: string | null
           email?: string | null
           id?: string
           nome?: string
           telefone?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -988,6 +1043,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "user"],
