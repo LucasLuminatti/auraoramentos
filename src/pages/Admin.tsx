@@ -362,7 +362,7 @@ const Admin = () => {
   const fetchArquitetos = async () => {
     const { data, error } = await supabase
       .from("arquitetos")
-      .select("id, nome, contato")
+      .select("id, nome, contato, data_nascimento, endereco, banco, agencia, conta, tipo_conta, pix")
       .order("nome", { ascending: true });
     if (error) {
       toast.error("Erro ao carregar arquitetos");

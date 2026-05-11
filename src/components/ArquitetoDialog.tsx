@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -10,6 +11,13 @@ export interface ArquitetoRow {
   id: string;
   nome: string;
   contato: string | null;
+  data_nascimento: string | null;
+  endereco: string | null;
+  banco: string | null;
+  agencia: string | null;
+  conta: string | null;
+  tipo_conta: string | null;
+  pix: string | null;
 }
 
 interface ArquitetoDialogProps {
@@ -23,12 +31,27 @@ interface ArquitetoDialogProps {
 const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: ArquitetoDialogProps) => {
   const [nome, setNome] = useState("");
   const [contato, setContato] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [banco, setBanco] = useState("");
+  const [agencia, setAgencia] = useState("");
+  const [conta, setConta] = useState("");
+  const [tipoConta, setTipoConta] = useState("");
+  const [pix, setPix] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setNome(mode === "edit" && arquiteto ? arquiteto.nome : "");
-      setContato(mode === "edit" && arquiteto?.contato ? arquiteto.contato : "");
+      const a = mode === "edit" ? arquiteto : null;
+      setNome(a?.nome ?? "");
+      setContato(a?.contato ?? "");
+      setDataNascimento(a?.data_nascimento ?? "");
+      setEndereco(a?.endereco ?? "");
+      setBanco(a?.banco ?? "");
+      setAgencia(a?.agencia ?? "");
+      setConta(a?.conta ?? "");
+      setTipoConta(a?.tipo_conta ?? "");
+      setPix(a?.pix ?? "");
     }
   }, [open, mode, arquiteto]);
 
@@ -39,7 +62,17 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
       return;
     }
     setSaving(true);
-    const payload = { nome: nome.trim(), contato: contato.trim() || null };
+    const payload = {
+      nome: nome.trim(),
+      contato: contato.trim() || null,
+      data_nascimento: dataNascimento || null,
+      endereco: endereco.trim() || null,
+      banco: banco.trim() || null,
+      agencia: agencia.trim() || null,
+      conta: conta.trim() || null,
+      tipo_conta: tipoConta.trim() || null,
+      pix: pix.trim() || null,
+    };
     let error;
     if (mode === "create") {
       const res = await supabase.from("arquitetos").insert(payload);
@@ -60,7 +93,7 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Novo Arquiteto" : "Editar Arquiteto"}</DialogTitle>
         </DialogHeader>
@@ -76,7 +109,7 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="arq-contato">Contato</Label>
+            <Label htmlFor="arq-contato">Contato <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
             <Input
               id="arq-contato"
               placeholder="Ex: contato@studiomk27.com.br"
@@ -84,6 +117,76 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
               onChange={(e) => setContato(e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="arq-data-nascimento">Data de Nascimento <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
+            <Input
+              id="arq-data-nascimento"
+              type="date"
+              value={dataNascimento}
+              onChange={(e) => setDataNascimento(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="arq-endereco">Endereço <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
+            <Textarea
+              id="arq-endereco"
+              placeholder="Rua, número, complemento, bairro, cidade — UF"
+              rows={2}
+              value={endereco}
+              onChange={(e) => setEndereco(e.target.value)}
+            />
+          </div>
+
+          <div className="pt-2 text-sm font-medium border-t mt-2">Dados Bancários <span className="text-muted-foreground text-xs font-normal">(opcional)</span></div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="arq-banco">Banco <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
+              <Input
+                id="arq-banco"
+                placeholder="Ex: Bradesco"
+                value={banco}
+                onChange={(e) => setBanco(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="arq-agencia">Agência <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
+              <Input
+                id="arq-agencia"
+                placeholder="Ex: 1234"
+                value={agencia}
+                onChange={(e) => setAgencia(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="arq-conta">Conta <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
+              <Input
+                id="arq-conta"
+                placeholder="Ex: 567890-1"
+                value={conta}
+                onChange={(e) => setConta(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="arq-tipo-conta">Tipo de Conta <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
+              <Input
+                id="arq-tipo-conta"
+                placeholder="Ex: corrente / poupança"
+                value={tipoConta}
+                onChange={(e) => setTipoConta(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="arq-pix">Pix <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
+              <Input
+                id="arq-pix"
+                placeholder="CPF / email / telefone / chave aleatória"
+                value={pix}
+                onChange={(e) => setPix(e.target.value)}
+              />
+            </div>
+          </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
