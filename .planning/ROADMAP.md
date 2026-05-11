@@ -31,12 +31,16 @@
 **Depends on**: Nothing (primeira fase do v1.1; v1.0 já shipped)
 **Requirements**: RLS-03, AUTO-03
 **Success Criteria** (what must be TRUE):
-  1. Tabelas `arquitetos` e `clientes` têm coluna `user_id UUID NULL` em produção (FK `auth.users.id` quando aplicável)
+  1. Tabelas `arquitetos` e `clientes` têm coluna `user_id UUID NOT NULL` em produção (FK `auth.users.id` ON DELETE RESTRICT) — D-01/D-03 elevou para NOT NULL após backfill
   2. Tabela `clientes` tem coluna `data_nascimento DATE NULL` em produção
-  3. Tabela `orcamentos` tem coluna `status TEXT NULL` (enum `rascunho|aprovado|perdido|pendente`) — se ainda não existir; caso já exista, decisão registrada
-  4. `product_variants` cobre os campos de descrição rica (temperatura/potência/IRC/nicho) — verificado contra ImportMaster XLSX vivente; gaps preenchidos por migration aditiva
-  5. Wizard, login, admin, PDF v1/v2 e Drive continuam funcionando em produção sem regressão visível (colunas novas vazias não quebram render nem queries existentes)
-**Plans**: TBD
+  3. Tabela `orcamentos.status` tem CHECK constraint enum (`rascunho|aprovado|perdido|pendente`) — UPDATE in-place de `'fechado'` para `'aprovado'`
+  4. `product_variants` cobre os campos de descrição rica (auditoria SQL via JSONB; gaps viram FOLLOW-UP, não migration aditiva — D-15/D-17)
+  5. Wizard, login, admin, PDF v1/v2 e Drive continuam funcionando em produção sem regressão visível (smoke D-22 confirma)
+**Plans**: 4 plans
+- [x] 07-01-PLAN.md — Migration arquitetos+clientes user_id (RLS-03; pre-flight + backfill admin + NOT NULL + indexes)
+- [x] 07-02-PLAN.md — Migration clientes.data_nascimento (AUTO-03; aditivo + index BTREE)
+- [x] 07-03-PLAN.md — Migration orcamentos.status enum (UPDATE fechado→aprovado + CHECK constraint)
+- [x] 07-04-PLAN.md — Audit product_variants + supabase db push em prod + smoke D-22 + docs (PUSH-LOG, SMOKE-RESULTS, SUMMARY)
 
 ### Phase 8: Cadastros — Opcionalizar + Imagens Manuais
 **Goal**: Cadastros deixam de bloquear o usuário em campos não-essenciais, arquiteto vira ficha completa do escritório, produtos coringa AU001..AU016 ganham descrição/imagem editável e admin pode anexar imagem em qualquer SKU sem precisar de import em massa
@@ -114,7 +118,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 7. Schema & Prep v1.1 | 0/0 | Not started | - |
+| 7. Schema & Prep v1.1 | 0/4 | Plans created | - |
 | 8. Cadastros — Opcionalizar + Imagens | 0/0 | Not started | - |
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
 | 10. Wizard — Edição + Status + Descrição | 0/0 | Not started | - |
@@ -146,4 +150,4 @@
 - **v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07): cadastro expandido (CPF/telefone/setor), arquiteto como entidade, importação CSV de produtos, Drive RLS por colaborador, admin reorganizado, PDF v2 (Playfair+Inter), filtros por arquiteto, smoke prod 8/8 → [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 ---
-*Last updated: 2026-05-11 — v1.1 roadmap defined (7 phases, 18 reqs, 100% coverage)*
+*Last updated: 2026-05-11 — Phase 7 plans created (4 plans, 2 waves).*
