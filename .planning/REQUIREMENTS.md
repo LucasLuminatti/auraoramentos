@@ -2,7 +2,7 @@
 
 **Milestone:** v1.1 — Polimento UAT + Multi-tenancy + Automação
 **Opened:** 2026-05-11
-**Status:** Draft (pré-roadmap)
+**Status:** Roadmap defined (7 phases, 18 reqs, 100% coverage)
 
 > Capturadas a partir do UAT pessoal do Lenny em prod (2026-05-11) após arquivamento do v1.0. 18 requirements em 6 categorias.
 
@@ -76,29 +76,32 @@ Não inflando o marco — carryover do PROJECT.md:
 
 ---
 
-## Traceability (preenchido pelo roadmapper)
+## Traceability
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| FORM-01 | — | — |
-| FORM-02 | — | — |
-| FORM-03 | — | — |
-| FORM-04 | — | — |
-| RLS-01 | — | — |
-| RLS-02 | — | — |
-| RLS-03 | — | — |
-| WIZ-01 | — | — |
-| WIZ-02 | — | — |
-| WIZ-03 | — | — |
-| WIZ-04 | — | — |
-| WIZ-05 | — | — |
-| PDF-01 | — | — |
-| PDF-02 | — | — |
-| DASH-01 | — | — |
-| AUTO-01 | — | — |
-| AUTO-02 | — | — |
-| AUTO-03 | — | — |
+| FORM-01 | Phase 8 | TBD |
+| FORM-02 | Phase 8 | TBD |
+| FORM-03 | Phase 8 | TBD |
+| FORM-04 | Phase 8 | TBD |
+| RLS-01 | Phase 9 | TBD |
+| RLS-02 | Phase 9 | TBD |
+| RLS-03 | Phase 7 | TBD |
+| WIZ-01 | Phase 10 | TBD |
+| WIZ-02 | Phase 10 | TBD |
+| WIZ-03 | Phase 10 | TBD |
+| WIZ-04 | Phase 10 | TBD |
+| WIZ-05 | Phase 10 | TBD |
+| PDF-01 | Phase 11 | TBD |
+| PDF-02 | Phase 11 | TBD |
+| DASH-01 | Phase 11 | TBD |
+| AUTO-01 | Phase 12 | TBD |
+| AUTO-02 | Phase 12 | TBD |
+| AUTO-03 | Phase 7 | TBD |
+
+**Coverage:** 18/18 mapped · 0 orphaned · 100%
 
 ---
 
 *Generated 2026-05-11 by /gsd-new-milestone — milestone v1.1.*
+*Traceability filled 2026-05-11 by gsd-roadmapper (7 phases, 18 reqs, 100% coverage).*
