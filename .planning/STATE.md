@@ -45,10 +45,6 @@ progress:
 | 12 | Automação aniversário | AUTO-01, AUTO-02 | 7, 9 |
 | 13 | Smoke & Closure | (closure) | 8, 9, 10, 11, 12 |
 
-## Blocker conhecido (fora do escopo do marco)
-
-`request-access` quebrado em prod em 2026-05-11 (David Grabarz + Lenny não conseguem solicitar convite). Fix via `/gsd-quick` ou `/gsd-debug` antes da primeira execução de fase. Não conta como REQ do marco — restauração de funcionalidade v1.0.
-
 ## Latest Milestone Shipped
 
 **v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07, 15 dias)
@@ -66,11 +62,16 @@ progress:
 - ImportMaster XLSX (2.088 SKUs oficiais) é fonte da verdade pra descrição rica — Phase 7 verifica gaps antes de planar WIZ-05
 
 ### Todos
-- [ ] Antes de Phase 7: rodar `/gsd-quick` ou `/gsd-debug` no `request-access` (blocker fora do marco)
 - [ ] Phase 7 plan #1: auditar `product_variants` vs ImportMaster XLSX pra confirmar quais campos de descrição rica já existem
 
 ### Blockers
-- (fora do marco) `request-access` quebrado em prod desde 2026-05-11
+- (nenhum)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260511-cwq | Fix request-access HTTP status: retornar 200 nos casos pending/approved (frontend cai em res.error e mostra toast genérico) | 2026-05-11 | 16c0b14 | [260511-cwq-fix-request-access-http-status-retornar-](./quick/260511-cwq-fix-request-access-http-status-retornar-/) |
 
 ## Next Action
 
@@ -82,5 +83,7 @@ progress:
 - REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída)
 - MILESTONES.md: índice ainda só com v1.0 — atualizar na Phase 13 (closure)
 
+**Last activity:** 2026-05-11 — Completed quick task 260511-cwq: request-access fix deployed em prod + smoke Playwright OK (POST → 200)
+
 ---
-*STATE refreshed: 2026-05-11 ao concluir roadmap v1.1*
+*STATE refreshed: 2026-05-11 ao concluir quick task 260511-cwq (request-access fix)*
