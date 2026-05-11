@@ -110,7 +110,7 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cli-contato">Contato</Label>
+            <Label htmlFor="cli-contato">Contato <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
             <Input
               id="cli-contato"
               placeholder="Ex: João Silva, joao@email.com"
@@ -119,7 +119,7 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cli-cpf">CPF/CNPJ</Label>
+            <Label htmlFor="cli-cpf">CPF/CNPJ <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
             <Input
               id="cli-cpf"
               placeholder="000.000.000-00 ou 00.000.000/0000-00"
@@ -128,7 +128,7 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
             />
           </div>
           <div className="space-y-2">
-            <Label>Arquiteto</Label>
+            <Label>Arquiteto <span className="text-muted-foreground text-xs font-normal">(opcional)</span></Label>
             <ArquitetoAutocomplete
               value={arquitetoNome}
               onSelect={(arq) => {
