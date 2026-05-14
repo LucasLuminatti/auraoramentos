@@ -51,9 +51,64 @@ Nenhuma — estado em prod bate exatamente com as hipóteses do contexto:
 ---
 
 ## POST-PUSH pg_policies snapshot
-[TODO — preenchido em 09-04 após apply]
+
+**Captured:** 2026-05-14T15:55:00Z
+**Method:** `mcp__plugin_supabase_supabase__execute_sql` (project `jkewlaezvrbuicmncqbj`)
+
+### Table: public.arquitetos
+
+| policyname | cmd | roles | qual | with_check |
+|------------|-----|-------|------|------------|
+| Colabs delete own arquitetos, admins delete all | DELETE | {authenticated} | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` | null |
+| Colabs insert own arquitetos | INSERT | {authenticated} | null | `user_id = auth.uid()` |
+| Colabs read own arquitetos, admins read all | SELECT | {authenticated} | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` | null |
+| Colabs update own arquitetos, admins update all | UPDATE | {authenticated} | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` |
+
+**Total policies (arquitetos):** 4
+**RLS enabled:** true
+**RLS forced:** false
+
+### Table: public.clientes
+
+| policyname | cmd | roles | qual | with_check |
+|------------|-----|-------|------|------------|
+| Colabs delete own clientes, admins delete all | DELETE | {authenticated} | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` | null |
+| Colabs insert own clientes | INSERT | {authenticated} | null | `user_id = auth.uid()` |
+| Colabs read own clientes, admins read all | SELECT | {authenticated} | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` | null |
+| Colabs update own clientes, admins update all | UPDATE | {authenticated} | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` | `(user_id = auth.uid()) OR has_role(auth.uid(), 'admin'::app_role)` |
+
+**Total policies (clientes):** 4
+**RLS enabled:** true
+**RLS forced:** false
+
+### DEFAULT verification
+
+| table | column | column_default |
+|-------|--------|----------------|
+| arquitetos | user_id | auth.uid() |
+| clientes | user_id | auth.uid() |
 
 ---
 
 ## Apply Log
-[TODO — preenchido em 09-04]
+
+**Method:** `mcp__plugin_supabase_supabase__apply_migration`
+**Name:** `arquitetos_clientes_rls`
+**Project:** `jkewlaezvrbuicmncqbj` (auraoramentos prod, sa-east-1)
+**Started:** 2026-05-14T15:54:00Z
+**Result:** SUCCESS
+**Errors:** none
+
+### Diff PRE → POST
+
+- **Dropped:** 6 legacy policies
+  - arquitetos: `"Anyone can read arquitetos"`, `"Admins can manage arquitetos"`
+  - clientes: `"Anyone can read clientes"`, `"Authenticated users can insert clientes"`, `"Authenticated users can update clientes"`, `"Authenticated users can delete clientes"`
+- **Created:** 8 new policies (4 arquitetos + 4 clientes) — Drive D-02 pattern
+- **DEFAULT added:** `arquitetos.user_id → auth.uid()`, `clientes.user_id → auth.uid()`
+- **RLS state:** unchanged (already enabled in both pre-push — bloco 3 idempotente)
+
+### Build sanity
+
+- `npm run build`: exit 0
+- `npm run lint`: exit 1 (754 pré-existentes — 580 errors / 174 warnings) — **baseline pré-Phase 9, não introduzidos por esta migration**. Verificado via `git diff --name-only c6b5067..HEAD -- 'src/**' 'supabase/functions/**' '*.ts' '*.tsx'` retornar vazio (Phase 9 só tocou em `.sql`).
