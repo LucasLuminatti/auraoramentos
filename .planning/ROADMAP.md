@@ -81,7 +81,12 @@
   3. Orçamento com `status='rascunho'` é clicável em Clientes/Pedidos e abre o wizard no Step onde parou, com dados/ambientes/sistemas pré-preenchidos
   4. Após gerar PDF, orçamento pode ser marcado pelo colab ou admin com status `aprovado`, `perdido` ou `pendente` — status persiste e aparece em Pedidos
   5. Descrição do produto no wizard (cards de ambiente + Step 3) e no PDF gerado mostra `nome + temperatura(K) + potência + IRC + nicho` quando os campos existem; orçamentos antigos sem esses campos continuam renderizando o nome cru
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 10-01-PLAN.md — Migration RLS UPDATE em orcamentos (colab dono + admin + block aprovado one-way) [WIZ-04 server-side defense]
+- [ ] 10-02-PLAN.md — TS sync StatusOrcamento + regen types.ts + remover 11 hardcoded "fechado" + delete EncerrarNegociacaoModal [WIZ-04 cleanup]
+- [ ] 10-03-PLAN.md — Inputs inline qty/preço no Step 3 (padrão PrecosBatch) [WIZ-01, WIZ-02]
+- [ ] 10-04-PLAN.md — Status dropdown + AlertDialog one-way no card Pedidos + reabrir rascunho via location.state [WIZ-03, WIZ-04]
+- [ ] 10-05-PLAN.md — construirDescricaoRica builder + integração Step3/PDF v2 com batch lookup TanStack Query + smoke prod [WIZ-05]
 **UI hint**: yes
 
 ### Phase 11: PDF v2 + Dashboard
@@ -126,7 +131,7 @@
 | 7. Schema & Prep v1.1 | 4/4 | Complete | 2026-05-11 |
 | 8. Cadastros — Opcionalizar + Imagens | 5/5 | Complete (smoke 5/5 PASS) | 2026-05-14 |
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
-| 10. Wizard — Edição + Status + Descrição | 0/0 | Not started | - |
+| 10. Wizard — Edição + Status + Descrição | 0/5 | Planning complete | - |
 | 11. PDF v2 + Dashboard | 0/0 | Not started | - |
 | 12. Automação Aniversário | 0/0 | Not started | - |
 | 13. Smoke & UAT Closure | 0/0 | Not started | - |
