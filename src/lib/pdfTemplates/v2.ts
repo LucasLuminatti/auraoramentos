@@ -80,6 +80,18 @@ function agruparPorLocal(sistemas: SistemaIluminacao[]): Array<{ local: string |
   return Array.from(grupos.entries()).map(([local, sistemas]) => ({ local, sistemas }));
 }
 
+/**
+ * PDF-01: Sistema é considerado "vazio" quando não tem nenhum elemento físico real
+ * (sem fita LED demandada, sem consumo em watts, sem driver). Perfil é ignorado de propósito
+ * (D-02 CONTEXT.md Phase 11): perfil isolado não é um "sistema" no domínio AURA.
+ * Sistemas vazios são filtrados antes de renderizar para não vazar placeholders no PDF do cliente.
+ */
+function isSistemaVazio(sis: SistemaIluminacao): boolean {
+  return calcularDemandaFita(sis) === 0
+    && calcularConsumoW(sis) === 0
+    && calcularQtdDrivers(sis) === 0;
+}
+
 /* ──────────────────────────────────────────────────────────────
    Builders
    ────────────────────────────────────────────────────────────── */
@@ -221,7 +233,10 @@ function blocoLocal(local: string | null, sistemas: SistemaIluminacao[], atribut
   const header = local
     ? `<div class="local-name">${esc(local)}</div>`
     : "";
-  const sistemasHtml = sistemas.map((sis, i) => blocoSistema(sis, i, atributosMap)).join("");
+  const sistemasHtml = sistemas
+    .filter(sis => !isSistemaVazio(sis))
+    .map((sis, i) => blocoSistema(sis, i, atributosMap))
+    .join("");
   return `<div class="local-block">${header}${sistemasHtml}</div>`;
 }
 
