@@ -28,6 +28,8 @@ interface Step3Props {
   projetoNome: string;
   projetoId?: string;
   onUpdateAmbientes: (ambientes: Ambiente[]) => void;
+  /** Phase 10 WIZ-03 (D-08): inicializa orcamentoId state quando o wizard é reaberto a partir de um rascunho — evita duplicate INSERT. */
+  initialOrcamentoId?: string;
 }
 
 interface Violacao {
@@ -100,7 +102,7 @@ async function imageToBase64(src: string): Promise<string> {
   });
 }
 
-const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes }: Step3Props) => {
+const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes, initialOrcamentoId }: Step3Props) => {
   const { dados, ambientes } = orcamento;
   const { user } = useAuth();
   const { colaborador } = useColaborador();
@@ -110,6 +112,15 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
   const [chatViolacao, setChatViolacao] = useState<Violacao | null>(null);
   const [chatExceptionId, setChatExceptionId] = useState("");
   const [orcamentoId, setOrcamentoId] = useState<string | null>(null);
+
+  // WIZ-03 (D-08): inicializa orcamentoId com o id do rascunho reaberto para evitar duplicate INSERT
+  useEffect(() => {
+    if (initialOrcamentoId) setOrcamentoId(initialOrcamentoId);
+    // Intencional: rodar apenas no mount. Mudança subsequente de initialOrcamentoId seria edge case
+    // (parent reabriria outro rascunho sem desmontar — não acontece no fluxo atual).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [savingOrcamento, setSavingOrcamento] = useState(false);
   const pdfInFlightRef = useRef(false);
 

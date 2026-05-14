@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logo from "@/assets/logo.png";
 import StepIndicator from "@/components/StepIndicator";
 import Step1DadosOrcamento from "@/components/Step1DadosOrcamento";
@@ -12,10 +12,12 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { getSaudacao } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogOut, Plus, User, FolderOpen, ChevronRight, Shield, HardDrive } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ClienteDialog from "@/components/ClienteDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const STEPS = ["Dados", "Ambientes", "Revisão"];
 
@@ -24,6 +26,7 @@ const Index = () => {
   const { colaborador } = useColaborador();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<"list" | "create">("list");
   const [step, setStep] = useState(1);
   const [dados, setDados] = useState<DadosOrcamento>({ colaborador: "", tipo: "" });
@@ -35,6 +38,62 @@ const Index = () => {
   const [currentClienteNome, setCurrentClienteNome] = useState("");
   const [currentProjetoNome, setCurrentProjetoNome] = useState("");
   const [confirmVoltarOpen, setConfirmVoltarOpen] = useState(false);
+  const [reopenedOrcamentoId, setReopenedOrcamentoId] = useState<string | null>(null);
+
+  // WIZ-03 (D-09): detecta location.state.orcamentoId para reabrir rascunho
+  const orcamentoParaReabrir = (location.state as { orcamentoId?: string } | null)?.orcamentoId ?? null;
+
+  useEffect(() => {
+    if (!orcamentoParaReabrir) return;
+    let cancelled = false;
+
+    async function reabrir() {
+      try {
+        const { data, error } = await supabase
+          .from("orcamentos")
+          .select("id, cliente_id, colaborador_id, projeto_id, tipo, ambientes, status, clientes:cliente_id(id, nome), projetos:projeto_id(id, nome)")
+          .eq("id", orcamentoParaReabrir!)
+          .maybeSingle();
+
+        if (cancelled) return;
+        if (error || !data) {
+          toast.error("Orçamento não encontrado ou inacessível.");
+          navigate("/admin?tab=pedidos", { replace: true });
+          return;
+        }
+
+        // D-10: cliente removido (defesa em camadas — FK RESTRICT em prod mas tratamos mesmo assim)
+        if (!data.clientes) {
+          toast.error("Este orçamento referencia um cliente removido — não é possível continuar.");
+          navigate("/admin?tab=pedidos", { replace: true });
+          return;
+        }
+
+        // Popula state do wizard
+        setDados({ colaborador: colaborador?.nome ?? "", tipo: (data.tipo as DadosOrcamento["tipo"]) ?? "" });
+        setAmbientes((data.ambientes as unknown as Ambiente[]) ?? []);
+        setCurrentClienteId(data.cliente_id);
+        setCurrentClienteNome((data.clientes as any).nome ?? "");
+        setCurrentProjetoId(data.projeto_id);
+        setCurrentProjetoNome((data.projetos as any)?.nome ?? "");
+        setReopenedOrcamentoId(data.id);
+        setStep(1); // D-08: sempre reabre no Step 1
+        setMode("create");
+
+        // Limpa location.state para evitar re-fetch em refresh
+        navigate("/", { replace: true, state: null });
+      } catch {
+        if (!cancelled) {
+          toast.error("Erro ao carregar orçamento.");
+          navigate("/admin?tab=pedidos", { replace: true });
+        }
+      }
+    }
+
+    void reabrir();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orcamentoParaReabrir]);
 
   const orcamento: Orcamento = { dados, ambientes };
 
@@ -45,6 +104,7 @@ const Index = () => {
     setCurrentClienteId(clienteId);
     setCurrentClienteNome(clienteNome);
     setCurrentProjetoNome(projetoNome);
+    setReopenedOrcamentoId(null);
     setStep(1);
     setMode("create");
   };
@@ -62,6 +122,7 @@ const Index = () => {
     setCurrentClienteId(null);
     setCurrentClienteNome("");
     setCurrentProjetoNome("");
+    setReopenedOrcamentoId(null);
     setConfirmVoltarOpen(false);
   };
 
@@ -131,7 +192,7 @@ const Index = () => {
                 <Step2Ambientes ambientes={ambientes} onChange={setAmbientes} onNext={() => setStep(3)} onPrev={() => setStep(1)} />
               )}
               {step === 3 && (
-                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(2)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} />
+                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(2)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} initialOrcamentoId={reopenedOrcamentoId ?? undefined} />
               )}
             </div>
           </>
