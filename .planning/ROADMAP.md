@@ -16,8 +16,8 @@
 
 ### Phases
 
-- [ ] **Phase 7: Schema & Prep v1.1** — Migrations aditivas (`user_id` em arquitetos/clientes, `data_nascimento` em clientes, `status` em orçamentos se faltar, campos de descrição rica em product_variants se faltarem) — desbloqueia 9, 10 e 12 sem mexer em UI
-- [ ] **Phase 8: Cadastros — Opcionalizar + Imagens Manuais** — Cliente com campos opcionais, arquiteto expandido (nascimento/endereço/banco), produtos coringa AU001..AU016 editáveis, anexo de imagem manual por SKU
+- [x] **Phase 7: Schema & Prep v1.1** — Migrations aditivas (`user_id` em arquitetos/clientes, `data_nascimento` em clientes, `status` em orçamentos se faltar, campos de descrição rica em product_variants se faltarem) — desbloqueia 9, 10 e 12 sem mexer em UI
+- [x] **Phase 8: Cadastros — Opcionalizar + Imagens Manuais** — Cliente com campos opcionais, arquiteto expandido (nascimento/endereço/banco), produtos coringa AU001..AU016 editáveis, anexo de imagem manual por SKU
 - [ ] **Phase 9: Multi-tenancy RLS** — Policies de `arquitetos` e `clientes` replicando padrão Drive v1.0 (D-02) + queries dos componentes ajustadas — colaborador só vê o próprio, admin vê tudo
 - [ ] **Phase 10: Wizard — Edição + Status + Descrição rica** — Step 3 editar preço (≥ mínimo) + quantidade, reabrir rascunho, marcar status (aprovado/perdido/pendente), descrição puxando temperatura(K)+potência+IRC+nicho da ImportMaster
 - [ ] **Phase 11: PDF v2 + Dashboard** — PDF sem bloco "Sistemas" vazio, "Prazo de Entrega" com texto adicional, tab Início substituindo 6 cards por somatório de orçamentos em aberto
@@ -51,7 +51,12 @@
   2. Form de arquiteto permite preencher data de nascimento, endereço do escritório e dados bancários (campos opcionais) — todos persistem e voltam no edit
   3. Admin consegue editar descrição e imagem dos 16 SKUs coringa AU001..AU016 (anteriormente fixos/só leitura) e mudança aparece imediatamente na lista de produtos
   4. Admin tem botão "anexar/trocar imagem" em qualquer linha de produto na tab Cadastros > Produtos — upload manual funciona e substitui imagem anterior (complementa ImportImagens em massa)
-**Plans**: TBD
+**Plans**: 5 plans
+- [x] 08-01-PLAN.md — Migration arquitetos.expand_fields SQL (FORM-02, aditivo, 7 colunas + 1 index)
+- [x] 08-02-PLAN.md — ClienteDialog opcionalizar Contato/CPF/Arquiteto (FORM-01)
+- [x] 08-03-PLAN.md — Botão ImageIcon inline em Cadastros > Produtos (FORM-03 + FORM-04)
+- [x] 08-04-PLAN.md — [BLOCKING] supabase db push + types regen + PUSH-LOG (FORM-02 gate)
+- [x] 08-05-PLAN.md — ArquitetoDialog expand 7 campos + smoke prod FORM-01..04 (SMOKE-RESULTS 5/5 PASS + hotfix user_id Phase 7 regression)
 **UI hint**: yes
 
 ### Phase 9: Multi-tenancy RLS
@@ -118,8 +123,8 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 7. Schema & Prep v1.1 | 0/4 | Plans created | - |
-| 8. Cadastros — Opcionalizar + Imagens | 0/0 | Not started | - |
+| 7. Schema & Prep v1.1 | 4/4 | Complete | 2026-05-11 |
+| 8. Cadastros — Opcionalizar + Imagens | 5/5 | Complete (smoke 5/5 PASS) | 2026-05-14 |
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
 | 10. Wizard — Edição + Status + Descrição | 0/0 | Not started | - |
 | 11. PDF v2 + Dashboard | 0/0 | Not started | - |
@@ -150,4 +155,4 @@
 - **v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07): cadastro expandido (CPF/telefone/setor), arquiteto como entidade, importação CSV de produtos, Drive RLS por colaborador, admin reorganizado, PDF v2 (Playfair+Inter), filtros por arquiteto, smoke prod 8/8 → [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 ---
-*Last updated: 2026-05-11 — Phase 7 plans created (4 plans, 2 waves).*
+*Last updated: 2026-05-14 — Phase 8 complete (5/5 plans, smoke prod 5/5 PASS). Hotfix Phase 7 user_id NOT NULL regression encontrado e corrigido durante smoke.*

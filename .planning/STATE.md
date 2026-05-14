@@ -1,21 +1,21 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
-status: planning
-last_updated: "2026-05-11T14:05:13.671Z"
-last_activity: 2026-05-11
+milestone_name: "Polimento UAT + Multi-tenancy + Automação"
+status: executing
+last_updated: "2026-05-14T14:45:00.000Z"
+last_activity: 2026-05-14
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 9
+  percent: 56
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-05-11 (v1.1 roadmap defined — 7 phases mapped, awaiting Phase 7 planning)
+**Last updated:** 2026-05-14 — Phase 8 complete (5/5 plans, smoke prod 5/5 PASS, hotfix Phase 7 user_id regression)
 
 ## Project Reference
 
@@ -24,18 +24,18 @@ progress:
 - **Current Milestone:** v1.1 — Polimento UAT + Multi-tenancy + Automação
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 07 — schema-prep-v1-1
+- **Current Focus:** Phase 09 (Multi-tenancy RLS) — não iniciada
 
 ## Current Position
 
-Phase: 07 (schema-prep-v1-1) — EXECUTING
-Plan: 1 of 4
+Phase: 08 — COMPLETE (smoke 5/5 PASS, 2026-05-14)
+Next: Phase 9 (Multi-tenancy RLS) — plans a derivar
 
-- **Phase:** 8
+- **Phase:** 9 (próxima)
 - **Plan:** Not started
-- **Status:** Ready to plan
-- **Progress:** 0/7 phases · 0/0 plans (plans ainda a derivar)
-- **Last activity:** 2026-05-11
+- **Status:** Phase 8 fechada, aguardando `/gsd-discuss-phase 9` ou `/gsd-plan-phase 9`
+- **Progress:** 2/7 phases · 9/9 plans até aqui
+- **Last activity:** 2026-05-14
 
 ## Roadmap v1.1 (resumo)
 
@@ -83,7 +83,9 @@ Plan: 1 of 4
 
 ## Next Action
 
-`/gsd-plan-phase 7` — planejar Phase 7 (Schema & Prep v1.1) com plans incluindo audit de campos de descrição rica em `product_variants` antes das migrations.
+`/gsd-discuss-phase 9` ou `/gsd-plan-phase 9` — Multi-tenancy RLS (replicar padrão Drive D-02, policies em `arquitetos` e `clientes`, queries ajustadas, smoke 2 contas).
+
+**Atenção:** Phase 7 deixou `user_id NOT NULL` sem `DEFAULT auth.uid()`. Hotfix `71d28d7` (08-05) injeta user_id no payload do dialog. Avaliar se Phase 9 (que vai adicionar policy `WITH CHECK (user_id = auth.uid())`) torna isso redundante OU se vale adicionar `DEFAULT auth.uid()` na coluna como cinto-e-suspensórios.
 
 ## Session Continuity
 
@@ -91,7 +93,7 @@ Plan: 1 of 4
 - REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída)
 - MILESTONES.md: índice ainda só com v1.0 — atualizar na Phase 13 (closure)
 
-**Last activity:** 2026-05-11 — Completed quick task 260511-cwq: request-access fix deployed em prod + smoke Playwright OK (POST → 200)
+**Last activity:** 2026-05-14 — Phase 8 fechada (smoke 5/5 PASS via Playwright + Supabase MCP, hotfix Phase 7 user_id regression aplicado)
 
 ---
-*STATE refreshed: 2026-05-11 ao concluir quick task 260511-cwq (request-access fix)*
+*STATE refreshed: 2026-05-14 ao fechar Phase 8 (commits 311cda9..71d28d7, 12 commits, 5 plans + 1 hotfix).*
