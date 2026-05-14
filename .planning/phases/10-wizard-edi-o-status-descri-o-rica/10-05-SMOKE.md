@@ -144,14 +144,35 @@
 
 ## Summary
 
+**Executed:** 2026-05-14T18:30Z (Lenny pilotando em prod, Claude monitorando chat)
+**Method:** Manual via browser, 4 prints anexados aos turnos do chat
+
 | Smoke | Cobertura | Status |
 |-------|-----------|--------|
-| 1 — Edit qty+preço Step 3 | WIZ-01 + WIZ-02 | |
-| 2 — Marcar perdido | WIZ-04 (transição livre) | |
-| 3 — Reabrir rascunho | WIZ-03 | |
-| 4 — Snapshot antigo | WIZ-05 (D-22 backward-compat) | |
-| 5 — Marcar aprovado | WIZ-04 (one-way D-16) | |
+| 1 — Edit qty+preço Step 3 | WIZ-01 + WIZ-02 | **PASS** |
+| 2 — Marcar perdido | WIZ-04 (transição livre) | **PASS** |
+| 3 — Reabrir rascunho | WIZ-03 | **PASS** |
+| 4 — Snapshot antigo | WIZ-05 (D-22 backward-compat) | **PASS** |
+| 5 — Marcar aprovado | WIZ-04 (one-way D-16) | **PASS** |
 
-**Overall:** _(N/5 PASS)_
+**Overall:** 5/5 PASS
 
-**Bugs encontrados:** _(listar com gravidade alta/média/baixa; alta = bloqueia closure da phase)_
+### Detalhes confirmados
+
+- **Smoke 1:** Edit qty + preço inline funciona, badge de violação aparece quando preço < mínimo (LM1017 R$30 < R$37,66 mín), some quando corrigido, PDF reflete valores editados.
+- **Smoke 2:** Dropdown "Perdido" muda direto sem dialog, toast "Status atualizado para perdido", badge vira vermelho.
+- **Smoke 3:** Clicar linha de rascunho em /admin?tab=pedidos abre o wizard no Step 1 com prefill completo (cliente/projeto/tipo/ambientes/sistemas).
+- **Smoke 4:** Orçamento antigo abre tela de detalhe sem crash JS. PDF re-emitido normalmente, sem "undefined K"/"undefined W". Console mostra apenas warnings de WebSocket Realtime (pré-existentes, não introduzidos pela Phase 10).
+- **Smoke 5:** AlertDialog "Marcar como aprovado? Esta ação é irreversível" aparece; cancelar não muda status; confirmar vira badge verde; dropdown desabilitado depois (read-only).
+
+### Bugs encontrados
+
+Nenhum bug bloqueante.
+
+### Polish items (follow-up — NÃO bloqueia closure)
+
+1. **Smoke 1 — lag perceptível no input inline ao editar qty/preço.** Suspeita: o `useQuery` batch lookup (10-05 descrição rica) está re-renderizando o Step 3 a cada flush. Mitigação possível: estabilizar o `queryKey` ou debounce no flush. Anotar como ticket técnico (não regressão funcional — edit funciona, só com fricção).
+
+### Console errors (não-bloqueantes)
+
+- `WebSocket connection to wss://...supabase.co/realtime/v1/websocket failed: WebSocket is closed before the connection is established.` — pré-existente, vem da subscription do ExceptionChat. Aparece em todas as páginas do app, não foi introduzido pela Phase 10.
