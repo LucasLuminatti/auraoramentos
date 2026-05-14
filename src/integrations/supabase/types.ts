@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       access_requests: {
@@ -117,7 +92,7 @@ export type Database = {
           nome: string
           pix?: string | null
           tipo_conta?: string | null
-          user_id: string
+          user_id?: string
         }
         Update: {
           agencia?: string | null
@@ -277,7 +252,7 @@ export type Database = {
           id?: string
           nome: string
           telefone?: string | null
-          user_id: string
+          user_id?: string
         }
         Update: {
           arquiteto_id?: string | null
@@ -1043,12 +1018,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["admin", "user"],
     },
   },
 } as const
+<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />

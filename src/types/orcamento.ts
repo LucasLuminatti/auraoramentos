@@ -106,7 +106,8 @@ export interface Orcamento {
   ambientes: Ambiente[];
 }
 
-export type StatusOrcamento = 'rascunho' | 'fechado' | 'perdido';
+// Status do orçamento — alinhado com CHECK constraint da Phase 7 (D-25)
+export type StatusOrcamento = 'rascunho' | 'aprovado' | 'perdido' | 'pendente';
 
 // ─── Cálculos do Sistema Fita→Driver (com perfil opcional) ───
 
