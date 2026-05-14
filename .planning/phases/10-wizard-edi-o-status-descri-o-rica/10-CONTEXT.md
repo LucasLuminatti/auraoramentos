@@ -86,6 +86,13 @@ Tornar o wizard "round-trip" e enriquecer a descrição dos produtos no review/P
 - Tradução das mensagens de erro
 - Implementação do re-lookup com TanStack Query (chave, staleTime)
 
+### G) Adendos pós-research (2026-05-14)
+
+- **D-31:** **Remover `EncerrarNegociacaoModal`** completamente. Componente está bugado em prod (grava `status='fechado'` que o CHECK constraint da Phase 7 rejeita) e vira redundante com o dropdown novo de status no card de Pedidos (D-13). Plan de cleanup deleta o arquivo + remove imports/usos. Bug-fix oportunístico via deleção.
+- **D-32:** **RLS SELECT em `orcamentos` fica fora do escopo da Phase 10.** A migration da Phase 10 só toca UPDATE policies (`colab dono | admin` + bloqueio de `WHERE status='aprovado'`). SELECT continua `USING (true)` por enquanto — Phase 9 fechou RLS de arquitetos+clientes; orçamentos seria phase futura se vier no v1.2. Não adicionar todo no backlog agora — fica como observação na VERIFICATION quando Phase 10 fechar.
+- **D-33:** **11 ocorrências hardcoded de `"fechado"`** em 5 arquivos (`AdminDashboard.tsx` ×6, `ClienteList.tsx` ×2, `EncerrarNegociacaoModal.tsx` ×1 — fica obsoleto via D-31, `OrcamentoDetalhe.tsx` ×2, `Admin.tsx` ×3 em STATUS_OPTIONS) precisam virar `"aprovado"`. Plan E (TS sync) cobre todas via search-replace + ajuste de STATUS_OPTIONS + sync de `StatusOrcamento` (D-25).
+- **D-34:** **Padrão de input inline = espelhar `PrecosBatch.tsx`** — estado local `string` no input + flush para o domain state (`onUpdateAmbientes`) só no blur/Enter. Justificativa: `onChange` direto chama `calcularRolosPorGrupo` + `calcularDriversPorProjeto` a cada keystroke, causando jank perceptível em forms grandes. Pattern já validado em prod.
+
 ### Folded Todos
 
 [Nenhum todo folded — todos pendentes pertencem a Phase 11 (PDF) ou Phase 12 (automação).]
