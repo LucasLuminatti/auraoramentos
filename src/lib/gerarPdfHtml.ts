@@ -19,7 +19,8 @@
 
 import type { Ambiente } from "@/types/orcamento";
 import { gerarOrcamentoHtmlV1 } from "./pdfTemplates/v1";
-import { gerarOrcamentoHtmlV2 } from "./pdfTemplates/v2";
+import { gerarOrcamentoHtmlV2, type AtributosMap } from "./pdfTemplates/v2";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface PdfParams {
   clienteNome: string;
@@ -35,10 +36,47 @@ export interface PdfParams {
   templateVersion?: number;
 }
 
-export function gerarOrcamentoHtml(params: PdfParams): string {
+/**
+ * WIZ-05 (D-23): batch lookup de atributos por código para descrição rica no PDF v2.
+ * Executado apenas quando templateVersion >= 2. PDF v1 não faz lookup (D-21).
+ */
+async function buildAtributosMap(ambientes: Ambiente[]): Promise<AtributosMap> {
+  const codigos = new Set<string>();
+  for (const amb of ambientes) {
+    for (const l of amb.luminarias) if (l.codigo) codigos.add(l.codigo);
+    for (const sis of amb.sistemas) {
+      if (sis.fita?.codigo) codigos.add(sis.fita.codigo);
+      if (sis.driver?.codigo) codigos.add(sis.driver.codigo);
+      if (sis.perfil?.codigo) codigos.add(sis.perfil.codigo);
+    }
+  }
+  if (codigos.size === 0) return {};
+  const { data, error } = await supabase
+    .from("product_variants")
+    .select("codigo, atributos, potencia_watts")
+    .in("codigo", Array.from(codigos));
+  if (error || !data) return {};
+  const map: AtributosMap = {};
+  for (const row of data) {
+    if (row.codigo) {
+      map[row.codigo] = {
+        atributos: (row.atributos as Record<string, unknown> | null) ?? null,
+        potencia_watts: row.potencia_watts ?? null,
+      };
+    }
+  }
+  return map;
+}
+
+/**
+ * Router de templates de PDF — async para suportar batch lookup de atributos no v2 (WIZ-05).
+ * Call sites já são async (handlePDF em Step3Revisao, OrcamentoDetalhe).
+ */
+export async function gerarOrcamentoHtml(params: PdfParams): Promise<string> {
   const v = params.templateVersion ?? 2;
   if (v >= 2) {
-    return gerarOrcamentoHtmlV2(params);
+    const atributosMap = await buildAtributosMap(params.ambientes);
+    return gerarOrcamentoHtmlV2({ ...params, atributosMap });
   }
   return gerarOrcamentoHtmlV1(params);
 }

@@ -446,7 +446,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
       ]);
       await ensureFontsReady();
 
-      const html = gerarOrcamentoHtml({
+      const html = await gerarOrcamentoHtml({
         clienteNome,
         projetoNome,
         colaborador: dados.colaborador,

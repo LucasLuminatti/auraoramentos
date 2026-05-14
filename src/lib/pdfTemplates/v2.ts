@@ -20,6 +20,10 @@ import {
   calcularTotalGeral,
   formatarMoeda,
 } from "@/types/orcamento";
+import { construirDescricaoRica } from "@/lib/produtoDescricao";
+
+/** Map de atributos ricos por código de produto — populado via batch lookup antes de chamar o builder v2 (WIZ-05 D-23). */
+export type AtributosMap = Record<string, { atributos: Record<string, unknown> | null; potencia_watts: number | null }>;
 
 export interface PdfParamsV2 {
   clienteNome: string;
@@ -28,6 +32,8 @@ export interface PdfParamsV2 {
   tipo: string;
   ambientes: Ambiente[];
   logoBase64?: string;
+  /** WIZ-05: map de atributos por código para descrição rica nas row functions. Opcional — ausente = descrição crua. */
+  atributosMap?: AtributosMap;
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -79,16 +85,22 @@ function agruparPorLocal(sistemas: SistemaIluminacao[]): Array<{ local: string |
    ────────────────────────────────────────────────────────────── */
 
 /** Linha de item: thumbnail + nome + chips + colunas (qtd, W/V, preço, SKU). */
-function rowLuminaria(item: ItemLuminaria): string {
+function rowLuminaria(item: ItemLuminaria, atributosMap: AtributosMap): string {
   const subtotal = calcularSubtotalLuminaria(item);
   const wattsChip = item.potencia_watts ? chip(`${item.potencia_watts}W`) : "";
   const tensaoChip = item.tensao ? chip(`${item.tensao}V`) : "";
   const chipsHtml = [wattsChip, tensaoChip].filter(Boolean).join("");
+  const lookup = atributosMap[item.codigo];
+  const descRica = construirDescricaoRica({
+    nome: item.descricao || "—",
+    atributos: lookup?.atributos ?? null,
+    potenciaWatts: lookup?.potencia_watts ?? item.potencia_watts ?? null,
+  });
   return `
     <tr class="item-row">
       <td class="thumb-cell">${thumb(item.imagemUrl)}</td>
       <td class="desc-cell">
-        <div class="desc-name">${esc(item.descricao || "—")}</div>
+        <div class="desc-name">${esc(descRica)}</div>
         ${chipsHtml ? `<div class="chips">${chipsHtml}</div>` : ""}
       </td>
       <td class="qty-cell">${item.quantidade} un</td>
@@ -100,7 +112,7 @@ function rowLuminaria(item: ItemLuminaria): string {
 }
 
 /** Linha de fita dentro de um sistema. Quantidade calculada em metros (demanda). */
-function rowFita(sis: SistemaIluminacao): string {
+function rowFita(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
   const demanda = calcularDemandaFita(sis);
   const consumo = calcularConsumoW(sis);
   const chipsHtml = [
@@ -108,11 +120,17 @@ function rowFita(sis: SistemaIluminacao): string {
     sis.fita.voltagem ? chip(`${sis.fita.voltagem}V`, "orange") : "",
     chip(`${consumo.toFixed(1)}W total`),
   ].filter(Boolean).join("");
+  const lookup = atributosMap[sis.fita.codigo];
+  const descRica = construirDescricaoRica({
+    nome: sis.fita.descricao || "—",
+    atributos: lookup?.atributos ?? null,
+    potenciaWatts: null, // fita usa W/m (wm), não potência absoluta
+  });
   return `
     <tr class="item-row">
       <td class="thumb-cell">${thumb(sis.fita.imagemUrl)}</td>
       <td class="desc-cell">
-        <div class="desc-name"><span class="comp-tag comp-fita">Fita</span> ${esc(sis.fita.descricao || "—")}</div>
+        <div class="desc-name"><span class="comp-tag comp-fita">Fita</span> ${esc(descRica)}</div>
         <div class="chips">${chipsHtml}</div>
       </td>
       <td class="qty-cell">${demanda} m</td>
@@ -124,7 +142,7 @@ function rowFita(sis: SistemaIluminacao): string {
 }
 
 /** Linha de perfil (opcional). */
-function rowPerfil(sis: SistemaIluminacao): string {
+function rowPerfil(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
   if (!sis.perfil) return "";
   const subtotal = calcularSubtotalPerfilSistema(sis);
   const metragem = sis.perfil.comprimentoPeca * sis.perfil.quantidade;
@@ -133,11 +151,17 @@ function rowPerfil(sis: SistemaIluminacao): string {
     chip(`${metragem}m total`),
     chip(`${sis.perfil.passadas}× passada${sis.perfil.passadas > 1 ? "s" : ""}`),
   ].join("");
+  const lookup = atributosMap[sis.perfil.codigo];
+  const descRica = construirDescricaoRica({
+    nome: sis.perfil.descricao || "—",
+    atributos: lookup?.atributos ?? null,
+    potenciaWatts: lookup?.potencia_watts ?? null,
+  });
   return `
     <tr class="item-row">
       <td class="thumb-cell">${thumb(sis.perfil.imagemUrl)}</td>
       <td class="desc-cell">
-        <div class="desc-name"><span class="comp-tag">Perfil</span> ${esc(sis.perfil.descricao || "—")}</div>
+        <div class="desc-name"><span class="comp-tag">Perfil</span> ${esc(descRica)}</div>
         <div class="chips">${chipsHtml}</div>
       </td>
       <td class="qty-cell">${sis.perfil.quantidade} un</td>
@@ -149,18 +173,24 @@ function rowPerfil(sis: SistemaIluminacao): string {
 }
 
 /** Linha de driver — quantidade calculada por calcularQtdDrivers. */
-function rowDriver(sis: SistemaIluminacao): string {
+function rowDriver(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
   const qtd = calcularQtdDrivers(sis);
   const subtotal = calcularSubtotalDriverSistema(sis);
   const chipsHtml = [
     chip(`${sis.driver.potencia}W`),
     chip(`${sis.driver.voltagem}V`),
   ].join("");
+  const lookup = atributosMap[sis.driver.codigo];
+  const descRica = construirDescricaoRica({
+    nome: sis.driver.descricao || "—",
+    atributos: lookup?.atributos ?? null,
+    potenciaWatts: lookup?.potencia_watts ?? null,
+  });
   return `
     <tr class="item-row">
       <td class="thumb-cell">${thumb(sis.driver.imagemUrl)}</td>
       <td class="desc-cell">
-        <div class="desc-name"><span class="comp-tag">Driver</span> ${esc(sis.driver.descricao || "—")}</div>
+        <div class="desc-name"><span class="comp-tag">Driver</span> ${esc(descRica)}</div>
         <div class="chips">${chipsHtml}</div>
       </td>
       <td class="qty-cell">${qtd} un</td>
@@ -172,36 +202,36 @@ function rowDriver(sis: SistemaIluminacao): string {
 }
 
 /** Bloco de Sistema: header "SISTEMA N" + tabela com fita + perfil(?) + driver. */
-function blocoSistema(sis: SistemaIluminacao, indexNoLocal: number): string {
+function blocoSistema(sis: SistemaIluminacao, indexNoLocal: number, atributosMap: AtributosMap): string {
   return `
     <div class="system-block">
       <div class="system-label">SISTEMA ${indexNoLocal + 1}</div>
       <table class="items-table">
         <tbody>
-          ${rowFita(sis)}
-          ${rowPerfil(sis)}
-          ${rowDriver(sis)}
+          ${rowFita(sis, atributosMap)}
+          ${rowPerfil(sis, atributosMap)}
+          ${rowDriver(sis, atributosMap)}
         </tbody>
       </table>
     </div>`;
 }
 
 /** Bloco de Local: header em Playfair italic + sistemas dentro. Local null = sem header. */
-function blocoLocal(local: string | null, sistemas: SistemaIluminacao[]): string {
+function blocoLocal(local: string | null, sistemas: SistemaIluminacao[], atributosMap: AtributosMap): string {
   const header = local
     ? `<div class="local-name">${esc(local)}</div>`
     : "";
-  const sistemasHtml = sistemas.map((sis, i) => blocoSistema(sis, i)).join("");
+  const sistemasHtml = sistemas.map((sis, i) => blocoSistema(sis, i, atributosMap)).join("");
   return `<div class="local-block">${header}${sistemasHtml}</div>`;
 }
 
 /** Bloco de Ambiente: header "AMBIENTE NOME" com regra horizontal + luminárias + grupos de Local com sistemas. */
-function blocoAmbiente(amb: Ambiente): string {
+function blocoAmbiente(amb: Ambiente, atributosMap: AtributosMap): string {
   const luminariasHtml = amb.luminarias.length
-    ? `<table class="items-table"><tbody>${amb.luminarias.map(rowLuminaria).join("")}</tbody></table>`
+    ? `<table class="items-table"><tbody>${amb.luminarias.map(l => rowLuminaria(l, atributosMap)).join("")}</tbody></table>`
     : "";
   const grupos = agruparPorLocal(amb.sistemas);
-  const gruposHtml = grupos.map(g => blocoLocal(g.local, g.sistemas)).join("");
+  const gruposHtml = grupos.map(g => blocoLocal(g.local, g.sistemas, atributosMap)).join("");
   const subtotal = calcularTotalAmbienteSemFita(amb);
   const empty = !amb.luminarias.length && !amb.sistemas.length;
   return `
@@ -308,7 +338,7 @@ function blocoTermos(): string {
  * Recebe params + Ambiente[] (já com base64 e local quando aplicáveis) e devolve HTML para html2pdf.
  */
 export function gerarOrcamentoHtmlV2(params: PdfParamsV2): string {
-  const { clienteNome, projetoNome, colaborador, tipo, ambientes, logoBase64 } = params;
+  const { clienteNome, projetoNome, colaborador, tipo, ambientes, logoBase64, atributosMap = {} } = params;
   const data = formatarData();
   const totalGeral = calcularTotalGeral(ambientes);
 
@@ -316,7 +346,7 @@ export function gerarOrcamentoHtmlV2(params: PdfParamsV2): string {
     ? `<img src="${logoBase64}" alt="Aura" class="logo" />`
     : `<span class="logo-text">AURA</span>`;
 
-  const ambientesHtml = ambientes.map(blocoAmbiente).join("");
+  const ambientesHtml = ambientes.map(amb => blocoAmbiente(amb, atributosMap)).join("");
   const resumoFitasHtml = blocoResumoFitas(ambientes);
 
   return `<!DOCTYPE html>

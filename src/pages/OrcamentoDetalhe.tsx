@@ -181,7 +181,7 @@ const OrcamentoDetalhe = () => {
         // Rows criadas pela Phase 5 em diante têm 2 explicitamente persistido em Step3Revisao.
         templateVersion: orc.pdf_template_version ?? 1,
       };
-      const html = gerarOrcamentoHtml(params);
+      const html = await gerarOrcamentoHtml(params);
 
       // Mesmo padrão usado em Step3Revisao.tsx — render off-screen + html2pdf.
       container.style.position = "fixed";
