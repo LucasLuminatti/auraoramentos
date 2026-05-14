@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FileDown, AlertTriangle, MessageSquare } from "lucide-react";
 import type { Orcamento, Ambiente, SistemaIluminacao, GrupoFita, StatusOrcamento } from "@/types/orcamento";
 import type { Json } from "@/integrations/supabase/types";
+import { construirDescricaoRica } from "@/lib/produtoDescricao";
 import {
   calcularDemandaFita, calcularConsumoW, calcularQtdDrivers,
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
@@ -127,6 +129,56 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
   const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes), [ambientes]);
   const resumoDrivers = useMemo(() => calcularDriversPorProjeto(ambientes), [ambientes]);
   const totalGeral = useMemo(() => calcularTotalGeral(ambientes), [ambientes]);
+
+  // WIZ-05 (D-23): coleta de códigos distintos para batch lookup de atributos ricos
+  const allCodigos = useMemo(() => {
+    const set = new Set<string>();
+    for (const amb of ambientes) {
+      for (const l of amb.luminarias) if (l.codigo) set.add(l.codigo);
+      for (const sis of amb.sistemas) {
+        if (sis.fita?.codigo) set.add(sis.fita.codigo);
+        if (sis.driver?.codigo) set.add(sis.driver.codigo);
+        if (sis.perfil?.codigo) set.add(sis.perfil.codigo);
+      }
+    }
+    return Array.from(set).sort(); // sort garante estabilidade do queryKey (Pitfall 3)
+  }, [ambientes]);
+
+  // WIZ-05 (D-22, D-23): re-resolução de atributos por código — 1 query batch, staleTime 5min
+  type AtributosEntry = { atributos: Record<string, unknown> | null; potencia_watts: number | null };
+  const { data: atributosMap = {} } = useQuery<Record<string, AtributosEntry>>({
+    queryKey: ["produtoAtributos", allCodigos],
+    queryFn: async () => {
+      if (allCodigos.length === 0) return {};
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("codigo, atributos, potencia_watts")
+        .in("codigo", allCodigos);
+      if (error || !data) return {};
+      const map: Record<string, AtributosEntry> = {};
+      for (const row of data) {
+        if (row.codigo) {
+          map[row.codigo] = {
+            atributos: (row.atributos as Record<string, unknown> | null) ?? null,
+            potencia_watts: row.potencia_watts ?? null,
+          };
+        }
+      }
+      return map;
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: allCodigos.length > 0,
+  });
+
+  // Helper local: resolve descrição rica de qualquer item com codigo (D-22 fallback = nome cru)
+  const descricaoRica = (codigo: string, descricaoSnapshot: string, potenciaSnapshot?: number | null): string => {
+    const lookup = atributosMap[codigo];
+    return construirDescricaoRica({
+      nome: descricaoSnapshot || codigo || "—",
+      atributos: lookup?.atributos ?? null,
+      potenciaWatts: lookup?.potencia_watts ?? potenciaSnapshot ?? null,
+    });
+  };
 
   // Detect violations
   const violacoes = useMemo(() => {
@@ -514,7 +566,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                     {amb.luminarias.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-mono">{item.codigo}</TableCell>
-                        <TableCell>{item.descricao}</TableCell>
+                        <TableCell>{descricaoRica(item.codigo, item.descricao, (item as any).potencia_watts)}</TableCell>
                         <TableCell className="text-right">
                           <EditableNumericCell
                             value={item.quantidade}
@@ -569,7 +621,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                           <TableRow>
                             <TableCell><Badge variant="outline" className="text-xs bg-yellow-50">Fita</Badge></TableCell>
                             <TableCell className="font-mono">{sis.fita.codigo}</TableCell>
-                            <TableCell>{sis.fita.descricao}</TableCell>
+                            <TableCell>{descricaoRica(sis.fita.codigo, sis.fita.descricao)}</TableCell>
                             <TableCell className="text-right text-xs text-muted-foreground">{demanda}m | {sis.fita.wm}W/m | {consumo.toFixed(1)}W</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
@@ -589,7 +641,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                             <TableRow>
                               <TableCell><Badge variant="outline" className="text-xs">Perfil</Badge></TableCell>
                               <TableCell className="font-mono">{sis.perfil.codigo}</TableCell>
-                              <TableCell>{sis.perfil.descricao}</TableCell>
+                              <TableCell>{descricaoRica(sis.perfil.codigo, sis.perfil.descricao)}</TableCell>
                               <TableCell className="text-right text-xs text-muted-foreground">{sis.perfil.comprimentoPeca}m × {sis.perfil.quantidade} = {sis.perfil.comprimentoPeca * sis.perfil.quantidade}m | {sis.perfil.passadas} passada(s)</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
@@ -609,7 +661,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                           <TableRow>
                             <TableCell><Badge variant="outline" className="text-xs">Driver</Badge></TableCell>
                             <TableCell className="font-mono">{sis.driver.codigo}</TableCell>
-                            <TableCell>{sis.driver.descricao}</TableCell>
+                            <TableCell>{descricaoRica(sis.driver.codigo, sis.driver.descricao)}</TableCell>
                             <TableCell className="text-right text-xs text-muted-foreground">{sis.driver.potencia}W | {sis.driver.voltagem}V | ×{qtdDrv}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
