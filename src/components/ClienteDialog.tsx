@@ -76,7 +76,13 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
     };
     let error;
     if (mode === "create") {
-      const res = await supabase.from("clientes").insert(payload);
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        setSaving(false);
+        toast.error("Sessão expirada, faça login novamente");
+        return;
+      }
+      const res = await supabase.from("clientes").insert({ ...payload, user_id: userData.user.id });
       error = res.error;
     } else if (mode === "edit" && cliente) {
       const res = await supabase.from("clientes").update(payload).eq("id", cliente.id);

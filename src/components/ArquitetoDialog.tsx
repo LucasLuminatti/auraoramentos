@@ -75,7 +75,13 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
     };
     let error;
     if (mode === "create") {
-      const res = await supabase.from("arquitetos").insert(payload);
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        setSaving(false);
+        toast.error("Sessão expirada, faça login novamente");
+        return;
+      }
+      const res = await supabase.from("arquitetos").insert({ ...payload, user_id: userData.user.id });
       error = res.error;
     } else if (mode === "edit" && arquiteto) {
       const res = await supabase.from("arquitetos").update(payload).eq("id", arquiteto.id);
