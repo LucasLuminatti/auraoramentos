@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,47 @@ interface Violacao {
   descricao: string;
   precoUnitario: number;
   precoMinimo: number;
+}
+
+// ─── Sub-componente local: input numérico inline com estado local + flush on-blur (D-34) ───
+interface EditableNumericCellProps {
+  value: number;
+  onCommit: (next: number) => void;
+  mode: "integer" | "decimal";
+  min?: number;
+  className?: string;
+  ariaLabel?: string;
+}
+
+function EditableNumericCell({ value, onCommit, mode, min, className, ariaLabel }: EditableNumericCellProps) {
+  const [local, setLocal] = useState<string>(String(value));
+
+  // Sync external mutations (e.g. handleAjustarPreco) para o input
+  useEffect(() => { setLocal(String(value)); }, [value]);
+
+  const handleBlur = () => {
+    const raw = mode === "integer" ? parseInt(local, 10) : parseFloat(local);
+    const fallback = mode === "integer" ? (min ?? 1) : (min ?? 0);
+    const clampMin = min ?? (mode === "integer" ? 1 : 0);
+    const next = Number.isFinite(raw) ? Math.max(clampMin, raw) : fallback;
+    if (next !== value) onCommit(next);
+    setLocal(String(next));
+  };
+
+  return (
+    <Input
+      type="number"
+      step={mode === "integer" ? "1" : "0.01"}
+      min={min ?? (mode === "integer" ? 1 : 0)}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+      onFocus={(e) => e.target.select()}
+      className={className ?? "w-20 text-right ml-auto"}
+      aria-label={ariaLabel}
+    />
+  );
 }
 
 // Helper local para converter asset Vite-imported (logo) — fetch de URL externa
@@ -162,6 +204,81 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
     });
     onUpdateAmbientes(updated);
     toast.success(`Preço ajustado para ${formatarMoeda(v.precoMinimo)}`);
+  };
+
+  // WIZ-02 — Edita quantidade de uma luminária
+  const handleEditQuantidade = (ambienteId: string, itemId: string, nova: number) => {
+    const updated = ambientes.map((amb) => {
+      if (amb.id !== ambienteId) return amb;
+      return {
+        ...amb,
+        luminarias: amb.luminarias.map((l) =>
+          l.id === itemId ? { ...l, quantidade: Math.max(1, Math.floor(nova)) } : l
+        ),
+      };
+    });
+    onUpdateAmbientes(updated);
+  };
+
+  // WIZ-01 — Edita preço unitário de uma luminária
+  const handleEditPrecoLuminaria = (ambienteId: string, itemId: string, novo: number) => {
+    const updated = ambientes.map((amb) => {
+      if (amb.id !== ambienteId) return amb;
+      return {
+        ...amb,
+        luminarias: amb.luminarias.map((l) =>
+          l.id === itemId ? { ...l, precoUnitario: Math.max(0, novo) } : l
+        ),
+      };
+    });
+    onUpdateAmbientes(updated);
+  };
+
+  // WIZ-01 — Edita preço unitário da fita de um sistema
+  const handleEditPrecoFita = (ambienteId: string, sistemaId: string, novo: number) => {
+    const updated = ambientes.map((amb) => {
+      if (amb.id !== ambienteId) return amb;
+      return {
+        ...amb,
+        sistemas: amb.sistemas.map((sis) =>
+          sis.id === sistemaId
+            ? { ...sis, fita: { ...sis.fita, precoUnitario: Math.max(0, novo) } }
+            : sis
+        ),
+      };
+    });
+    onUpdateAmbientes(updated);
+  };
+
+  // WIZ-01 — Edita preço unitário do perfil de um sistema
+  const handleEditPrecoPerfil = (ambienteId: string, sistemaId: string, novo: number) => {
+    const updated = ambientes.map((amb) => {
+      if (amb.id !== ambienteId) return amb;
+      return {
+        ...amb,
+        sistemas: amb.sistemas.map((sis) => {
+          if (sis.id !== sistemaId || !sis.perfil) return sis;
+          return { ...sis, perfil: { ...sis.perfil, precoUnitario: Math.max(0, novo) } };
+        }),
+      };
+    });
+    onUpdateAmbientes(updated);
+  };
+
+  // WIZ-01 — Edita preço unitário do driver de um sistema
+  const handleEditPrecoDriver = (ambienteId: string, sistemaId: string, novo: number) => {
+    const updated = ambientes.map((amb) => {
+      if (amb.id !== ambienteId) return amb;
+      return {
+        ...amb,
+        sistemas: amb.sistemas.map((sis) =>
+          sis.id === sistemaId
+            ? { ...sis, driver: { ...sis.driver, precoUnitario: Math.max(0, novo) } }
+            : sis
+        ),
+      };
+    });
+    onUpdateAmbientes(updated);
   };
 
   const handleSolicitarExcecao = async (v: Violacao) => {
@@ -387,8 +504,25 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                       <TableRow key={item.id}>
                         <TableCell className="font-mono">{item.codigo}</TableCell>
                         <TableCell>{item.descricao}</TableCell>
-                        <TableCell className="text-right">{item.quantidade}</TableCell>
-                        <TableCell className="text-right">{formatarMoeda(item.precoUnitario)}{violacaoIndicator(item.codigo, item.precoUnitario, item.precoMinimo)}</TableCell>
+                        <TableCell className="text-right">
+                          <EditableNumericCell
+                            value={item.quantidade}
+                            onCommit={(v) => handleEditQuantidade(amb.id, item.id, v)}
+                            mode="integer"
+                            ariaLabel={`Quantidade ${item.codigo}`}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <EditableNumericCell
+                              value={item.precoUnitario}
+                              onCommit={(v) => handleEditPrecoLuminaria(amb.id, item.id, v)}
+                              mode="decimal"
+                              ariaLabel={`Preço unitário ${item.codigo}`}
+                            />
+                            {violacaoIndicator(item.codigo, item.precoUnitario, item.precoMinimo)}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalLuminaria(item))}</TableCell>
                       </TableRow>
                     ))}
@@ -426,7 +560,17 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                             <TableCell className="font-mono">{sis.fita.codigo}</TableCell>
                             <TableCell>{sis.fita.descricao}</TableCell>
                             <TableCell className="text-right text-xs text-muted-foreground">{demanda}m | {sis.fita.wm}W/m | {consumo.toFixed(1)}W</TableCell>
-                            <TableCell className="text-right">{formatarMoeda(sis.fita.precoUnitario)}{violacaoIndicator(sis.fita.codigo, sis.fita.precoUnitario, sis.fita.precoMinimo)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <EditableNumericCell
+                                  value={sis.fita.precoUnitario}
+                                  onCommit={(v) => handleEditPrecoFita(amb.id, sis.id, v)}
+                                  mode="decimal"
+                                  ariaLabel={`Preço unitário fita ${sis.fita.codigo}`}
+                                />
+                                {violacaoIndicator(sis.fita.codigo, sis.fita.precoUnitario, sis.fita.precoMinimo)}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-right text-xs text-muted-foreground italic">Global →</TableCell>
                           </TableRow>
                           {/* Perfil (se existir) */}
@@ -436,7 +580,17 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                               <TableCell className="font-mono">{sis.perfil.codigo}</TableCell>
                               <TableCell>{sis.perfil.descricao}</TableCell>
                               <TableCell className="text-right text-xs text-muted-foreground">{sis.perfil.comprimentoPeca}m × {sis.perfil.quantidade} = {sis.perfil.comprimentoPeca * sis.perfil.quantidade}m | {sis.perfil.passadas} passada(s)</TableCell>
-                              <TableCell className="text-right">{formatarMoeda(sis.perfil.precoUnitario)}{violacaoIndicator(sis.perfil.codigo, sis.perfil.precoUnitario, sis.perfil.precoMinimo)}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <EditableNumericCell
+                                    value={sis.perfil.precoUnitario}
+                                    onCommit={(v) => handleEditPrecoPerfil(amb.id, sis.id, v)}
+                                    mode="decimal"
+                                    ariaLabel={`Preço unitário perfil ${sis.perfil.codigo}`}
+                                  />
+                                  {violacaoIndicator(sis.perfil.codigo, sis.perfil.precoUnitario, sis.perfil.precoMinimo)}
+                                </div>
+                              </TableCell>
                               <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalPerfilSistema(sis))}</TableCell>
                             </TableRow>
                           )}
@@ -446,7 +600,17 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                             <TableCell className="font-mono">{sis.driver.codigo}</TableCell>
                             <TableCell>{sis.driver.descricao}</TableCell>
                             <TableCell className="text-right text-xs text-muted-foreground">{sis.driver.potencia}W | {sis.driver.voltagem}V | ×{qtdDrv}</TableCell>
-                            <TableCell className="text-right">{formatarMoeda(sis.driver.precoUnitario)}{violacaoIndicator(sis.driver.codigo, sis.driver.precoUnitario, sis.driver.precoMinimo)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <EditableNumericCell
+                                  value={sis.driver.precoUnitario}
+                                  onCommit={(v) => handleEditPrecoDriver(amb.id, sis.id, v)}
+                                  mode="decimal"
+                                  ariaLabel={`Preço unitário driver ${sis.driver.codigo}`}
+                                />
+                                {violacaoIndicator(sis.driver.codigo, sis.driver.precoUnitario, sis.driver.precoMinimo)}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalDriverSistema(sis))}</TableCell>
                           </TableRow>
                         </React.Fragment>
