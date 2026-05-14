@@ -321,7 +321,7 @@ function blocoTermos(): string {
 
       <div class="term-block">
         <h3 class="term-header">Prazo de entrega</h3>
-        <p>A consultar conforme disponibilidade de estoque. Pedidos confirmados após aprovação da proposta.</p>
+        <p>A consultar conforme disponibilidade de estoque, com prazo médio de 20 dias úteis. Pedidos confirmados após aprovação da proposta.</p>
       </div>
 
       <div class="term-block">
