@@ -62,9 +62,8 @@ interface ExceptionRow {
 const statusLabel = (s: string) => {
   switch (s) {
     case "rascunho": return "Rascunho";
-    case "enviado": return "Enviado";
+    case "pendente": return "Pendente";
     case "aprovado": return "Aprovado";
-    case "fechado": return "Fechado";
     case "perdido": return "Perdido";
     default: return s;
   }
@@ -72,9 +71,9 @@ const statusLabel = (s: string) => {
 
 const statusClass = (s: string) => {
   switch (s) {
-    case "enviado": return "bg-yellow-100 text-yellow-800";
-    case "aprovado": return "bg-blue-100 text-blue-800";
-    case "fechado": return "bg-green-100 text-green-800";
+    case "rascunho": return "bg-muted text-muted-foreground";
+    case "pendente": return "bg-yellow-100 text-yellow-800";
+    case "aprovado": return "bg-emerald-100 text-emerald-800";
     case "perdido": return "bg-red-100 text-red-800";
     default: return "bg-muted text-muted-foreground";
   }

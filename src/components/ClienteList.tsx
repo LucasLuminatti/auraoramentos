@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight, FileText, Users, FolderOpen, Plus, Pencil, Flag } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Users, FolderOpen, Plus, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import ClienteArquivos from "@/components/ClienteArquivos";
-import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 
 interface OrcamentoRow {
   id: string;
@@ -48,10 +47,6 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameProjetoId, setRenameProjetoId] = useState<string | null>(null);
   const [renameNome, setRenameNome] = useState("");
-
-  // Encerrar negociação modal
-  const [encerrarOpen, setEncerrarOpen] = useState(false);
-  const [encerrarOrcId, setEncerrarOrcId] = useState("");
 
   const fetchData = async () => {
     const { data: clientesData } = await supabase
@@ -140,9 +135,8 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
   const statusLabel = (s: string) => {
     switch (s) {
       case "rascunho": return "Rascunho";
-      case "enviado": return "Enviado";
+      case "pendente": return "Pendente";
       case "aprovado": return "Aprovado";
-      case "fechado": return "Fechado";
       case "perdido": return "Perdido";
       default: return s;
     }
@@ -150,15 +144,13 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
 
   const statusClass = (s: string) => {
     switch (s) {
-      case "enviado": return "bg-yellow-100 text-yellow-800";
-      case "aprovado": return "bg-blue-100 text-blue-800";
-      case "fechado": return "bg-green-100 text-green-800";
+      case "rascunho": return "bg-muted text-muted-foreground";
+      case "pendente": return "bg-yellow-100 text-yellow-800";
+      case "aprovado": return "bg-emerald-100 text-emerald-800";
       case "perdido": return "bg-red-100 text-red-800";
       default: return "bg-muted text-muted-foreground";
     }
   };
-
-  const canEncerrar = (status: string) => status === "enviado" || status === "aprovado";
 
   return (
     <>
@@ -249,18 +241,6 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                                     <span className="font-medium text-foreground">
                                       R$ {Number(orc.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                     </span>
-                                    {canEncerrar(orc.status) && (
-                                      <button
-                                        className="p-1 rounded hover:bg-muted transition-colors"
-                                        title="Encerrar negociação"
-                                        onClick={() => {
-                                          setEncerrarOrcId(orc.id);
-                                          setEncerrarOpen(true);
-                                        }}
-                                      >
-                                        <Flag className="h-4 w-4 text-muted-foreground" />
-                                      </button>
-                                    )}
                                   </div>
                                 </div>
                               ))}
@@ -349,12 +329,6 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
         </DialogContent>
       </Dialog>
 
-      <EncerrarNegociacaoModal
-        open={encerrarOpen}
-        onOpenChange={setEncerrarOpen}
-        orcamentoId={encerrarOrcId}
-        onSuccess={fetchData}
-      />
     </>
   );
 };

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Flag, Plus, Pencil, Filter } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Search, FileSpreadsheet, DollarSign, ImageIcon, Plus, Pencil, Filter } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import AdminDashboard from "@/components/AdminDashboard";
@@ -18,7 +18,6 @@ import ImportMaster from "@/components/ImportMaster";
 import ImportProdutos from "@/components/ImportProdutos";
 import ImportImagens from "@/components/ImportImagens";
 import PrecosBatch from "@/components/PrecosBatch";
-import EncerrarNegociacaoModal from "@/components/EncerrarNegociacaoModal";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
 import ClienteDialog, { type ClienteRow } from "@/components/ClienteDialog";
@@ -47,13 +46,12 @@ const DEFAULT_SUB_BY_TAB: Partial<Record<TopTab, string>> = {
   precos: "atualizacao",
 };
 
-// Status options para o filtro Pedidos (Phase 6 Plan 04, D-05)
+// Status options para o filtro Pedidos — alinhado com CHECK constraint Phase 7 (D-33)
 const STATUS_OPTIONS = [
   { value: "all", label: "Todos" },
   { value: "rascunho", label: "Rascunho" },
-  { value: "enviado", label: "Enviado" },
+  { value: "pendente", label: "Pendente" },
   { value: "aprovado", label: "Aprovado" },
-  { value: "fechado", label: "Fechado" },
   { value: "perdido", label: "Perdido" },
 ] as const;
 
@@ -198,9 +196,6 @@ const Admin = () => {
   const [arquitetoDeleteTarget, setArquitetoDeleteTarget] = useState<ArquitetoRow | null>(null);
   const [arquitetoDeleteOpen, setArquitetoDeleteOpen] = useState(false);
 
-  // Encerrar negociação
-  const [encerrarOpen, setEncerrarOpen] = useState(false);
-  const [encerrarOrcId, setEncerrarOrcId] = useState("");
 
   useEffect(() => {
     fetchColaboradores();
@@ -425,9 +420,8 @@ const Admin = () => {
   const statusLabel = (s: string) => {
     switch (s) {
       case "rascunho": return "Rascunho";
-      case "enviado": return "Enviado";
+      case "pendente": return "Pendente";
       case "aprovado": return "Aprovado";
-      case "fechado": return "Fechado";
       case "perdido": return "Perdido";
       default: return s;
     }
@@ -435,15 +429,13 @@ const Admin = () => {
 
   const statusClass = (s: string) => {
     switch (s) {
-      case "enviado": return "bg-yellow-100 text-yellow-800";
-      case "aprovado": return "bg-blue-100 text-blue-800";
-      case "fechado": return "bg-green-100 text-green-800";
+      case "rascunho": return "bg-muted text-muted-foreground";
+      case "pendente": return "bg-yellow-100 text-yellow-800";
+      case "aprovado": return "bg-emerald-100 text-emerald-800";
       case "perdido": return "bg-red-100 text-red-800";
       default: return "bg-muted text-muted-foreground";
     }
   };
-
-  const canEncerrar = (status: string) => status === "enviado" || status === "aprovado";
 
   // Contador de filtros ativos em Pedidos (para badge mobile e botão "Limpar filtros")
   const pedidosFilterCount = [
@@ -1011,21 +1003,7 @@ const Admin = () => {
                       <TableCell>
                         <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusClass(o.status)}`}>{statusLabel(o.status)}</span>
                       </TableCell>
-                      <TableCell>
-                        {canEncerrar(o.status) && (
-                          <button
-                            className="p-1 rounded hover:bg-muted transition-colors"
-                            title="Encerrar negociação"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEncerrarOrcId(o.id);
-                              setEncerrarOpen(true);
-                            }}
-                          >
-                            <Flag className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        )}
-                      </TableCell>
+                      <TableCell>{/* Plan 10-04 popula com dropdown de status */}</TableCell>
                     </TableRow>
                   ))}
                   {orcamentos.length === 0 && (
@@ -1120,19 +1098,6 @@ const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <EncerrarNegociacaoModal
-        open={encerrarOpen}
-        onOpenChange={setEncerrarOpen}
-        orcamentoId={encerrarOrcId}
-        onSuccess={() => fetchOrcamentos({
-          arq: arqPedidosParam,
-          cli: cliPedidosParam,
-          dataDe: dataDeParam,
-          dataAte: dataAteParam,
-          status: statusPedidosParam,
-        })}
-      />
 
       <ArquitetoDialog
         open={arquitetoDialogOpen}

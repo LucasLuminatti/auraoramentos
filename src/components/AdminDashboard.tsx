@@ -57,14 +57,13 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
   }, [orcamentos, period]);
 
   const kpis = useMemo(() => {
-    const fechados = filtered.filter((o) => o.status === "fechado");
-    const perdidos = filtered.filter((o) => o.status === "perdido");
     const aprovados = filtered.filter((o) => o.status === "aprovado");
-    const enviados = filtered.filter((o) => o.status === "enviado");
+    const perdidos = filtered.filter((o) => o.status === "perdido");
+    const pendentes = filtered.filter((o) => o.status === "pendente");
 
-    const receitaEfetiva = fechados.reduce((s, o) => s + Number(o.valor), 0);
-    const receitaPrevista = aprovados.reduce((s, o) => s + Number(o.valor), 0);
-    const pipeline = enviados.reduce((s, o) => s + Number(o.valor), 0);
+    const receitaEfetiva = aprovados.reduce((s, o) => s + Number(o.valor), 0);
+    const receitaPrevista = pendentes.reduce((s, o) => s + Number(o.valor), 0);
+    const pipeline = pendentes.reduce((s, o) => s + Number(o.valor), 0);
 
     const projetoMap = new Map<string, number[]>();
     filtered.forEach((o) => {
@@ -81,19 +80,19 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
           ) / projetoMap.size
         : 0;
 
-    // Conversão corrigida: ganhos / (ganhos + perdidos)
+    // Conversão corrigida: aprovados / (aprovados + perdidos)
     const taxaConversao =
-      fechados.length + perdidos.length > 0
-        ? (fechados.length / (fechados.length + perdidos.length)) * 100
+      aprovados.length + perdidos.length > 0
+        ? (aprovados.length / (aprovados.length + perdidos.length)) * 100
         : 0;
 
     // Ciclo médio corrigido: usar fechado_at quando disponível
-    const encerrados = [...fechados, ...perdidos].filter((o) => (o as any).fechado_at);
+    const encerrados = [...aprovados, ...perdidos].filter((o) => (o as any).fechado_at);
     const ciclos = encerrados.map((o) =>
       Math.abs(differenceInDays(new Date((o as any).fechado_at), new Date(o.created_at)))
     );
     // Fallback para orçamentos sem fechado_at
-    const ciclosFallback = [...fechados, ...perdidos]
+    const ciclosFallback = [...aprovados, ...perdidos]
       .filter((o) => !(o as any).fechado_at)
       .map((o) => Math.abs(differenceInDays(new Date(o.data), new Date(o.created_at))));
     const allCiclos = [...ciclos, ...ciclosFallback];
@@ -102,11 +101,11 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
     return { receitaEfetiva, receitaPrevista, pipeline, ticketMedio, taxaConversao, cicloMedio };
   }, [filtered]);
 
-  // Top 5 clientes por receita fechada
+  // Top 5 clientes por receita aprovada
   const topClientes = useMemo(() => {
     const clienteMap = new Map<string, { nome: string; total: number; count: number }>();
     filtered
-      .filter((o) => o.status === "fechado")
+      .filter((o) => o.status === "aprovado")
       .forEach((o) => {
         const nome = (o as any).clientes?.nome || "Sem cliente";
         const cur = clienteMap.get(nome) || { nome, total: 0, count: 0 };
@@ -117,7 +116,7 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
     return [...clienteMap.values()].sort((a, b) => b.total - a.total).slice(0, 5);
   }, [filtered]);
 
-  // Receita mensal (aprovada + fechada)
+  // Receita mensal (pendente + aprovada)
   const monthlyData = useMemo(() => {
     const now = new Date();
     const numMonths = period === "all" ? 12 : Math.min(Math.ceil(Number(period) / 30), 12);
@@ -134,8 +133,8 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
       });
       return {
         mes: m.label,
+        pendente: inRange.filter((o) => o.status === "pendente").reduce((s, o) => s + Number(o.valor), 0),
         aprovado: inRange.filter((o) => o.status === "aprovado").reduce((s, o) => s + Number(o.valor), 0),
-        fechado: inRange.filter((o) => o.status === "fechado").reduce((s, o) => s + Number(o.valor), 0),
       };
     });
   }, [filtered, period]);
@@ -207,10 +206,10 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="mes" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number, name: string) => [formatCurrency(v), name === "fechado" ? "Fechado" : "Aprovado"]} />
-                <Legend formatter={(v) => (v === "fechado" ? "Fechado" : "Aprovado")} />
-                <Bar dataKey="aprovado" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="fechado" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+                <Tooltip formatter={(v: number, name: string) => [formatCurrency(v), name === "pendente" ? "Pendente" : "Aprovado"]} />
+                <Legend formatter={(v) => (v === "pendente" ? "Pendente" : "Aprovado")} />
+                <Bar dataKey="pendente" fill="hsl(45, 93%, 47%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="aprovado" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
