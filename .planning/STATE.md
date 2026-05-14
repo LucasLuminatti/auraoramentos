@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: "Polimento UAT + Multi-tenancy + Automação"
-status: executing
-last_updated: "2026-05-14T14:45:00.000Z"
+milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
+status: planning
+last_updated: "2026-05-14T23:18:40.822Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 56
+  completed_phases: 3
+  total_plans: 21
+  completed_plans: 14
+  percent: 67
 ---
 
 # STATE: AURA
@@ -31,9 +31,9 @@ progress:
 Phase: 08 — COMPLETE (smoke 5/5 PASS, 2026-05-14)
 Next: Phase 9 (Multi-tenancy RLS) — plans a derivar
 
-- **Phase:** 9 (próxima)
+- **Phase:** 11
 - **Plan:** Not started
-- **Status:** Phase 8 fechada, aguardando `/gsd-discuss-phase 9` ou `/gsd-plan-phase 9`
+- **Status:** Ready to plan
 - **Progress:** 2/7 phases · 9/9 plans até aqui
 - **Last activity:** 2026-05-14
 

@@ -19,7 +19,7 @@
 - [x] **Phase 7: Schema & Prep v1.1** — Migrations aditivas (`user_id` em arquitetos/clientes, `data_nascimento` em clientes, `status` em orçamentos se faltar, campos de descrição rica em product_variants se faltarem) — desbloqueia 9, 10 e 12 sem mexer em UI
 - [x] **Phase 8: Cadastros — Opcionalizar + Imagens Manuais** — Cliente com campos opcionais, arquiteto expandido (nascimento/endereço/banco), produtos coringa AU001..AU016 editáveis, anexo de imagem manual por SKU
 - [ ] **Phase 9: Multi-tenancy RLS** — Policies de `arquitetos` e `clientes` replicando padrão Drive v1.0 (D-02) + queries dos componentes ajustadas — colaborador só vê o próprio, admin vê tudo
-- [ ] **Phase 10: Wizard — Edição + Status + Descrição rica** — Step 3 editar preço (≥ mínimo) + quantidade, reabrir rascunho, marcar status (aprovado/perdido/pendente), descrição puxando temperatura(K)+potência+IRC+nicho da ImportMaster
+- [x] **Phase 10: Wizard — Edição + Status + Descrição rica** — Step 3 editar preço (≥ mínimo) + quantidade, reabrir rascunho, marcar status (aprovado/perdido/pendente), descrição puxando temperatura(K)+potência+IRC+nicho da ImportMaster (completed 2026-05-14)
 - [ ] **Phase 11: PDF v2 + Dashboard** — PDF sem bloco "Sistemas" vazio, "Prazo de Entrega" com texto adicional, tab Início substituindo 6 cards por somatório de orçamentos em aberto
 - [ ] **Phase 12: Automação Aniversário** — pg_cron diário + edge function Resend disparando email 5d antes do aniversário do cliente para o colab dono + admin David Grabarz
 - [ ] **Phase 13: Smoke & UAT Closure** — Smoke prod cobrindo todas as fases (RLS com 2 contas, wizard edição, PDF v2 vazio, dashboard, automação), correção de bugs encontrados e fechamento do marco
@@ -126,7 +126,7 @@
 | 7. Schema & Prep v1.1 | 4/4 | Complete | 2026-05-11 |
 | 8. Cadastros — Opcionalizar + Imagens | 5/5 | Complete (smoke 5/5 PASS) | 2026-05-14 |
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
-| 10. Wizard — Edição + Status + Descrição | 0/0 | Not started | - |
+| 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 0/0 | Not started | - |
 | 12. Automação Aniversário | 0/0 | Not started | - |
 | 13. Smoke & UAT Closure | 0/0 | Not started | - |
