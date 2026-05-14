@@ -67,6 +67,66 @@ const LEGACY_TAB_MAP: Record<string, { tab: TopTab; sub?: string }> = {
   excecoes: { tab: "excecoes" },
 };
 
+// ─── StatusBadgeSelect: dropdown de status com AlertDialog one-way para aprovado (WIZ-04) ───
+interface StatusBadgeSelectProps {
+  orcamentoId: string;
+  currentStatus: string;
+  onStatusChange: (orcamentoId: string, novo: string) => Promise<void>;
+}
+
+function StatusBadgeSelect({ orcamentoId, currentStatus, onStatusChange }: StatusBadgeSelectProps) {
+  const [confirmAprovarOpen, setConfirmAprovarOpen] = useState(false);
+  const [pendingValue, setPendingValue] = useState<string | null>(null);
+  const isAprovado = currentStatus === "aprovado";
+
+  const handleChange = (next: string) => {
+    if (next === currentStatus) return;
+    if (next === "aprovado") {
+      setPendingValue(next);
+      setConfirmAprovarOpen(true);
+      return;
+    }
+    void onStatusChange(orcamentoId, next);
+  };
+
+  const handleConfirmAprovado = async () => {
+    if (pendingValue) await onStatusChange(orcamentoId, pendingValue);
+    setConfirmAprovarOpen(false);
+    setPendingValue(null);
+  };
+
+  return (
+    <>
+      <Select value={currentStatus} onValueChange={handleChange} disabled={isAprovado}>
+        <SelectTrigger className="w-[140px] h-8" onClick={(e) => e.stopPropagation()}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent onClick={(e) => e.stopPropagation()}>
+          <SelectItem value="rascunho">Rascunho</SelectItem>
+          <SelectItem value="pendente">Pendente</SelectItem>
+          <SelectItem value="aprovado">Aprovado</SelectItem>
+          <SelectItem value="perdido">Perdido</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <AlertDialog open={confirmAprovarOpen} onOpenChange={setConfirmAprovarOpen}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar como aprovado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível. Depois de aprovado, o orçamento não pode ser revertido para outro status. Tem certeza?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingValue(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAprovado}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -415,6 +475,28 @@ const Admin = () => {
     }
     toast.success("Colaborador removido!");
     fetchColaboradores();
+  };
+
+  // WIZ-04: atualiza status de um orçamento via Supabase UPDATE com otimistic state update
+  const handleStatusChange = async (id: string, novo: string) => {
+    const { error } = await supabase
+      .from("orcamentos")
+      .update({ status: novo })
+      .eq("id", id);
+
+    if (error) {
+      // RLS bloqueio (ex: tentar reverter aprovado ou alterar orçamento de outro colab)
+      toast.error(
+        error.message?.includes("policy")
+          ? "Você não tem permissão para alterar este orçamento (ou ele já está aprovado)."
+          : `Erro ao atualizar status: ${error.message}`
+      );
+      return;
+    }
+
+    // Otimistic update do state local — evita refetch completo
+    setOrcamentos((prev) => prev.map((o) => (o.id === id ? { ...o, status: novo } : o)));
+    toast.success(`Status atualizado para ${novo}`);
   };
 
   const statusLabel = (s: string) => {
@@ -984,7 +1066,6 @@ const Admin = () => {
                     <TableHead>Colaborador</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-20">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -993,7 +1074,14 @@ const Admin = () => {
                       key={o.id}
                       role="button"
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/admin/orcamento/${o.id}`)}
+                      title={o.status === "rascunho" ? "Continuar este rascunho" : undefined}
+                      onClick={() => {
+                        if (o.status === "rascunho") {
+                          navigate("/", { state: { orcamentoId: o.id } });
+                        } else {
+                          navigate(`/admin/orcamento/${o.id}`);
+                        }
+                      }}
                     >
                       <TableCell>{format(new Date(o.data), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                       <TableCell>{(o as any).clientes?.nome || "—"}</TableCell>
@@ -1001,14 +1089,20 @@ const Admin = () => {
                       <TableCell>{(o as any).colaboradores?.nome || "—"}</TableCell>
                       <TableCell className="font-medium">R$ {Number(o.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                       <TableCell>
-                        <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusClass(o.status)}`}>{statusLabel(o.status)}</span>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusClass(o.status)}`}>{statusLabel(o.status)}</span>
+                          <StatusBadgeSelect
+                            orcamentoId={o.id}
+                            currentStatus={o.status}
+                            onStatusChange={handleStatusChange}
+                          />
+                        </div>
                       </TableCell>
-                      <TableCell>{/* Plan 10-04 popula com dropdown de status */}</TableCell>
                     </TableRow>
                   ))}
                   {orcamentos.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         {pedidosFilterCount > 0
                           ? "Nenhum pedido bate com os filtros aplicados"
                           : "Nenhum orçamento"}
