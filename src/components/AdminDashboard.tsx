@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, Target, BarChart3, Clock, Trophy, ThumbsDown } from "lucide-react";
-import { differenceInDays, subDays, startOfMonth, subMonths, format, isAfter } from "date-fns";
+import { Trophy, ThumbsDown, FileClock } from "lucide-react";
+import { subDays, startOfMonth, subMonths, format, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, Legend,
 } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Orcamento {
   id: string;
@@ -17,7 +19,6 @@ interface Orcamento {
   created_at: string;
   data: string;
   projeto_id: string | null;
-  fechado_at?: string | null;
   motivo_perda?: string | null;
   clientes?: { nome: string } | null;
 }
@@ -50,56 +51,34 @@ const PERIOD_OPTIONS = [
 const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
   const [period, setPeriod] = useState("180");
 
+  // DASH-01: somatório de orçamentos em aberto (cross-rep) — D-10, D-11, D-14
+  const { data: emAberto, isLoading: emAbertoLoading } = useQuery({
+    queryKey: ['orcamentos-em-aberto'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orcamentos')
+        .select('status, valor')
+        .in('status', ['rascunho', 'pendente']);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const emAbertoTotais = useMemo(() => {
+    const rascunho = (emAberto ?? [])
+      .filter((o) => o.status === 'rascunho')
+      .reduce((s, o) => s + Number(o.valor ?? 0), 0);
+    const pendente = (emAberto ?? [])
+      .filter((o) => o.status === 'pendente')
+      .reduce((s, o) => s + Number(o.valor ?? 0), 0);
+    return { rascunho, pendente, total: rascunho + pendente };
+  }, [emAberto]);
+
   const filtered = useMemo(() => {
     if (period === "all") return orcamentos;
     const cutoff = subDays(new Date(), Number(period));
     return orcamentos.filter((o) => isAfter(new Date(o.created_at), cutoff));
   }, [orcamentos, period]);
-
-  const kpis = useMemo(() => {
-    const aprovados = filtered.filter((o) => o.status === "aprovado");
-    const perdidos = filtered.filter((o) => o.status === "perdido");
-    const pendentes = filtered.filter((o) => o.status === "pendente");
-
-    const receitaEfetiva = aprovados.reduce((s, o) => s + Number(o.valor), 0);
-    const receitaPrevista = pendentes.reduce((s, o) => s + Number(o.valor), 0);
-    const pipeline = pendentes.reduce((s, o) => s + Number(o.valor), 0);
-
-    const projetoMap = new Map<string, number[]>();
-    filtered.forEach((o) => {
-      if (o.projeto_id) {
-        if (!projetoMap.has(o.projeto_id)) projetoMap.set(o.projeto_id, []);
-        projetoMap.get(o.projeto_id)!.push(Number(o.valor));
-      }
-    });
-    const ticketMedio =
-      projetoMap.size > 0
-        ? [...projetoMap.values()].reduce(
-            (s, vals) => s + vals.reduce((a, b) => a + b, 0) / vals.length,
-            0
-          ) / projetoMap.size
-        : 0;
-
-    // Conversão corrigida: aprovados / (aprovados + perdidos)
-    const taxaConversao =
-      aprovados.length + perdidos.length > 0
-        ? (aprovados.length / (aprovados.length + perdidos.length)) * 100
-        : 0;
-
-    // Ciclo médio corrigido: usar fechado_at quando disponível
-    const encerrados = [...aprovados, ...perdidos].filter((o) => (o as any).fechado_at);
-    const ciclos = encerrados.map((o) =>
-      Math.abs(differenceInDays(new Date((o as any).fechado_at), new Date(o.created_at)))
-    );
-    // Fallback para orçamentos sem fechado_at
-    const ciclosFallback = [...aprovados, ...perdidos]
-      .filter((o) => !(o as any).fechado_at)
-      .map((o) => Math.abs(differenceInDays(new Date(o.data), new Date(o.created_at))));
-    const allCiclos = [...ciclos, ...ciclosFallback];
-    const cicloMedio = allCiclos.length > 0 ? allCiclos.reduce((a, b) => a + b, 0) / allCiclos.length : 0;
-
-    return { receitaEfetiva, receitaPrevista, pipeline, ticketMedio, taxaConversao, cicloMedio };
-  }, [filtered]);
 
   // Top 5 clientes por receita aprovada
   const topClientes = useMemo(() => {
@@ -153,15 +132,6 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
       .sort((a, b) => b.value - a.value);
   }, [filtered]);
 
-  const cards = [
-    { title: "Receita Efetiva", value: formatCurrency(kpis.receitaEfetiva), icon: Trophy },
-    { title: "Receita Prevista", value: formatCurrency(kpis.receitaPrevista), icon: DollarSign },
-    { title: "Pipeline", value: formatCurrency(kpis.pipeline), icon: TrendingUp },
-    { title: "Ticket Médio", value: formatCurrency(kpis.ticketMedio), icon: Target },
-    { title: "Conversão", value: `${kpis.taxaConversao.toFixed(1)}%`, icon: BarChart3 },
-    { title: "Ciclo Médio", value: `${kpis.cicloMedio.toFixed(0)} dias`, icon: Clock },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Period Filter */}
@@ -179,20 +149,27 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
         </Select>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {cards.map((c) => (
-          <Card key={c.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">{c.title}</CardTitle>
-              <c.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg font-bold">{c.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Orçamentos em Aberto (DASH-01) */}
+      <Card className="border-l-4 border-l-primary">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle className="text-sm font-medium">Orçamentos em Aberto</CardTitle>
+          <FileClock className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Rascunho</span>
+            <span className="font-medium">{emAbertoLoading ? '—' : formatCurrency(emAbertoTotais.rascunho)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Pendente</span>
+            <span className="font-medium">{emAbertoLoading ? '—' : formatCurrency(emAbertoTotais.pendente)}</span>
+          </div>
+          <div className="border-t pt-2 flex items-center justify-between">
+            <span className="font-semibold">Total</span>
+            <span className="text-lg font-bold">{emAbertoLoading ? '—' : formatCurrency(emAbertoTotais.total)}</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts */}
       <div className="space-y-4">
@@ -249,7 +226,7 @@ const AdminDashboard = ({ orcamentos }: AdminDashboardProps) => {
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Trophy className="h-4 w-4 text-yellow-500" />
-              Top 5 Clientes por Receita Fechada
+              Top 5 Clientes por Receita Aprovada
             </CardTitle>
           </CardHeader>
           <CardContent>
