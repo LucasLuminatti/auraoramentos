@@ -149,7 +149,7 @@
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
 | 12. Automação Aniversário | 3/3 | Complete    | 2026-05-15 |
-| 13. Smoke & UAT Closure | 2/2 | Complete   | 2026-05-15 |
+| 13. Smoke & UAT Closure | 2/2 | Complete    | 2026-05-15 |
 
 ## Coverage Summary
 

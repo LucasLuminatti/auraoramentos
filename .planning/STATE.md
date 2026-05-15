@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1 (archived)
-milestone_name: "v1.1 — Polimento UAT + Multi-tenancy + Automação — ARCHIVED 2026-05-15"
-status: awaiting_next_milestone
-last_updated: "2026-05-15T18:00:00.000Z"
+milestone: v1.1
+milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
+status: completed
+last_updated: "2026-05-15T14:34:02.881Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 7
@@ -32,9 +32,9 @@ Phase: _none_ (marco fechado)
 Plan: _none_
 Next: definir próximo marco via `/gsd-new-milestone` ou pausa até Lenny escolher foco
 
-- **Phase:** Marco v1.1 archived
-- **Plan:** N/A
-- **Status:** awaiting_next_milestone
+- **Phase:** 13
+- **Plan:** Not started
+- **Status:** Milestone complete
 - **Progress:** [██████████] 100% (v1.1 completo: 7/7 phases, 29/29 plans)
 - **Last activity:** 2026-05-15
 
@@ -97,6 +97,7 @@ Next: definir próximo marco via `/gsd-new-milestone` ou pausa até Lenny escolh
 **Definir próximo marco** via `/gsd-new-milestone` ou pausar até Lenny escolher foco.
 
 **Candidatos provisórios para v1.2+** (do PROJECT.md + follow-ups deferidos do v1.1):
+
 - **Preços via CSV** (IMP-02 deferido v1.0) + tabela de custos (desbloqueia margem)
 - **Margem no pedido** — agregada por arquiteto/colaborador/período
 - **Documentação + testes das fórmulas de cálculo** (fita/driver/perfil/agrupamento)
