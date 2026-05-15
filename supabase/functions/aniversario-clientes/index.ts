@@ -113,9 +113,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // WR-01: deduplicar admin_emails em relação ao colab_email — quando colab é admin (ex: Lenny),
+      // o email apareceria duas vezes no `to` do Resend. Mantém log fiel ao que foi enviado.
+      const adminEmailsDedup = adminEmails.filter((e) => e !== cliente.colab_email);
       const destinatarios = {
         colab_email: cliente.colab_email,
-        admin_emails: adminEmails,
+        admin_emails: adminEmailsDedup,
       };
 
       // 4b. INSERT log com status optimistic 'sent' — UNIQUE constraint garante idempotência (D-02)
@@ -144,7 +147,8 @@ Deno.serve(async (req) => {
       const logId = inserted!.id;
 
       // 4c. Enviar email via Resend
-      const toList = [cliente.colab_email, ...adminEmails];
+      // WR-01: toList usa adminEmailsDedup para evitar duplicação quando colab é admin
+      const toList = [cliente.colab_email, ...adminEmailsDedup];
       const dataAniv = new Date(cliente.data_nascimento);
       const dataFormatada = `${String(dataAniv.getUTCDate()).padStart(2, "0")}/${String(
         dataAniv.getUTCMonth() + 1
