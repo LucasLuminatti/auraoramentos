@@ -110,7 +110,10 @@
   3. Cron diário roda automaticamente em produção (pg_cron ativo) — não depende de ação manual nem de um usuário estar logado
   4. Cliente sem `data_nascimento` ou com aniversário fora da janela de 5 dias não dispara email (zero falso-positivo)
   5. Logs da edge function registram cada disparo com cliente_id, colab destinatário e timestamp — auditável em caso de falha de entrega Resend
-**Plans**: TBD
+**Plans**: 3 plans
+- [x] 12-01-PLAN.md — Migration tabela aniversario_envios + stored functions (buscar_aniversariantes_d5 + buscar_admins_emails) + push prod
+- [ ] 12-02-PLAN.md — Edge function aniversario-clientes (Deno + Resend) + deploy prod + smoke curl manual
+- [ ] 12-03-PLAN.md — [BLOCKING] Vault secret manual + migration cron schedule (pg_cron + pg_net) + smoke pós-deploy
 
 ### Phase 13: Smoke & UAT Closure
 **Goal**: Marco v1.1 validado em produção via smoke test manual cobrindo todas as fases (RLS bilateral, wizard edição, PDF v2, dashboard, automação) e fechado com requirements outcome + archive do roadmap
@@ -132,7 +135,7 @@
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
-| 12. Automação Aniversário | 0/0 | Not started | - |
+| 12. Automação Aniversário | 1/3 | In Progress|  |
 | 13. Smoke & UAT Closure | 0/0 | Not started | - |
 
 ## Coverage Summary

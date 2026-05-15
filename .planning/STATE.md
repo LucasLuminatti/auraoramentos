@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
-status: planning
-last_updated: "2026-05-15T01:41:39.307Z"
-last_activity: 2026-05-15
+status: executing
+last_updated: "2026-05-14T23:55:00.000Z"
+last_activity: 2026-05-14
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 24
-  completed_plans: 17
-  percent: 71
+  total_plans: 27
+  completed_plans: 18
+  percent: 67
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-05-14 — Phase 8 complete (5/5 plans, smoke prod 5/5 PASS, hotfix Phase 7 user_id regression)
+**Last updated:** 2026-05-14 — Phase 12 Plan 01 complete (migration aniversario_envios + 2 stored fns aplicados em prod via MCP, smoke 5/5 PASS)
 
 ## Project Reference
 
@@ -24,19 +24,20 @@ progress:
 - **Current Milestone:** v1.1 — Polimento UAT + Multi-tenancy + Automação
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 11 — pdf-v2-dashboard
+- **Current Focus:** Phase 12 — automa-o-anivers-rio
 
 ## Current Position
 
-Phase: 11 (pdf-v2-dashboard) — EXECUTING
-Plan: 1 of 3
-Next: Phase 9 (Multi-tenancy RLS) — plans a derivar
+Phase: 12 (automa-o-anivers-rio) — EXECUTING
+Plan: 2 of 3 (Wave 2 — edge function aniversario-clientes)
+Next: Plan 12-02 (edge function Deno + Resend) → Plan 12-03 (Vault secret + cron)
+Após Phase 12: Phase 9 (Multi-tenancy RLS) — plans a derivar
 
 - **Phase:** 12
-- **Plan:** Not started
-- **Status:** Ready to plan
-- **Progress:** 2/7 phases · 9/9 plans até aqui
-- **Last activity:** 2026-05-15
+- **Plan:** 12-01 COMPLETE (migration aplicada em prod, schema disponível pra Wave 2)
+- **Status:** Executing Phase 12 — Plan 12-02 próximo
+- **Progress:** 4/7 phases completas · 18/27 plans
+- **Last activity:** 2026-05-14
 
 ## Roadmap v1.1 (resumo)
 
@@ -84,17 +85,25 @@ Next: Phase 9 (Multi-tenancy RLS) — plans a derivar
 
 ## Next Action
 
-`/gsd-discuss-phase 9` ou `/gsd-plan-phase 9` — Multi-tenancy RLS (replicar padrão Drive D-02, policies em `arquitetos` e `clientes`, queries ajustadas, smoke 2 contas).
+`/gsd-execute-phase 12` — continuar Plan 12-02 (edge function `aniversario-clientes` em Deno + Resend, consumindo `buscar_aniversariantes_d5()` + `buscar_admins_emails()` via service role RPC). Schema da Wave 1 pronto em prod (smoke 5/5 PASS).
 
 **Atenção:** Phase 7 deixou `user_id NOT NULL` sem `DEFAULT auth.uid()`. Hotfix `71d28d7` (08-05) injeta user_id no payload do dialog. Avaliar se Phase 9 (que vai adicionar policy `WITH CHECK (user_id = auth.uid())`) torna isso redundante OU se vale adicionar `DEFAULT auth.uid()` na coluna como cinto-e-suspensórios.
+
+### Phase 12 — Decisões carryover (Plan 12-01)
+
+- **Stored fns vs JOIN inline:** `buscar_aniversariantes_d5()` + `buscar_admins_emails()` SECURITY DEFINER pra evitar N+1 e desacoplar schema da edge fn
+- **UNIQUE(cliente_id, ano_referencia) = idempotência atomic:** Wave 2 edge fn deve tratar PG 23505 como "já enviado nesse ano" (sem lock aplicacional)
+- **LEFT JOIN auth.users:** cliente órfão (D-06) retorna `colab_email=NULL` → Wave 2 deve registrar `status='skipped_no_owner'`
+- **Edge case 29/02 (D-08):** já tratado no SQL — dispara em 28/02 em ano não-bissexto
+- **REVOKE EXECUTE pattern:** authenticated não chama as fns; só service role via RPC
 
 ## Session Continuity
 
 - ROADMAP.md: 7 phases (7-13), 18 reqs mapeados, coverage 100%
-- REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída)
+- REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída) — AUTO-01/AUTO-02 ficam parcialmente atendidos (schema OK; entrega final só com edge fn + cron da Wave 2/3)
 - MILESTONES.md: índice ainda só com v1.0 — atualizar na Phase 13 (closure)
 
-**Last activity:** 2026-05-14 — Phase 8 fechada (smoke 5/5 PASS via Playwright + Supabase MCP, hotfix Phase 7 user_id regression aplicado)
+**Last activity:** 2026-05-14 — Plan 12-01 fechado (migration aniversario_envios + 2 stored fns aplicados em prod via MCP `apply_migration`, smoke SQL 5/5 PASS, PUSH-LOG + SUMMARY commitados).
 
 ---
-*STATE refreshed: 2026-05-14 ao fechar Phase 8 (commits 311cda9..71d28d7, 12 commits, 5 plans + 1 hotfix).*
+*STATE refreshed: 2026-05-14 ao fechar Plan 12-01 (commit 39a2c1b da migration + docs commit pendente do plano final).*
