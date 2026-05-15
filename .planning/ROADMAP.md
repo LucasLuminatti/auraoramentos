@@ -22,7 +22,7 @@
 - [x] **Phase 10: Wizard — Edição + Status + Descrição rica** — Step 3 editar preço (≥ mínimo) + quantidade, reabrir rascunho, marcar status (aprovado/perdido/pendente), descrição puxando temperatura(K)+potência+IRC+nicho da ImportMaster
  (completed 2026-05-14)
 - [x] **Phase 11: PDF v2 + Dashboard** — PDF sem bloco "Sistemas" vazio, "Prazo de Entrega" com texto adicional, tab Início substituindo 6 cards por somatório de orçamentos em aberto (completed 2026-05-15)
-- [ ] **Phase 12: Automação Aniversário** — pg_cron diário + edge function Resend disparando email 5d antes do aniversário do cliente para o colab dono + admin David Grabarz
+- [x] **Phase 12: Automação Aniversário** — pg_cron diário + edge function Resend disparando email 5d antes do aniversário do cliente para o colab dono + admin David Grabarz (completed 2026-05-15)
 - [ ] **Phase 13: Smoke & UAT Closure** — Smoke prod cobrindo todas as fases (RLS com 2 contas, wizard edição, PDF v2 vazio, dashboard, automação), correção de bugs encontrados e fechamento do marco
 
 ## Phase Details
@@ -113,7 +113,7 @@
 **Plans**: 3 plans
 - [x] 12-01-PLAN.md — Migration tabela aniversario_envios + stored functions (buscar_aniversariantes_d5 + buscar_admins_emails) + push prod
 - [x] 12-02-PLAN.md — Edge function aniversario-clientes (Deno + Resend) + deploy prod via MCP + smoke 2-run E2E PASS
-- [ ] 12-03-PLAN.md — [BLOCKING] Vault secret manual + migration cron schedule (pg_cron + pg_net) + smoke pós-deploy
+- [x] 12-03-PLAN.md — Vault secret manual + migration cron schedule (pg_cron 1.6.4 + pg_net 0.20.0) aplicada + smoke pós-deploy 200 OK (completed 2026-05-15)
 
 ### Phase 13: Smoke & UAT Closure
 **Goal**: Marco v1.1 validado em produção via smoke test manual cobrindo todas as fases (RLS bilateral, wizard edição, PDF v2, dashboard, automação) e fechado com requirements outcome + archive do roadmap
@@ -135,7 +135,7 @@
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
-| 12. Automação Aniversário | 2/3 | In Progress|  |
+| 12. Automação Aniversário | 3/3 | Complete   | 2026-05-15 |
 | 13. Smoke & UAT Closure | 0/0 | Not started | - |
 
 ## Coverage Summary
@@ -162,4 +162,4 @@
 - **v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07): cadastro expandido (CPF/telefone/setor), arquiteto como entidade, importação CSV de produtos, Drive RLS por colaborador, admin reorganizado, PDF v2 (Playfair+Inter), filtros por arquiteto, smoke prod 8/8 → [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 ---
-*Last updated: 2026-05-14 — Phase 8 complete (5/5 plans, smoke prod 5/5 PASS). Hotfix Phase 7 user_id NOT NULL regression encontrado e corrigido durante smoke.*
+*Last updated: 2026-05-15 — Phase 12 complete (3/3 plans). Wave 3 fechou com Vault secret + migration cron schedule aplicada + smoke pós-deploy status_code=200. Próxima execução real automática: 2026-05-15 09:00 UTC. Phase 13 (UAT closure) destravada.*

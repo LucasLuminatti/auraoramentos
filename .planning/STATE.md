@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
 status: executing
-last_updated: "2026-05-15T00:30:00.000Z"
-last_activity: 2026-05-14
+last_updated: "2026-05-15T02:55:00.000Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 27
-  completed_plans: 19
-  percent: 70
+  completed_plans: 20
+  percent: 74
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-05-14 — Phase 12 Plan 02 complete (edge function aniversario-clientes deployed em prod via MCP, smoke 2-run E2E PASS — Wave 3 destravada)
+**Last updated:** 2026-05-15 — Phase 12 Plan 03 complete (Vault secret criado + migration cron aplicada + smoke E2E PASS — Phase 12 entregue end-to-end, ready for Phase 13 UAT closure)
 
 ## Project Reference
 
@@ -28,16 +28,14 @@ progress:
 
 ## Current Position
 
-Phase: 12 (automa-o-anivers-rio) — EXECUTING
-Plan: 3 of 3 (Wave 3 — pg_cron + pg_net schedule)
-Next: Plan 12-03 (Vault secret manual + migration cron schedule + smoke pós-deploy)
-Após Phase 12: Phase 9 (Multi-tenancy RLS) — plans a derivar
+Phase: 12 (automa-o-anivers-rio) — COMPLETE (3/3 plans)
+Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paralelo
 
-- **Phase:** 12
-- **Plan:** 12-02 COMPLETE (edge function deployed em prod via MCP, smoke E2E 2-run PASS, log + inbox confirmados — caveats Junk/dedup documentados)
-- **Status:** Executing Phase 12 — Plan 12-03 próximo (último do Wave)
-- **Progress:** 4/7 phases completas · 19/27 plans
-- **Last activity:** 2026-05-14
+- **Phase:** 12 COMPLETE (Wave 1 schema + Wave 2 edge fn + Wave 3 cron — chain E2E live em prod)
+- **Plan:** 12-03 COMPLETE (Vault secret criado, migration aplicada, cron `aniversario-diario` ativo @ 09:00 UTC, smoke pós-deploy status_code=200)
+- **Status:** Phase 12 entregue — pronto para `verify_phase_goal` (Phase 13 closure)
+- **Progress:** 5/7 phases completas · 20/27 plans
+- **Last activity:** 2026-05-15
 
 ## Roadmap v1.1 (resumo)
 
@@ -85,11 +83,16 @@ Após Phase 12: Phase 9 (Multi-tenancy RLS) — plans a derivar
 
 ## Next Action
 
-`/gsd-execute-phase 12` — continuar Plan 12-03 (último do Wave): Vault secret `service_role_key` + migration pg_cron schedule diário (10h BRT / 13h UTC) chamando `https://jkewlaezvrbuicmncqbj.supabase.co/functions/v1/aniversario-clientes` via `net.http_post`. Edge fn da Wave 2 pronta e validada em prod.
+`/gsd-verify-phase 12` (ou `/gsd-plan-phase 13` para iniciar UAT closure). Phase 12 entregue end-to-end:
+- Wave 1: tabela `aniversario_envios` + stored fns `buscar_aniversariantes_d5` + `buscar_admins_emails` em prod
+- Wave 2: edge fn `aniversario-clientes` deployed via MCP, smoke 2-run E2E PASS
+- Wave 3: Vault secret `service_role_key` criado, migration `20260515000002_aniversario_cron_schedule` aplicada, cron `aniversario-diario` ativo @ 09:00 UTC, smoke pós-deploy status_code=200 + content JSON `{"processed":0,...}`
+
+**Próxima execução real do cron:** 2026-05-15 09:00 UTC = 06:00 BRT.
 
 **Atenção:** Phase 7 deixou `user_id NOT NULL` sem `DEFAULT auth.uid()`. Hotfix `71d28d7` (08-05) injeta user_id no payload do dialog. Avaliar se Phase 9 (que vai adicionar policy `WITH CHECK (user_id = auth.uid())`) torna isso redundante OU se vale adicionar `DEFAULT auth.uid()` na coluna como cinto-e-suspensórios.
 
-### Phase 12 — Decisões carryover (Plan 12-01 + 12-02)
+### Phase 12 — Decisões carryover (Plan 12-01 + 12-02 + 12-03)
 
 - **Stored fns vs JOIN inline (12-01):** `buscar_aniversariantes_d5()` + `buscar_admins_emails()` SECURITY DEFINER pra evitar N+1 e desacoplar schema da edge fn
 - **UNIQUE(cliente_id, ano_referencia) = idempotência atomic (12-01):** edge fn trata PG 23505 como "já enviado nesse ano" — mas na prática stored fn já filtra antes (better-than-spec confirmado em 12-02)
@@ -100,6 +103,10 @@ Após Phase 12: Phase 9 (Multi-tenancy RLS) — plans a derivar
 - **INSERT optimistic 'sent' + UPDATE 'failed' (12-02):** mantém row única por (cliente, ano), preserva auditoria mesmo em falha de Resend
 - **Multi-admin dinâmico via RPC (12-02):** substitui hardcode ADMIN_EMAIL legacy do request-access; suporta N admins sem redeploy
 - **Pattern Deno + Resend (12-02):** edge fn replica request-access (imports esm.sh + npm:, createClient com SERVICE_ROLE, OPTIONS+CORS, from `noreply@orcamentosaura.com.br`) — pattern já validado em prod
+- **Vault subquery em RUNTIME (12-03):** cron command lê `decrypted_secret` a cada disparo (não em schedule-time) — rotação propaga sem redeploy
+- **DO $$ BEGIN ... END $$ defensive cleanup (12-03):** `cron.unschedule` retorna void, não funciona em WHERE — bloco anônimo PL/pgSQL é o padrão
+- **timeout_milliseconds=60000 (12-03):** 60s folgado pro volume atual; reduzir pra 10s no futuro se quiser fail-fast
+- **Schedule literal `'0 9 * * *'` (12-03):** 09:00 UTC = 06:00 BR direto, sem timezone math em SQL
 
 ### Phase 12 — Follow-ups separados (NÃO bloqueiam Wave 3)
 
@@ -112,7 +119,7 @@ Após Phase 12: Phase 9 (Multi-tenancy RLS) — plans a derivar
 - REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída) — AUTO-01/AUTO-02 ficam parcialmente atendidos (schema + edge fn OK; entrega final só com cron Wave 3)
 - MILESTONES.md: índice ainda só com v1.0 — atualizar na Phase 13 (closure)
 
-**Last activity:** 2026-05-14 — Plan 12-02 fechado (edge function `aniversario-clientes` deployed em prod via MCP `deploy_edge_function` version=1 ACTIVE, smoke 2-run E2E PASS, log + inbox confirmados, SMOKE-RESULTS + SUMMARY commitados).
+**Last activity:** 2026-05-15 — Plan 12-03 fechado (Vault secret `service_role_key` criado em prod via MCP execute_sql, migration `20260515000002_aniversario_cron_schedule` aplicada via MCP apply_migration, cron `aniversario-diario` ativo `0 9 * * *`, smoke E2E `net._http_response.status_code=200` + content JSON. Phase 12 entregue end-to-end).
 
 ---
-*STATE refreshed: 2026-05-14 ao fechar Plan 12-02 (commit 7cdf8d4 do edge fn + docs commit pendente do plano final).*
+*STATE refreshed: 2026-05-15 ao fechar Plan 12-03 (commit e03dd4c do SQL migration + docs commit final do plano).*
