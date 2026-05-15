@@ -112,7 +112,7 @@
   5. Logs da edge function registram cada disparo com cliente_id, colab destinatário e timestamp — auditável em caso de falha de entrega Resend
 **Plans**: 3 plans
 - [x] 12-01-PLAN.md — Migration tabela aniversario_envios + stored functions (buscar_aniversariantes_d5 + buscar_admins_emails) + push prod
-- [ ] 12-02-PLAN.md — Edge function aniversario-clientes (Deno + Resend) + deploy prod + smoke curl manual
+- [x] 12-02-PLAN.md — Edge function aniversario-clientes (Deno + Resend) + deploy prod via MCP + smoke 2-run E2E PASS
 - [ ] 12-03-PLAN.md — [BLOCKING] Vault secret manual + migration cron schedule (pg_cron + pg_net) + smoke pós-deploy
 
 ### Phase 13: Smoke & UAT Closure
@@ -135,7 +135,7 @@
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
-| 12. Automação Aniversário | 1/3 | In Progress|  |
+| 12. Automação Aniversário | 2/3 | In Progress|  |
 | 13. Smoke & UAT Closure | 0/0 | Not started | - |
 
 ## Coverage Summary
