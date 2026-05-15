@@ -9,13 +9,13 @@ progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 27
-  completed_plans: 21
+  completed_plans: 24
   percent: 78
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-05-15 — Phase 09 Plan 01 complete (preflight callsite audit, 11 callsites em arquitetos/clientes classificados, 0 Risk — Phase 9 confirmada como zero-code-change no client)
+**Last updated:** 2026-05-15 — Phase 09 Plans 02/03/04 documentados retroativamente (migration RLS arquitetos+clientes já live em prod desde 2026-05-14; verificação MCP confirma 8 policies + 2 DEFAULTs). Próximo: Plan 09-05 (signup manual 2º colaborador).
 
 ## Project Reference
 
@@ -29,8 +29,8 @@ progress:
 ## Current Position
 
 Phase: 09 (multi-tenancy-rls) — EXECUTING
-Plan: 2 of 7 (após 09-01 fechado — audit baseline em 09-PREFLIGHT.md)
-Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paralelo
+Plan: 5 of 7 (após 09-04 fechado retroativamente — migration aplicada em prod 2026-05-14, version `20260514154347`)
+Next: Plan 09-05 (signup manual do segundo colaborador — checkpoint humano) → 09-06 (smoke RLS bilateral) → 09-07 (close-out)
 
 - **Phase:** 13
 - **Plan:** Not started
@@ -122,7 +122,7 @@ Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paral
 - REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída) — AUTO-01/AUTO-02 ficam parcialmente atendidos (schema + edge fn OK; entrega final só com cron Wave 3)
 - MILESTONES.md: índice ainda só com v1.0 — atualizar na Phase 13 (closure)
 
-**Last activity:** 2026-05-15 — Plan 09-01 fechado (preflight callsite audit publicado em `09-PREFLIGHT.md`; 11 callsites em arquitetos/clientes classificados; 0 Risk; Phase 9 confirmada zero-code-change no frontend; baseline pronta pra investigação pós-migration).
+**Last activity:** 2026-05-15 — Plans 09-02/09-03/09-04 documentados retroativamente. Migration `20260514000001_arquitetos_clientes_rls.sql` foi aplicada em prod 2026-05-14 (version `20260514154347` em `supabase_migrations.schema_migrations`) fora do fluxo GSD; verificação MCP em 2026-05-15 confirma 8 policies live (4 arquitetos + 4 clientes) + DEFAULT `auth.uid()` em ambas as colunas user_id + RLS enabled em ambas. RLS-01 + RLS-02 estruturalmente em vigor; smoke comportamental pendente (Wave 4-5 = 09-05/06/07).
 
 ---
-*STATE refreshed: 2026-05-15 ao fechar Plan 09-01 (commit `4fdba6a` do PREFLIGHT.md).*
+*STATE refreshed: 2026-05-15 ao documentar retroativamente Plans 09-02/03/04 (commits `5181494`, `4dff930`, `7014d5f`). Phase 9 estruturalmente done em prod desde 2026-05-14; falta smoke bilateral (09-05/06/07).*

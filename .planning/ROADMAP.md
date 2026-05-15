@@ -70,7 +70,14 @@
   3. Admin (`has_role(admin)`) continua vendo todos os clientes e todos os arquitetos de todos os colaboradores em todas as listas
   4. Criação de cliente/arquiteto preenche `user_id` automaticamente com o `auth.uid()` do usuário logado (sem campo manual no form)
   5. Smoke com 2 contas reais (colab A + colab B) confirma isolamento bilateral; admin vê união dos dois
-**Plans**: TBD
+**Plans**: 7 plans
+- [x] 09-01-PLAN.md — Preflight callsite audit (11 callsites em arquitetos/clientes classificados — 0 Risk; Phase 9 confirmada zero-code-change no frontend)
+- [x] 09-02-PLAN.md — PRE-PUSH snapshot pg_policies baseline (6 policies legadas confirmadas, zero divergência D-02) — documentado retroativamente 2026-05-15
+- [x] 09-03-PLAN.md — Migration SQL `20260514000001_arquitetos_clientes_rls.sql` (8 policies + 2 DEFAULTs + 6 DROPs, BEGIN/COMMIT atômico) — commit `31ef3bc` 2026-05-14
+- [x] 09-04-PLAN.md — Apply migration em prod (version `20260514154347` em schema_migrations, RLS-01 + RLS-02 estruturalmente live) — documentado retroativamente 2026-05-15
+- [ ] 09-05-PLAN.md — Signup manual do segundo colaborador (checkpoint humano)
+- [ ] 09-06-PLAN.md — Smoke RLS bilateral em prod (colab A vs B + admin)
+- [ ] 09-07-PLAN.md — Close-out Phase 9 (verification + STATE/ROADMAP update)
 
 ### Phase 10: Wizard — Edição + Status + Descrição rica
 **Goal**: Wizard deixa de ser one-way — colaborador pode ajustar preço/quantidade no Step 3 antes do PDF, reabrir rascunho do ponto onde parou, marcar status do orçamento após geração e produtos exibem descrição rica (temperatura/potência/IRC/nicho) puxada da planilha master
@@ -132,7 +139,7 @@
 |-------|----------------|--------|-----------|
 | 7. Schema & Prep v1.1 | 4/4 | Complete | 2026-05-11 |
 | 8. Cadastros — Opcionalizar + Imagens | 5/5 | Complete (smoke 5/5 PASS) | 2026-05-14 |
-| 9. Multi-tenancy RLS | 0/0 | Not started | - |
+| 9. Multi-tenancy RLS | 4/7 | Executing (RLS structural live in prod 2026-05-14; smoke pending 09-05/06/07) | - |
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
 | 12. Automação Aniversário | 3/3 | Complete    | 2026-05-15 |
@@ -162,4 +169,4 @@
 - **v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07): cadastro expandido (CPF/telefone/setor), arquiteto como entidade, importação CSV de produtos, Drive RLS por colaborador, admin reorganizado, PDF v2 (Playfair+Inter), filtros por arquiteto, smoke prod 8/8 → [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 ---
-*Last updated: 2026-05-15 — Phase 12 complete (3/3 plans). Wave 3 fechou com Vault secret + migration cron schedule aplicada + smoke pós-deploy status_code=200. Próxima execução real automática: 2026-05-15 09:00 UTC. Phase 13 (UAT closure) destravada.*
+*Last updated: 2026-05-15 — Phase 9 Plans 02/03/04 documentados retroativamente (migration RLS arquitetos+clientes aplicada em prod 2026-05-14, version `20260514154347`). 8 policies + 2 DEFAULTs live; RLS-01 + RLS-02 estruturalmente em vigor. Próximo: Plan 09-05 (signup manual 2º colaborador) → 09-06 (smoke bilateral).*
