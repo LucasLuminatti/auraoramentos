@@ -149,11 +149,14 @@ Deno.serve(async (req) => {
       // 4c. Enviar email via Resend
       // WR-01: toList usa adminEmailsDedup para evitar duplicação quando colab é admin
       const toList = [cliente.colab_email, ...adminEmailsDedup];
-      const dataAniv = new Date(cliente.data_nascimento);
-      const dataFormatada = `${String(dataAniv.getUTCDate()).padStart(2, "0")}/${String(
-        dataAniv.getUTCMonth() + 1
-      ).padStart(2, "0")}`;
-      const idadeQueCompleta = anoReferencia - dataAniv.getUTCFullYear();
+      // WR-04: parse manual de data_nascimento (formato Postgres DATE 'YYYY-MM-DD') —
+      // evita ambiguidade UTC de `new Date(string)` caso o driver mude o shape no futuro.
+      const [yyyyStr, mmStr, ddStr] = cliente.data_nascimento.split("-");
+      const yyyy = Number(yyyyStr);
+      const mm = Number(mmStr);
+      const dd = Number(ddStr);
+      const dataFormatada = `${String(dd).padStart(2, "0")}/${String(mm).padStart(2, "0")}`;
+      const idadeQueCompleta = anoReferencia - yyyy;
 
       try {
         const result = await resend.emails.send({
