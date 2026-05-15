@@ -139,7 +139,7 @@
 |-------|----------------|--------|-----------|
 | 7. Schema & Prep v1.1 | 4/4 | Complete | 2026-05-11 |
 | 8. Cadastros — Opcionalizar + Imagens | 5/5 | Complete (smoke 5/5 PASS) | 2026-05-14 |
-| 9. Multi-tenancy RLS | 7/7 | Complete   | 2026-05-15 |
+| 9. Multi-tenancy RLS | 7/7 | Complete    | 2026-05-15 |
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
 | 12. Automação Aniversário | 3/3 | Complete    | 2026-05-15 |
