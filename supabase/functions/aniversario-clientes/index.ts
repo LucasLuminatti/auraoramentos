@@ -28,6 +28,10 @@ interface AdminEmailRow {
   email: string;
 }
 
+// WR-05: valida formato de email (não só trim) — evita marcar como `failed` o que deveria ser `skipped_no_owner`
+const isValidEmail = (e: string | null | undefined): boolean =>
+  !!e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -73,7 +77,7 @@ Deno.serve(async (req) => {
 
     const adminEmails: string[] = ((adminRows ?? []) as AdminEmailRow[])
       .map((r) => r.email)
-      .filter((e) => !!e && e.trim().length > 0);
+      .filter((e) => isValidEmail(e));
 
     let processed = 0;
     let sent = 0;
@@ -90,8 +94,9 @@ Deno.serve(async (req) => {
     for (const cliente of (aniversariantes ?? []) as ClienteAniversariante[]) {
       processed++;
 
-      // 4a. Cliente órfão (colab dono sem email) — registra skipped sem enviar (D-06)
-      if (!cliente.colab_email || cliente.colab_email.trim() === "") {
+      // 4a. Cliente órfão (colab dono sem email válido) — registra skipped sem enviar (D-06)
+      // WR-05: validar formato de email (não só trim) — evita marcar como `failed` o que deveria ser `skipped_no_owner`
+      if (!isValidEmail(cliente.colab_email)) {
         const { error: skipErr } = await supabase
           .from("aniversario_envios")
           .insert({
@@ -99,7 +104,7 @@ Deno.serve(async (req) => {
             ano_referencia: anoReferencia,
             destinatarios: { colab_email: null, admin_emails: adminEmails },
             status: "skipped_no_owner",
-            error_msg: "colab dono sem email (auth.users.email nulo ou vazio)",
+            error_msg: "colab dono sem email válido (auth.users.email nulo, vazio ou malformado)",
           });
         if (skipErr && skipErr.code !== "23505") {
           console.error(`[skip-insert ${cliente.id}] ${skipErr.message}`);
