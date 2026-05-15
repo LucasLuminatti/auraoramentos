@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
-status: executing
-last_updated: "2026-05-15T02:55:00.000Z"
+status: planning
+last_updated: "2026-05-15T03:02:45.462Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 7
@@ -31,9 +31,9 @@ progress:
 Phase: 12 (automa-o-anivers-rio) — COMPLETE (3/3 plans)
 Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paralelo
 
-- **Phase:** 12 COMPLETE (Wave 1 schema + Wave 2 edge fn + Wave 3 cron — chain E2E live em prod)
-- **Plan:** 12-03 COMPLETE (Vault secret criado, migration aplicada, cron `aniversario-diario` ativo @ 09:00 UTC, smoke pós-deploy status_code=200)
-- **Status:** Phase 12 entregue — pronto para `verify_phase_goal` (Phase 13 closure)
+- **Phase:** 13
+- **Plan:** Not started
+- **Status:** Ready to plan
 - **Progress:** 5/7 phases completas · 20/27 plans
 - **Last activity:** 2026-05-15
 
@@ -84,6 +84,7 @@ Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paral
 ## Next Action
 
 `/gsd-verify-phase 12` (ou `/gsd-plan-phase 13` para iniciar UAT closure). Phase 12 entregue end-to-end:
+
 - Wave 1: tabela `aniversario_envios` + stored fns `buscar_aniversariantes_d5` + `buscar_admins_emails` em prod
 - Wave 2: edge fn `aniversario-clientes` deployed via MCP, smoke 2-run E2E PASS
 - Wave 3: Vault secret `service_role_key` criado, migration `20260515000002_aniversario_cron_schedule` aplicada, cron `aniversario-diario` ativo @ 09:00 UTC, smoke pós-deploy status_code=200 + content JSON `{"processed":0,...}`
