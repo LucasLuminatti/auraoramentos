@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
-status: planning
-last_updated: "2026-05-15T03:02:45.462Z"
+status: executing
+last_updated: "2026-05-15T12:58:31.153Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 27
-  completed_plans: 20
-  percent: 74
+  completed_plans: 21
+  percent: 78
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-05-15 — Phase 12 Plan 03 complete (Vault secret criado + migration cron aplicada + smoke E2E PASS — Phase 12 entregue end-to-end, ready for Phase 13 UAT closure)
+**Last updated:** 2026-05-15 — Phase 09 Plan 01 complete (preflight callsite audit, 11 callsites em arquitetos/clientes classificados, 0 Risk — Phase 9 confirmada como zero-code-change no client)
 
 ## Project Reference
 
@@ -24,17 +24,18 @@ progress:
 - **Current Milestone:** v1.1 — Polimento UAT + Multi-tenancy + Automação
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 12 — automa-o-anivers-rio
+- **Current Focus:** Phase 09 — multi-tenancy-rls
 
 ## Current Position
 
-Phase: 12 (automa-o-anivers-rio) — COMPLETE (3/3 plans)
+Phase: 09 (multi-tenancy-rls) — EXECUTING
+Plan: 2 of 7 (após 09-01 fechado — audit baseline em 09-PREFLIGHT.md)
 Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paralelo
 
 - **Phase:** 13
 - **Plan:** Not started
-- **Status:** Ready to plan
-- **Progress:** 5/7 phases completas · 20/27 plans
+- **Status:** Executing Phase 09
+- **Progress:** [████████░░] 78%
 - **Last activity:** 2026-05-15
 
 ## Roadmap v1.1 (resumo)
@@ -66,6 +67,7 @@ Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paral
 - Drive RLS via `user_id` direto (D-02 errata) — padrão a replicar em `arquitetos` e `clientes` na Phase 9
 - PDF v1/v2 router (`pdf_template_version`) — ajustes da Phase 11 ficam no template v2 apenas; v1 não pode regredir
 - ImportMaster XLSX (2.088 SKUs oficiais) é fonte da verdade pra descrição rica — Phase 7 verifica gaps antes de planar WIZ-05
+- **Phase 9 zero-code-change no client (09-01 preflight, 2026-05-15)** — auditoria dos 11 callsites em `arquitetos`/`clientes` (10 SELECT/DELETE + bloco INSERT dialogs) classifica todos como OK natural ou OK admin-only; nenhum Risk. RLS + DEFAULT `auth.uid()` cobre 100% sem mexer em frontend. Confirma D-09/D-11. Hotfix `71d28d7` torna-se redundância segura.
 
 ### Todos
 
@@ -120,7 +122,7 @@ Next: Phase 13 (Smoke & UAT Closure) — ou Phase 9 (Multi-tenancy RLS) em paral
 - REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída) — AUTO-01/AUTO-02 ficam parcialmente atendidos (schema + edge fn OK; entrega final só com cron Wave 3)
 - MILESTONES.md: índice ainda só com v1.0 — atualizar na Phase 13 (closure)
 
-**Last activity:** 2026-05-15 — Plan 12-03 fechado (Vault secret `service_role_key` criado em prod via MCP execute_sql, migration `20260515000002_aniversario_cron_schedule` aplicada via MCP apply_migration, cron `aniversario-diario` ativo `0 9 * * *`, smoke E2E `net._http_response.status_code=200` + content JSON. Phase 12 entregue end-to-end).
+**Last activity:** 2026-05-15 — Plan 09-01 fechado (preflight callsite audit publicado em `09-PREFLIGHT.md`; 11 callsites em arquitetos/clientes classificados; 0 Risk; Phase 9 confirmada zero-code-change no frontend; baseline pronta pra investigação pós-migration).
 
 ---
-*STATE refreshed: 2026-05-15 ao fechar Plan 12-03 (commit e03dd4c do SQL migration + docs commit final do plano).*
+*STATE refreshed: 2026-05-15 ao fechar Plan 09-01 (commit `4fdba6a` do PREFLIGHT.md).*
