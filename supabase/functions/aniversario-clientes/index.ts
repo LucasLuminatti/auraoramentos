@@ -179,10 +179,15 @@ Deno.serve(async (req) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[resend ${cliente.id}] ${msg}`);
         // D-09: sem retry. UNIQUE constraint impede tentativa nova no mesmo ano.
-        await supabase
+        // WR-03: checar erro do UPDATE — caso contrário log fica eternamente como 'sent'
+        // mesmo com email não enviado, e admin não tem como saber via auditoria.
+        const { error: updateErr } = await supabase
           .from("aniversario_envios")
           .update({ status: "failed", error_msg: msg })
           .eq("id", logId);
+        if (updateErr) {
+          console.error(`[failed-update ${cliente.id}] log=${logId} ${updateErr.message}`);
+        }
         failed++;
       }
     }
