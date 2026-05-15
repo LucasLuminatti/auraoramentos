@@ -38,6 +38,7 @@ Em prod hoje:
 - **Filtros combinados em Pedidos** (arquiteto + cliente + período + status) via JOIN `clientes!inner` + popover mobile com badge contador
 
 **v1.1 em prod (parcial):**
+- **Multi-tenancy RLS** (Phase 9, verificada 2026-05-15) — `arquitetos` e `clientes` com 8 policies (4 por tabela) replicando padrão Drive Bloco 5/6: colab vê só `user_id = auth.uid()`, admin vê tudo via `has_role`. DEFAULT `auth.uid()` em ambas user_id colunas. Smoke bilateral E2E PASS 5/5 (Playwright + SQL cross-check). Migration `20260514000001_arquitetos_clientes_rls.sql`.
 - **Automação Aniversário D-5** (Phase 12, 2026-05-15) — cron diário `0 9 * * *` UTC chama edge fn `aniversario-clientes` (Deno + Resend) que envia email pra colab dono + admins quando cliente faz aniversário em D+5. Log auditável em `aniversario_envios` (RLS admin-only, UNIQUE idempotência). Vault `service_role_key` autentica cron via runtime subquery (sem JWT em git).
 
 Schema:
@@ -115,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Current State + Validated Requirements + Key Decisions
 
 ---
-*Last updated: 2026-05-15 — Phase 12 completed (Automação Aniversário D-5 live em prod)*
+*Last updated: 2026-05-15 — Phase 9 verificada (Multi-tenancy RLS) + Phase 12 (Automação Aniversário D-5) live em prod*
