@@ -18,7 +18,7 @@
 
 - [x] **Phase 7: Schema & Prep v1.1** — Migrations aditivas (`user_id` em arquitetos/clientes, `data_nascimento` em clientes, `status` em orçamentos se faltar, campos de descrição rica em product_variants se faltarem) — desbloqueia 9, 10 e 12 sem mexer em UI
 - [x] **Phase 8: Cadastros — Opcionalizar + Imagens Manuais** — Cliente com campos opcionais, arquiteto expandido (nascimento/endereço/banco), produtos coringa AU001..AU016 editáveis, anexo de imagem manual por SKU
-- [ ] **Phase 9: Multi-tenancy RLS** — Policies de `arquitetos` e `clientes` replicando padrão Drive v1.0 (D-02) + queries dos componentes ajustadas — colaborador só vê o próprio, admin vê tudo
+- [x] **Phase 9: Multi-tenancy RLS** — Policies de `arquitetos` e `clientes` replicando padrão Drive v1.0 (D-02) + queries dos componentes ajustadas — colaborador só vê o próprio, admin vê tudo (completed 2026-05-15)
 - [x] **Phase 10: Wizard — Edição + Status + Descrição rica** — Step 3 editar preço (≥ mínimo) + quantidade, reabrir rascunho, marcar status (aprovado/perdido/pendente), descrição puxando temperatura(K)+potência+IRC+nicho da ImportMaster
  (completed 2026-05-14)
 - [x] **Phase 11: PDF v2 + Dashboard** — PDF sem bloco "Sistemas" vazio, "Prazo de Entrega" com texto adicional, tab Início substituindo 6 cards por somatório de orçamentos em aberto (completed 2026-05-15)
@@ -75,9 +75,9 @@
 - [x] 09-02-PLAN.md — PRE-PUSH snapshot pg_policies baseline (6 policies legadas confirmadas, zero divergência D-02) — documentado retroativamente 2026-05-15
 - [x] 09-03-PLAN.md — Migration SQL `20260514000001_arquitetos_clientes_rls.sql` (8 policies + 2 DEFAULTs + 6 DROPs, BEGIN/COMMIT atômico) — commit `31ef3bc` 2026-05-14
 - [x] 09-04-PLAN.md — Apply migration em prod (version `20260514154347` em schema_migrations, RLS-01 + RLS-02 estruturalmente live) — documentado retroativamente 2026-05-15
-- [ ] 09-05-PLAN.md — Signup manual do segundo colaborador (checkpoint humano)
-- [ ] 09-06-PLAN.md — Smoke RLS bilateral em prod (colab A vs B + admin)
-- [ ] 09-07-PLAN.md — Close-out Phase 9 (verification + STATE/ROADMAP update)
+- [x] 09-05-PLAN.md — Signup manual do segundo colaborador (checkpoint humano)
+- [x] 09-06-PLAN.md — Smoke RLS bilateral em prod (colab A vs B + admin)
+- [x] 09-07-PLAN.md — Close-out Phase 9 (verification + STATE/ROADMAP update)
 
 ### Phase 10: Wizard — Edição + Status + Descrição rica
 **Goal**: Wizard deixa de ser one-way — colaborador pode ajustar preço/quantidade no Step 3 antes do PDF, reabrir rascunho do ponto onde parou, marcar status do orçamento após geração e produtos exibem descrição rica (temperatura/potência/IRC/nicho) puxada da planilha master
@@ -139,7 +139,7 @@
 |-------|----------------|--------|-----------|
 | 7. Schema & Prep v1.1 | 4/4 | Complete | 2026-05-11 |
 | 8. Cadastros — Opcionalizar + Imagens | 5/5 | Complete (smoke 5/5 PASS) | 2026-05-14 |
-| 9. Multi-tenancy RLS | 4/7 | Executing (RLS structural live in prod 2026-05-14; smoke pending 09-05/06/07) | - |
+| 9. Multi-tenancy RLS | 7/7 | Complete   | 2026-05-15 |
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
 | 12. Automação Aniversário | 3/3 | Complete    | 2026-05-15 |
