@@ -1,77 +1,86 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
-status: planning
-last_updated: "2026-05-15T13:31:50.700Z"
+milestone: v1.1 (archived)
+milestone_name: "v1.1 — Polimento UAT + Multi-tenancy + Automação — ARCHIVED 2026-05-15"
+status: awaiting_next_milestone
+last_updated: "2026-05-15T18:00:00.000Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 7
-  completed_phases: 6
-  total_plans: 27
-  completed_plans: 27
+  completed_phases: 7
+  total_plans: 29
+  completed_plans: 29
   percent: 100
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-05-15 — Phase 09 Plans 02/03/04 documentados retroativamente (migration RLS arquitetos+clientes já live em prod desde 2026-05-14; verificação MCP confirma 8 policies + 2 DEFAULTs). Próximo: Plan 09-05 (signup manual 2º colaborador).
+**Last updated:** 2026-05-15 — Milestone v1.1 archived. Phase 13 (closure) completa: smoke integration 4/4 PASS + BUG-13-01 fixed inline + archive formal em `.planning/milestones/v1.1-*.md` + MILESTONES.md criado.
 
 ## Project Reference
 
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
-- **Current Milestone:** v1.1 — Polimento UAT + Multi-tenancy + Automação
+- **Current Milestone:** _Nenhum marco ativo_ (v1.1 archived 2026-05-15)
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 09 — multi-tenancy-rls
+- **Current Focus:** Milestone v1.1 archived. Awaiting v1.2 definition via `/gsd-new-milestone`.
 
 ## Current Position
 
-Phase: 09 (multi-tenancy-rls) — EXECUTING
-Plan: 5 of 7 (após 09-04 fechado retroativamente — migration aplicada em prod 2026-05-14, version `20260514154347`)
-Next: Plan 09-05 (signup manual do segundo colaborador — checkpoint humano) → 09-06 (smoke RLS bilateral) → 09-07 (close-out)
+Phase: _none_ (marco fechado)
+Plan: _none_
+Next: definir próximo marco via `/gsd-new-milestone` ou pausa até Lenny escolher foco
 
-- **Phase:** 10
-- **Plan:** Not started
-- **Status:** Ready to plan
-- **Progress:** [████████░░] 78%
+- **Phase:** Marco v1.1 archived
+- **Plan:** N/A
+- **Status:** awaiting_next_milestone
+- **Progress:** [██████████] 100% (v1.1 completo: 7/7 phases, 29/29 plans)
 - **Last activity:** 2026-05-15
 
-## Roadmap v1.1 (resumo)
+## Roadmap v1.1 (resumo final)
 
-| Phase | Tema | Reqs | Depends on |
-|-------|------|------|------------|
-| 7 | Schema & Prep | RLS-03, AUTO-03 | — |
-| 8 | Cadastros (FORM) | FORM-01..04 | 7 |
-| 9 | Multi-tenancy RLS | RLS-01, RLS-02 | 7 |
-| 10 | Wizard edição | WIZ-01..05 | 7 |
-| 11 | PDF + Dashboard | PDF-01, PDF-02, DASH-01 | 10 |
-| 12 | Automação aniversário | AUTO-01, AUTO-02 | 7, 9 |
-| 13 | Smoke & Closure | (closure) | 8, 9, 10, 11, 12 |
+| Phase | Tema | Reqs | Status |
+|-------|------|------|--------|
+| 7 | Schema & Prep | RLS-03, AUTO-03 | Complete (2026-05-11) |
+| 8 | Cadastros (FORM) | FORM-01..04 | Complete (2026-05-14) |
+| 9 | Multi-tenancy RLS | RLS-01, RLS-02 | Complete (2026-05-15) |
+| 10 | Wizard edição | WIZ-01..05 | Complete (2026-05-14) |
+| 11 | PDF + Dashboard | PDF-01, PDF-02, DASH-01 | Complete (2026-05-15) |
+| 12 | Automação aniversário | AUTO-01, AUTO-02 | Complete (2026-05-15) |
+| 13 | Smoke & Closure | (closure) | Complete (2026-05-15) |
 
 ## Latest Milestone Shipped
 
-**v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07, 15 dias)
+**v1.1 — Polimento UAT + Multi-tenancy + Automação** (2026-05-11 → 2026-05-15, 5 dias)
 
-- 6 phases, 28 plans, 163 commits
-- 40/42 requirements entregues + 1 obsoleto + 1 deferido
-- Smoke prod 8/8 passed (2026-05-07)
-- Archive: `.planning/milestones/v1.0-ROADMAP.md` + `v1.0-REQUIREMENTS.md`
+- 7 phases, 29 plans, 96 commits
+- 17/18 DELIVERED + 1 DELIVERED with deviation (AUTO-02 — multi-admin via `has_role(admin)`) = 18/18 covered
+- 11 migrations aditivas (zero destrutivas)
+- 1 nova edge function: `aniversario-clientes` (Deno + Resend, cron-triggered)
+- Extensions habilitadas: pg_cron 1.6.4 + pg_net 0.20.0
+- Smoke prod 4/4 cenários integration PASS (Phase 13)
+- BUG-13-01 capturado e fixed inline (`b3ae4db`) durante smoke
+- Archive: `.planning/milestones/v1.1-ROADMAP.md` + `v1.1-REQUIREMENTS.md` + `MILESTONES.md`
+
+**Previous milestone:** v1.0 — Melhorias v1 (2026-04-23 → 2026-05-07, 15 dias, 28 plans, 163 commits, 40/42 entregues + 1 obsoleto + 1 deferido). Archive em [milestones/MILESTONES.md](milestones/MILESTONES.md).
 
 ## Accumulated Context
 
-### Decisions carryover (v1.0 → v1.1)
+### Decisions carryover (v1.0 → v1.1 → v1.2+)
 
-- Schema sempre aditivo (perpetual) — confirmado v1.0 (9 migrations, zero regressão)
-- Drive RLS via `user_id` direto (D-02 errata) — padrão a replicar em `arquitetos` e `clientes` na Phase 9
-- PDF v1/v2 router (`pdf_template_version`) — ajustes da Phase 11 ficam no template v2 apenas; v1 não pode regredir
-- ImportMaster XLSX (2.088 SKUs oficiais) é fonte da verdade pra descrição rica — Phase 7 verifica gaps antes de planar WIZ-05
-- **Phase 9 zero-code-change no client (09-01 preflight, 2026-05-15)** — auditoria dos 11 callsites em `arquitetos`/`clientes` (10 SELECT/DELETE + bloco INSERT dialogs) classifica todos como OK natural ou OK admin-only; nenhum Risk. RLS + DEFAULT `auth.uid()` cobre 100% sem mexer em frontend. Confirma D-09/D-11. Hotfix `71d28d7` torna-se redundância segura.
+- **Schema sempre aditivo (perpetual)** — confirmado v1.0 (9 migrations) + v1.1 (11 migrations, zero regressão)
+- **Drive RLS via `user_id` direto (D-02 errata)** — replicado em `arquitetos` + `clientes` na Phase 9 com sucesso (zero-code-change no client, preflight 11 callsites = 0 Risk)
+- **PDF v1/v2 router (`pdf_template_version`)** — ajustes da Phase 11 ficam no template v2 apenas; v1 não pode regredir
+- **ImportMaster XLSX (2.088 SKUs oficiais)** é fonte da verdade pra descrição rica (WIZ-05 Phase 10: builder `construirDescricaoRica` com fallback ao snapshot puro pra produtos removidos do master)
+- **Phase 9 zero-code-change no client** — auditoria dos 11 callsites em `arquitetos`/`clientes` classifica todos como OK natural/admin-only. RLS + DEFAULT `auth.uid()` cobre 100% sem mexer em frontend.
+- **Phase 12 multi-admin dinâmico via `has_role(admin)` (D-22)** — substitui hardcode "David Grabarz" do AUTO-02. RPC `buscar_admins_emails()` SECURITY DEFINER escala pra N admins sem redeploy. Pattern também usado pra substituir `ADMIN_EMAIL` legacy do `request-access`.
+- **Vault subquery em RUNTIME (Phase 12-03)** — cron command lê `decrypted_secret` a cada disparo (não em schedule-time) — rotação propaga sem redeploy.
+- **UNIQUE(cliente_id, ano_referencia) = idempotência atomic (Phase 12-01)** — edge fn trata PG 23505 como "já enviado nesse ano".
 
 ### Todos
 
-- [ ] Phase 7 plan #1: auditar `product_variants` vs ImportMaster XLSX pra confirmar quais campos de descrição rica já existem
+- (nenhum — marco fechado)
 
 ### Blockers
 
@@ -85,44 +94,49 @@ Next: Plan 09-05 (signup manual do segundo colaborador — checkpoint humano) �
 
 ## Next Action
 
-`/gsd-verify-phase 12` (ou `/gsd-plan-phase 13` para iniciar UAT closure). Phase 12 entregue end-to-end:
+**Definir próximo marco** via `/gsd-new-milestone` ou pausar até Lenny escolher foco.
 
-- Wave 1: tabela `aniversario_envios` + stored fns `buscar_aniversariantes_d5` + `buscar_admins_emails` em prod
-- Wave 2: edge fn `aniversario-clientes` deployed via MCP, smoke 2-run E2E PASS
-- Wave 3: Vault secret `service_role_key` criado, migration `20260515000002_aniversario_cron_schedule` aplicada, cron `aniversario-diario` ativo @ 09:00 UTC, smoke pós-deploy status_code=200 + content JSON `{"processed":0,...}`
+**Candidatos provisórios para v1.2+** (do PROJECT.md + follow-ups deferidos do v1.1):
+- **Preços via CSV** (IMP-02 deferido v1.0) + tabela de custos (desbloqueia margem)
+- **Margem no pedido** — agregada por arquiteto/colaborador/período
+- **Documentação + testes das fórmulas de cálculo** (fita/driver/perfil/agrupamento)
+- **Follow-ups técnicos v1.1:**
+  - SPF/DKIM/DMARC do domínio `orcamentosaura.com.br` (email Junk em Outlook)
+  - WR-02 pg_net 4xx/5xx monitoring/alerts pro cron aniversário
+  - Dedup `toList` na edge fn aniversário (owner=admin)
+  - Bucket singular `produto-imagens` cleanup + `has_role(admin)` gate explícito em edge fn
 
-**Próxima execução real do cron:** 2026-05-15 09:00 UTC = 06:00 BRT.
-
-**Atenção:** Phase 7 deixou `user_id NOT NULL` sem `DEFAULT auth.uid()`. Hotfix `71d28d7` (08-05) injeta user_id no payload do dialog. Avaliar se Phase 9 (que vai adicionar policy `WITH CHECK (user_id = auth.uid())`) torna isso redundante OU se vale adicionar `DEFAULT auth.uid()` na coluna como cinto-e-suspensórios.
-
-### Phase 12 — Decisões carryover (Plan 12-01 + 12-02 + 12-03)
+### Phase 12 — Decisões carryover (preservadas para futuras referências de automação)
 
 - **Stored fns vs JOIN inline (12-01):** `buscar_aniversariantes_d5()` + `buscar_admins_emails()` SECURITY DEFINER pra evitar N+1 e desacoplar schema da edge fn
-- **UNIQUE(cliente_id, ano_referencia) = idempotência atomic (12-01):** edge fn trata PG 23505 como "já enviado nesse ano" — mas na prática stored fn já filtra antes (better-than-spec confirmado em 12-02)
+- **UNIQUE(cliente_id, ano_referencia) = idempotência atomic (12-01):** edge fn trata PG 23505 como "já enviado nesse ano"
 - **LEFT JOIN auth.users (12-01):** cliente órfão (D-06) retorna `colab_email=NULL` → edge fn registra `status='skipped_no_owner'`
 - **Edge case 29/02 (12-01):** já tratado no SQL — dispara em 28/02 em ano não-bissexto
 - **REVOKE EXECUTE pattern (12-01):** authenticated não chama as fns; só service role via RPC
 - **target-based ano_referencia (12-02):** edge fn calcula ano a partir de today+5d (não today) — corrige Pitfall 3 cross-year
 - **INSERT optimistic 'sent' + UPDATE 'failed' (12-02):** mantém row única por (cliente, ano), preserva auditoria mesmo em falha de Resend
 - **Multi-admin dinâmico via RPC (12-02):** substitui hardcode ADMIN_EMAIL legacy do request-access; suporta N admins sem redeploy
-- **Pattern Deno + Resend (12-02):** edge fn replica request-access (imports esm.sh + npm:, createClient com SERVICE_ROLE, OPTIONS+CORS, from `noreply@orcamentosaura.com.br`) — pattern já validado em prod
-- **Vault subquery em RUNTIME (12-03):** cron command lê `decrypted_secret` a cada disparo (não em schedule-time) — rotação propaga sem redeploy
-- **DO $$ BEGIN ... END $$ defensive cleanup (12-03):** `cron.unschedule` retorna void, não funciona em WHERE — bloco anônimo PL/pgSQL é o padrão
-- **timeout_milliseconds=60000 (12-03):** 60s folgado pro volume atual; reduzir pra 10s no futuro se quiser fail-fast
+- **Pattern Deno + Resend (12-02):** edge fn replica request-access (imports esm.sh + npm:, createClient com SERVICE_ROLE, OPTIONS+CORS, from `noreply@orcamentosaura.com.br`)
+- **Vault subquery em RUNTIME (12-03):** cron command lê `decrypted_secret` a cada disparo
+- **DO $$ BEGIN ... END $$ defensive cleanup (12-03):** `cron.unschedule` retorna void, bloco anônimo PL/pgSQL é o padrão
+- **timeout_milliseconds=60000 (12-03):** 60s folgado pro volume atual
 - **Schedule literal `'0 9 * * *'` (12-03):** 09:00 UTC = 06:00 BR direto, sem timezone math em SQL
 
-### Phase 12 — Follow-ups separados (NÃO bloqueiam Wave 3)
+### Phase 12 — Follow-ups deferidos pra v1.2+
 
-- [ ] Auditoria SPF/DKIM/DMARC do domínio `orcamentosaura.com.br` — email caiu em Junk no Outlook do Lenny no smoke 12-02 (Resend entregou; Outlook classificou). Issue de infra de email, não da edge fn.
-- [ ] Dedup do `toList` na edge fn: `Array.from(new Set([colab_email, ...admin_emails]))` — owner=admin causa duplicação no campo Para. Fix trivial (1 linha) pra próxima iteração.
+- [ ] Auditoria SPF/DKIM/DMARC do domínio `orcamentosaura.com.br` — email caiu em Junk no Outlook do Lenny no smoke 12-02
+- [ ] Dedup do `toList` na edge fn: `Array.from(new Set([colab_email, ...admin_emails]))` — owner=admin causa duplicação no campo Para
+- [ ] WR-02 pg_net 4xx/5xx monitoring/alerts pro cron aniversário
 
 ## Session Continuity
 
-- ROADMAP.md: 7 phases (7-13), 18 reqs mapeados, coverage 100%
-- REQUIREMENTS.md: traceability preenchido (todos REQ-ID com Phase atribuída) — AUTO-01/AUTO-02 ficam parcialmente atendidos (schema + edge fn OK; entrega final só com cron Wave 3)
-- MILESTONES.md: índice ainda só com v1.0 — atualizar na Phase 13 (closure)
+- **ROADMAP.md:** Phase 13 marcada [x], nota "v1.1 archived 2026-05-15" no topo, Shipped Milestones atualizado com entry v1.1
+- **REQUIREMENTS.md:** 18 REQs marcados [x] (AUTO-02 com flag `[~]` deviation), Traceability com coluna Status, marco fechado no header
+- **MILESTONES.md:** criado com entries v1.0 + v1.1, stats acumulados, "Next milestone" com candidatos v1.2+
+- **PROJECT.md:** Current Milestone agora "Nenhum marco ativo", section "Validated Requirements (v1.1)" adicionada
+- **Archives criados:** `.planning/milestones/v1.1-ROADMAP.md` + `v1.1-REQUIREMENTS.md`
 
-**Last activity:** 2026-05-15 — Plans 09-02/09-03/09-04 documentados retroativamente. Migration `20260514000001_arquitetos_clientes_rls.sql` foi aplicada em prod 2026-05-14 (version `20260514154347` em `supabase_migrations.schema_migrations`) fora do fluxo GSD; verificação MCP em 2026-05-15 confirma 8 policies live (4 arquitetos + 4 clientes) + DEFAULT `auth.uid()` em ambas as colunas user_id + RLS enabled em ambas. RLS-01 + RLS-02 estruturalmente em vigor; smoke comportamental pendente (Wave 4-5 = 09-05/06/07).
+**Last activity:** 2026-05-15 — Phase 13 Plan 02 (archive) completo. Marco v1.1 oficialmente fechado.
 
 ---
-*STATE refreshed: 2026-05-15 ao documentar retroativamente Plans 09-02/03/04 (commits `5181494`, `4dff930`, `7014d5f`). Phase 9 estruturalmente done em prod desde 2026-05-14; falta smoke bilateral (09-05/06/07).*
+*STATE refreshed: 2026-05-15 — milestone v1.1 archived (17 DELIVERED + 1 DELIVERED with deviation = 18/18 covered). Próxima ação: `/gsd-new-milestone` para definir foco v1.2+.*

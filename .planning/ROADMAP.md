@@ -4,9 +4,12 @@
 
 ## Active Milestone
 
-**v1.1 — Polimento UAT + Multi-tenancy + Automação**
+> **v1.1 archived 2026-05-15** — todas as 7 phases concluídas, 18/18 reqs delivered (1 deviation: AUTO-02 multi-admin via `has_role`). Archive completo em [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) + [milestones/v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md). Próximo marco TBD — definir via `/gsd-new-milestone`.
+
+**v1.1 — Polimento UAT + Multi-tenancy + Automação** (ARCHIVED 2026-05-15)
 
 **Defined:** 2026-05-11
+**Shipped:** 2026-05-15
 **Granularity:** coarse
 **Coverage:** 18/18 v1.1 requirements mapped
 **Mode:** yolo (parallelization enabled)
@@ -23,7 +26,7 @@
  (completed 2026-05-14)
 - [x] **Phase 11: PDF v2 + Dashboard** — PDF sem bloco "Sistemas" vazio, "Prazo de Entrega" com texto adicional, tab Início substituindo 6 cards por somatório de orçamentos em aberto (completed 2026-05-15)
 - [x] **Phase 12: Automação Aniversário** — pg_cron diário + edge function Resend disparando email 5d antes do aniversário do cliente para o colab dono + admin David Grabarz (completed 2026-05-15)
-- [ ] **Phase 13: Smoke & UAT Closure** — Smoke prod cobrindo todas as fases (RLS com 2 contas, wizard edição, PDF v2 vazio, dashboard, automação), correção de bugs encontrados e fechamento do marco
+- [x] **Phase 13: Smoke & UAT Closure** — Smoke prod 4/4 cenários integration PASS + 1 bug crítico (BUG-13-01) fixed inline + archive formal do marco em `.planning/milestones/v1.1-*.md` + MILESTONES.md (completed 2026-05-15)
 
 ## Phase Details
 
@@ -123,15 +126,18 @@
 - [x] 12-03-PLAN.md — Vault secret manual + migration cron schedule (pg_cron 1.6.4 + pg_net 0.20.0) aplicada + smoke pós-deploy 200 OK (completed 2026-05-15)
 
 ### Phase 13: Smoke & UAT Closure
-**Goal**: Marco v1.1 validado em produção via smoke test manual cobrindo todas as fases (RLS bilateral, wizard edição, PDF v2, dashboard, automação) e fechado com requirements outcome + archive do roadmap
-**Depends on**: Phase 8, Phase 9, Phase 10, Phase 11, Phase 12 (todas as features precisam estar em prod antes do smoke)
+**Goal**: Marco v1.1 validado em produção via smoke integration cross-feature, bug crítico capturado/corrigido inline, archive formal do marco
+**Depends on**: Phase 8, Phase 9, Phase 10, Phase 11, Phase 12
 **Requirements**: (closure — sem REQ-ID mapeado, padrão Phase 6 v1.0 WRAP-01)
 **Success Criteria** (what must be TRUE):
-  1. Smoke executado em produção cobrindo: cadastro de cliente sem campos opcionais, cadastro de arquiteto expandido, RLS com 2 contas reais (colab A + B), wizard editando preço/qtd + reabrindo rascunho + marcando status, PDF v2 sem bloco vazio + prazo atualizado, dashboard com card único, automação aniversário (manual trigger ou aguardar cron)
-  2. Bugs encontrados durante smoke são registrados, priorizados e (a) corrigidos antes do fechamento ou (b) deferidos explicitamente pra v1.2+ com justificativa
-  3. ROADMAP, REQUIREMENTS e STATE atualizados com outcome (entregues / obsoletos / deferidos)
-  4. Marco arquivado em `.planning/milestones/v1.1-ROADMAP.md` + `v1.1-REQUIREMENTS.md` e MILESTONES.md atualizado com índice + stats acumulados
-**Plans**: TBD
+  1. Smoke prod 4/4 cenários integration PASS (cliente+aniversário pipeline, orçamento full flow, RLS cross-feature, trigger manual edge fn)
+  2. Bug crítico BUG-13-01 (ClienteDialog faltava campo `data_nascimento`) corrigido inline (commit `b3ae4db`) + re-test PASS
+  3. ROADMAP/REQUIREMENTS/STATE/PROJECT atualizados com outcome (18 REQs classificados)
+  4. Marco arquivado em `.planning/milestones/v1.1-*.md` + MILESTONES.md
+**Plans**: 2 plans
+- [x] 13-01-PLAN.md — Integration smoke + bug capture (4 cenários cross-feature, BUG-13-01 fixed inline)
+- [x] 13-02-PLAN.md — Milestone archive (outcome + v1.1-*.md + MILESTONES.md + ROADMAP/STATE/PROJECT/REQUIREMENTS)
+**Status**: Complete (2026-05-15) — 4/4 smoke PASS + 1 bug crítico fixed inline + archive completo
 
 ## Progress
 
@@ -143,7 +149,7 @@
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
 | 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
 | 12. Automação Aniversário | 3/3 | Complete    | 2026-05-15 |
-| 13. Smoke & UAT Closure | 0/0 | Not started | - |
+| 13. Smoke & UAT Closure | 2/2 | Complete    | 2026-05-15 |
 
 ## Coverage Summary
 
@@ -166,7 +172,8 @@
 
 ## Shipped Milestones
 
+- **v1.1 — Polimento UAT + Multi-tenancy + Automação** (2026-05-11 → 2026-05-15, 5 dias): 17 reqs delivered + 1 with deviation (AUTO-02 multi-admin via has_role), 7 phases, 29 plans, 96 commits, 11 migrations aditivas, 1 nova edge fn (aniversario-clientes). Highlights: multi-tenancy RLS, automação aniversário D-5, wizard editável, descrição rica, PDF v2 sem bloco vazio, dashboard card único. → [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) · [v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md) · [MILESTONES.md](milestones/MILESTONES.md)
 - **v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07): cadastro expandido (CPF/telefone/setor), arquiteto como entidade, importação CSV de produtos, Drive RLS por colaborador, admin reorganizado, PDF v2 (Playfair+Inter), filtros por arquiteto, smoke prod 8/8 → [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 ---
-*Last updated: 2026-05-15 — Phase 9 Plans 02/03/04 documentados retroativamente (migration RLS arquitetos+clientes aplicada em prod 2026-05-14, version `20260514154347`). 8 policies + 2 DEFAULTs live; RLS-01 + RLS-02 estruturalmente em vigor. Próximo: Plan 09-05 (signup manual 2º colaborador) → 09-06 (smoke bilateral).*
+*Last updated: 2026-05-15 — milestone v1.1 archived (17 DELIVERED + 1 DELIVERED with deviation = 18/18 covered). Phase 13 smoke 4/4 PASS + BUG-13-01 fixed inline. Próximo: definir v1.2 via `/gsd-new-milestone`.*
