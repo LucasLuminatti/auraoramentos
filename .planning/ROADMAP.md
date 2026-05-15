@@ -21,7 +21,7 @@
 - [ ] **Phase 9: Multi-tenancy RLS** — Policies de `arquitetos` e `clientes` replicando padrão Drive v1.0 (D-02) + queries dos componentes ajustadas — colaborador só vê o próprio, admin vê tudo
 - [x] **Phase 10: Wizard — Edição + Status + Descrição rica** — Step 3 editar preço (≥ mínimo) + quantidade, reabrir rascunho, marcar status (aprovado/perdido/pendente), descrição puxando temperatura(K)+potência+IRC+nicho da ImportMaster
  (completed 2026-05-14)
-- [ ] **Phase 11: PDF v2 + Dashboard** — PDF sem bloco "Sistemas" vazio, "Prazo de Entrega" com texto adicional, tab Início substituindo 6 cards por somatório de orçamentos em aberto
+- [x] **Phase 11: PDF v2 + Dashboard** — PDF sem bloco "Sistemas" vazio, "Prazo de Entrega" com texto adicional, tab Início substituindo 6 cards por somatório de orçamentos em aberto (completed 2026-05-15)
 - [ ] **Phase 12: Automação Aniversário** — pg_cron diário + edge function Resend disparando email 5d antes do aniversário do cliente para o colab dono + admin David Grabarz
 - [ ] **Phase 13: Smoke & UAT Closure** — Smoke prod cobrindo todas as fases (RLS com 2 contas, wizard edição, PDF v2 vazio, dashboard, automação), correção de bugs encontrados e fechamento do marco
 
@@ -95,9 +95,9 @@
   3. Tab Início do admin exibe um único card destacado com o **somatório em R$ de orçamentos em aberto** (soma de todos os reps, status ≠ aprovado/perdido) — os 6 cards anteriores (Receita Efetiva/Prevista/Pipeline/Ticket Médio/Conversão/Ciclo Médio) foram removidos
   4. Orçamentos antigos (snapshots pré-v1.1) continuam renderizando no PDF v2 sem crash e sem texto duplicado de "20 dias úteis"
 **Plans**: 3 plans
-- [ ] 11-01-PLAN.md — PDF-01 (esconder sistemas vazios) + PDF-02 (prazo 20 dias úteis) em src/lib/pdfTemplates/v2.ts
-- [ ] 11-02-PLAN.md — DASH-01 remover 6 cards + adicionar card único Orçamentos em Aberto em AdminDashboard.tsx
-- [ ] 11-03-PLAN.md — Smoke manual em prod (checkpoint humano cobrindo 4 success criteria + SQL cross-check)
+- [x] 11-01-PLAN.md — PDF-01 (esconder sistemas vazios) + PDF-02 (prazo 20 dias úteis) em src/lib/pdfTemplates/v2.ts
+- [x] 11-02-PLAN.md — DASH-01 remover 6 cards + adicionar card único Orçamentos em Aberto em AdminDashboard.tsx
+- [x] 11-03-PLAN.md — Smoke manual em prod (checkpoint humano cobrindo 4 success criteria + SQL cross-check)
 **UI hint**: yes
 
 ### Phase 12: Automação Aniversário
@@ -131,7 +131,7 @@
 | 8. Cadastros — Opcionalizar + Imagens | 5/5 | Complete (smoke 5/5 PASS) | 2026-05-14 |
 | 9. Multi-tenancy RLS | 0/0 | Not started | - |
 | 10. Wizard — Edição + Status + Descrição | 5/5 | Complete    | 2026-05-14 |
-| 11. PDF v2 + Dashboard | 0/0 | Not started | - |
+| 11. PDF v2 + Dashboard | 3/3 | Complete    | 2026-05-15 |
 | 12. Automação Aniversário | 0/0 | Not started | - |
 | 13. Smoke & UAT Closure | 0/0 | Not started | - |
 
