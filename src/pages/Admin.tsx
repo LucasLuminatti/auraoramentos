@@ -400,7 +400,7 @@ const Admin = () => {
   const fetchClientes = async (arqFilter?: string | null) => {
     let q = supabase
       .from("clientes")
-      .select("id, nome, email, telefone, contato, cpf_cnpj, arquiteto_id");
+      .select("id, nome, email, telefone, contato, cpf_cnpj, arquiteto_id, data_nascimento");
     if (arqFilter === "none") {
       q = q.is("arquiteto_id", null);
     } else if (arqFilter && arqFilter !== "none") {

@@ -14,6 +14,7 @@ export interface ClienteRow {
   contato: string | null;
   cpf_cnpj: string | null;
   arquiteto_id: string | null;
+  data_nascimento: string | null;
 }
 
 interface ClienteDialogProps {
@@ -30,6 +31,7 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [arquitetoId, setArquitetoId] = useState<string | null>(null);
   const [arquitetoNome, setArquitetoNome] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Carrega dados quando abre em modo edit; reseta em create
@@ -40,6 +42,7 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
       setContato(cliente.contato || "");
       setCpfCnpj(cliente.cpf_cnpj ? formatCpfCnpj(cliente.cpf_cnpj) : "");
       setArquitetoId(cliente.arquiteto_id);
+      setDataNascimento(cliente.data_nascimento || "");
       if (cliente.arquiteto_id) {
         supabase
           .from("arquitetos")
@@ -58,6 +61,7 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
       setCpfCnpj("");
       setArquitetoId(null);
       setArquitetoNome("");
+      setDataNascimento("");
     }
   }, [open, mode, cliente]);
 
@@ -73,6 +77,7 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
       contato: contato.trim() || null,
       cpf_cnpj: cpfCnpj.trim() ? unmask(cpfCnpj) : null,
       arquiteto_id: arquitetoId,
+      data_nascimento: dataNascimento || null,
     };
     let error;
     if (mode === "create") {
@@ -131,6 +136,15 @@ const ClienteDialog = ({ open, onOpenChange, mode, cliente, onSuccess }: Cliente
               placeholder="000.000.000-00 ou 00.000.000/0000-00"
               value={cpfCnpj}
               onChange={(e) => setCpfCnpj(formatCpfCnpj(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cli-nascimento">Data de nascimento <span className="text-muted-foreground text-xs font-normal">(opcional — habilita aniversário automático)</span></Label>
+            <Input
+              id="cli-nascimento"
+              type="date"
+              value={dataNascimento}
+              onChange={(e) => setDataNascimento(e.target.value)}
             />
           </div>
           <div className="space-y-2">
