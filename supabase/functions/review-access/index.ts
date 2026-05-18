@@ -17,41 +17,14 @@ async function hmacSign(secret: string, message: string): Promise<string> {
     .replace(/=+$/, "");
 }
 
-function htmlPage(title: string, emoji: string, heading: string, body: string, color: string): Response {
-  const html = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f4f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; }
-    .emoji { font-size: 56px; margin-bottom: 20px; }
-    h1 { font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 12px; }
-    p { font-size: 15px; color: #6b7280; line-height: 1.6; }
-    .badge { display: inline-block; margin-top: 20px; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; background: ${color}20; color: ${color}; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="emoji">${emoji}</div>
-    <h1>${heading}</h1>
-    <p>${body}</p>
-    <span class="badge">Aura &middot; Criador de Or&ccedil;amentos</span>
-  </div>
-</body>
-</html>`;
-  const body_bytes = new TextEncoder().encode(html);
-  return new Response(body_bytes, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "no-store",
-    },
-  });
+function appUrl(): string {
+  return Deno.env.get("APP_URL") || "https://orcamentosaura.com.br";
+}
+
+function redirectToResult(status: string, params: Record<string, string> = {}): Response {
+  const qs = new URLSearchParams({ status, ...params });
+  const url = `${appUrl()}/access-result?${qs.toString()}`;
+  return Response.redirect(url, 302);
 }
 
 Deno.serve(async (req) => {
@@ -61,11 +34,11 @@ Deno.serve(async (req) => {
   const token = url.searchParams.get("token");
 
   if (!action || !requestId || !token) {
-    return htmlPage("Erro", "⚠️", "Link inválido", "Os parâmetros necessários estão ausentes. Verifique o link e tente novamente.", "#f59e0b");
+    return redirectToResult("invalid");
   }
 
   if (action !== "approve" && action !== "reject") {
-    return htmlPage("Erro", "⚠️", "Ação inválida", "A ação especificada não é reconhecida.", "#f59e0b");
+    return redirectToResult("invalid");
   }
 
   try {
@@ -74,25 +47,25 @@ Deno.serve(async (req) => {
     // Decode and verify token
     const [encodedPayload, signature] = token.split(".");
     if (!encodedPayload || !signature) {
-      return htmlPage("Link inválido", "🔒", "Link inválido ou corrompido", "O link de aprovação está inválido. Peça ao solicitante para fazer um novo pedido.", "#dc2626");
+      return redirectToResult("invalid");
     }
 
     const payload = atob(encodedPayload.replace(/-/g, "+").replace(/_/g, "/"));
     const expectedSig = await hmacSign(secret, payload);
 
     if (expectedSig !== signature) {
-      return htmlPage("Link inválido", "🔒", "Assinatura inválida", "O link de aprovação não é autêntico ou foi modificado.", "#dc2626");
+      return redirectToResult("invalid");
     }
 
     const [tokenRequestId, expStr] = payload.split(":");
     const exp = parseInt(expStr, 10);
 
     if (tokenRequestId !== requestId) {
-      return htmlPage("Link inválido", "🔒", "Link inválido", "O identificador do pedido não corresponde ao token.", "#dc2626");
+      return redirectToResult("invalid");
     }
 
     if (Date.now() > exp) {
-      return htmlPage("Link expirado", "⏰", "Este link expirou", "O link de aprovação é válido por 24 horas. Peça ao solicitante para fazer um novo pedido de acesso.", "#f59e0b");
+      return redirectToResult("expired");
     }
 
     const supabase = createClient(
@@ -108,18 +81,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (fetchError || !request) {
-      return htmlPage("Não encontrado", "🔍", "Pedido não encontrado", "O pedido de acesso não foi encontrado no sistema.", "#f59e0b");
+      return redirectToResult("not-found");
     }
 
     if (request.status !== "PENDING") {
-      const alreadyMsg = request.status === "APPROVED"
-        ? "Este pedido já foi <strong>aprovado</strong> anteriormente."
-        : "Este pedido já foi <strong>recusado</strong> anteriormente.";
-      return htmlPage("Já processado", "✅", "Pedido já revisado", alreadyMsg, "#6b7280");
+      return redirectToResult(
+        request.status === "APPROVED" ? "already-approved" : "already-rejected"
+      );
     }
 
     const adminEmail = Deno.env.get("ADMIN_EMAIL")!;
-    const appUrl = Deno.env.get("APP_URL") || "https://auraoramentos-kappa.vercel.app";
+    const signupUrl = `${appUrl()}/auth?mode=signup`;
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
     if (action === "approve") {
@@ -157,7 +129,7 @@ Deno.serve(async (req) => {
                       <div style="font-size:48px;margin-bottom:20px;">🎉</div>
                       <h2 style="color:#1a1a2e;margin:0 0 12px;font-size:22px;">Acesso aprovado, ${request.name}!</h2>
                       <p style="color:#6b7280;margin:0 0 28px;font-size:15px;line-height:1.6;">Seu pedido de acesso ao sistema Aura foi aprovado. Agora você pode criar sua conta.</p>
-                      <a href="${appUrl}/auth?mode=signup" style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Criar minha conta →</a>
+                      <a href="${signupUrl}" style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Criar minha conta →</a>
                       <p style="color:#9ca3af;font-size:12px;margin:24px 0 0;">Acesse com o e-mail: <strong>${request.email}</strong></p>
                     </td>
                   </tr>
@@ -169,13 +141,7 @@ Deno.serve(async (req) => {
         `,
       });
 
-      return htmlPage(
-        "Acesso aprovado",
-        "✅",
-        `Acesso aprovado para ${request.name}`,
-        `Um e-mail foi enviado para <strong>${request.email}</strong> com o link para criar a conta.`,
-        "#16a34a"
-      );
+      return redirectToResult("approved", { name: request.name, email: request.email });
     } else {
       // Reject
       await supabase
@@ -215,16 +181,10 @@ Deno.serve(async (req) => {
         `,
       });
 
-      return htmlPage(
-        "Acesso recusado",
-        "❌",
-        `Pedido de ${request.name} recusado`,
-        `Um e-mail foi enviado para <strong>${request.email}</strong> informando sobre a recusa.`,
-        "#dc2626"
-      );
+      return redirectToResult("rejected", { name: request.name, email: request.email });
     }
   } catch (err) {
     console.error("review-access error:", err);
-    return htmlPage("Erro", "⚠️", "Erro interno", "Ocorreu um erro inesperado. Tente novamente.", "#dc2626");
+    return redirectToResult("error");
   }
 });

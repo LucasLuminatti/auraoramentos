@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
 import RequestAccess from "./pages/RequestAccess";
+import AccessResult from "./pages/AccessResult";
 import NotFound from "./pages/NotFound";
 import AdminUploadImagens from "./pages/AdminUploadImagens";
 import OrcamentoDetalhe from "./pages/OrcamentoDetalhe";
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/request-access" element={<RequestAccess />} />
+          <Route path="/access-result" element={<AccessResult />} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/perfil/completar" element={<ProtectedRoute><PerfilCompletar /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
