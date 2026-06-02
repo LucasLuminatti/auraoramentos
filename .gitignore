@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 test2-banner.png
 .playwright-mcp/
+
+# Artefatos de carga de catálogo (dados locais, não versionar)
+produtos-sem-foto.csv
