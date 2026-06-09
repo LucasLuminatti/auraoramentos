@@ -175,5 +175,20 @@
 - **v1.1 — Polimento UAT + Multi-tenancy + Automação** (2026-05-11 → 2026-05-15, 5 dias): 17 reqs delivered + 1 with deviation (AUTO-02 multi-admin via has_role), 7 phases, 29 plans, 96 commits, 11 migrations aditivas, 1 nova edge fn (aniversario-clientes). Highlights: multi-tenancy RLS, automação aniversário D-5, wizard editável, descrição rica, PDF v2 sem bloco vazio, dashboard card único. → [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) · [v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md) · [MILESTONES.md](milestones/MILESTONES.md)
 - **v1.0 — Melhorias v1** (2026-04-23 → 2026-05-07): cadastro expandido (CPF/telefone/setor), arquiteto como entidade, importação CSV de produtos, Drive RLS por colaborador, admin reorganizado, PDF v2 (Playfair+Inter), filtros por arquiteto, smoke prod 8/8 → [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
+## Backlog
+
+### Phase 999.1: PDF vetorial — substituir rasterização html2canvas (BACKLOG · PRIORIDADE ALTA)
+
+**Goal:** Substituir o PDF rasterizado (html2pdf.js/html2canvas, cada página vira JPEG) por PDF de texto nativo/vetorial, reproduzindo fielmente o layout v2 aprovado, resolvendo de uma vez peso, tempo de geração e travamento ao navegar.
+
+**Contexto medido (2026-06-09):** cada página é um bitmap A4 a `scale: 2` embutido como JPEG. Escala mal: 1 item=2pág/0,5MB · 20=4pág/1,1MB · 50=7pág/2,2MB · 100=12pág/4,5MB. Cada página descomprime ~14MB na RAM do leitor → trava ao abrir/rolar/zoom em propostas grandes; geração de 100 itens leva dezenas de s; texto não selecionável. Paliativo já aplicado (não resolve travamento): `image.quality` 0.98→0.92 em `Step3Revisao.tsx` + `OrcamentoDetalhe.tsx` (−33% peso, visual idêntico).
+
+**Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
+**Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
 ---
-*Last updated: 2026-05-15 — milestone v1.1 archived (17 DELIVERED + 1 DELIVERED with deviation = 18/18 covered). Phase 13 smoke 4/4 PASS + BUG-13-01 fixed inline. Próximo: definir v1.2 via `/gsd-new-milestone`.*
+*Last updated: 2026-06-09 — backlog 999.1 (PDF vetorial) adicionado. Milestone v1.1 archived 2026-05-15 (18/18 covered). Próximo marco TBD via `/gsd-new-milestone`.*
