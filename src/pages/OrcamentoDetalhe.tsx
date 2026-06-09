@@ -199,7 +199,8 @@ const OrcamentoDetalhe = () => {
         .set({
           filename,
           margin: 0,
-          image: { type: "jpeg", quality: 0.98 },
+          // q92: ~⅓ menos peso que 0.98 com diferença visual imperceptível (scale 2 mantém a nitidez).
+          image: { type: "jpeg", quality: 0.92 },
           html2canvas: { scale: 2, useCORS: true, logging: false },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
           pagebreak: { mode: ["css", "legacy"] },
