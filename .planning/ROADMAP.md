@@ -16,7 +16,8 @@
 
 ### Phases
 
-- [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16 (completed 2026-06-10)
+- [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16
+ (completed 2026-06-10)
 - [ ] **Phase 15: Tensão & Validação** — Inferir voltagem do driver a partir da fita + aviso de divergência; remover bloqueio indevido entre ambientes com voltagens diferentes; corrigir grouping key de drivers globais para (codigo + voltagem); advisory TINY 24V com oferta de driver; sugerir driver compatível ao selecionar fita
 - [ ] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo
 - [ ] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item; fita sem duplicação entre visão por ambiente e resumo final; drivers por ambiente (não apenas bloco global); duplicar/reusar sistema em outro ambiente; aviso ao avançar para revisão sem lâmpada/item esperado
@@ -48,7 +49,9 @@
   3. O Resumo Global de drivers agrupa por (código + voltagem), não apenas por código — dois sistemas com mesmo driver em voltagens diferentes geram linhas distintas
   4. Ao adicionar produto da linha TINY (ex.: TINY SPOT 24V), o sistema exibe aviso de que requer driver 24V e oferece a opção de incluí-lo no sistema
   5. Ao selecionar uma fita, o campo de driver é pré-preenchido com sugestão compatível (voltagem + potência) como default — colaborador pode sobrescrever
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 15-01-PLAN.md — Grouping key (codigo+voltagem) + rótulo composto no Resumo Global de Drivers (TENS-02)
+- [ ] 15-02-PLAN.md — Pré-fill/pré-filtro de driver + badge de divergência não-bloqueante + advisory TINY 24V (TENS-01, SIST-04, UX-02)
 **UI hint**: yes
 
 ### Phase 16: Cálculo & Metragem
@@ -94,7 +97,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
-| 15. Tensão & Validação | 0/TBD | Not started | - |
+| 15. Tensão & Validação | 0/2 | Not started | - |
 | 16. Cálculo & Metragem | 0/TBD | Not started | - |
 | 17. Resumo & Apresentação | 0/TBD | Not started | - |
 | 18. UX Transversal | 0/TBD | Not started | - |
