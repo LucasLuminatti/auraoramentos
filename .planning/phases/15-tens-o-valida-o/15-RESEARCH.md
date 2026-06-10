@@ -104,11 +104,15 @@ Esta fase é puramente frontend + lógica de cálculo — zero migrações de sc
 
 ### Regra de sugestão (proposta, baseada nos dados reais)
 
-**Regra:**
+**Regra [APROVADA por Lenny 2026-06-10 — com refinamento da estimativa]:**
 1. Buscar no catálogo drivers onde `tensao = voltagem_da_fita` (coluna preenchida).
 2. De todos os encontrados, selecionar o de **menor potência suficiente**: `potencia_watts >= consumoW_estimado * MARGEM_SEGURANCA_DRIVER (1.05)`.
-3. Para estimar o consumo sem saber a metragem ainda (pré-fill acontece no momento da seleção da fita, antes de o colaborador definir metragem), usar um **consumo conservador padrão**: `wm_da_fita * 5m` (5 metros como estimativa default de ambiente típico, 1 passada).
+3. **Estimar o consumo (REFINAMENTO APROVADO):**
+   - **Se a metragem do sistema já estiver preenchida → usar a metragem REAL** do sistema (`consumoW = metragem_real * wm_da_fita`). Aproveita a informação real quando ela existe.
+   - **Se a metragem ainda NÃO estiver preenchida → usar 5m como fallback** (`consumoW = wm_da_fita * 5`), só para não deixar o campo vazio na sugestão inicial.
 4. Se nenhum driver com `tensao` preenchida atender → não fazer pré-fill (deixar vazio, filtro ainda funciona via query).
+
+> **Nota de implementação:** o pré-fill dispara no `handleSelectProdutoSistema` quando `component === 'fita'`. Nesse ponto, ler `sis.fita.metragem` (ou campo equivalente do sistema) — se `> 0`, usar como metragem real; senão, 5m. Confirmar o nome exato do campo de metragem no tipo `SistemaIluminacao`/`ItemFitaLED` ao planejar.
 
 **Margem de segurança:** `MARGEM_SEGURANCA_DRIVER = 1.05` (já definida em `src/types/orcamento.ts:118`). [VERIFIED: leitura do código fonte]
 
@@ -142,8 +146,10 @@ Esta fase é puramente frontend + lógica de cálculo — zero migrações de sc
 
 **Limitação da sugestão de 5m de estimativa:** O pré-fill sugere um driver de potência para 5m. Depois que o colaborador define a metragem real, a qtd de drivers é recalculada automaticamente pelas funções existentes — o pré-fill é só para inicializar o código/voltagem, não a potência definitiva. O colaborador pode trocar.
 
-**Resumo da regra para aprovação de Lenny (D-02a):**
-> "Ao selecionar a fita, o sistema estima o consumo para 5m (1 passada), aplica a margem de 5% e seleciona o driver de menor potência suficiente entre os drivers de mesma voltagem com `tensao` preenchida no banco. O driver sugerido pode ser trocado a qualquer momento."
+**Resumo da regra — APROVADA por Lenny (D-02a, 2026-06-10):**
+> "Ao selecionar a fita, o sistema estima o consumo usando a **metragem real do sistema se já estiver preenchida** (senão 5m como fallback), aplica a margem de 5% e seleciona o driver de menor potência suficiente entre os drivers de mesma voltagem com `tensao` preenchida no banco. O driver sugerido pode ser trocado a qualquer momento."
+
+✅ **STATUS: APROVADO** (com o refinamento da metragem real acima). Pronto para o planner.
 
 [VERIFIED: catálogo consultado via Supabase service role, 2026-06-10]
 
@@ -178,7 +184,9 @@ A voltagem fica no mesmo elemento visual que o código — imediatamente visíve
 **Opção B — Coluna Tensão separada (situação atual, quase funciona):**
 Manter como está. Após o fix do grouping key, cada linha já mostrará a voltagem correta na coluna "Tensão" (`{d.voltagem}V`). O colaborador vê código numa coluna e voltagem em outra.
 
-**Recomendação:** Opção A — rótulo composto `"LM2130 · 24V"` no campo de código dentro da coluna Driver. Mais imediato ao ler: o identificador único visual é o código+voltagem juntos, não dois campos separados. Elimina a coluna "Tensão" separada (simplifica a tabela). Implementação: mudar `{d.driverCodigo}` para `` `${d.driverCodigo} · ${d.voltagem}V` `` no `<div className="font-mono text-xs">`.
+**Recomendação:** Opção A — rótulo composto `"LM2130 · 24V"` no campo de código dentro da coluna Driver. Mais imediato ao ler: o identificador único visual é o código+voltagem juntos, não dois campos separados. Elimina a coluna "Tensão" separada (simplifica a tabela). Implementação: mudar `{d.driverCodigo}` para `` `${d.driverCodigo} · ${d.voltagem}V` `` no `<div className="font-mono text-xs">` e remover a coluna `<TableHead>Tensão</TableHead>` + a célula `<TableCell>{d.voltagem}V</TableCell>`.
+
+✅ **STATUS: APROVADO por Lenny (D-09a, 2026-06-10) — Opção A (rótulo composto, remover coluna Tensão separada).** Pronto para o planner.
 
 [VERIFIED: leitura do código Step3Revisao.tsx L756-804]
 
