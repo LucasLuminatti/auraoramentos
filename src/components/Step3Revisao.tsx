@@ -764,7 +764,6 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
               <TableHeader>
                 <TableRow>
                   <TableHead>Driver</TableHead>
-                  <TableHead className="text-right">Tensão</TableHead>
                   <TableHead className="text-right">Consumo Total</TableHead>
                   <TableHead className="text-right">Extensão Total</TableHead>
                   <TableHead className="text-right">Qtd Global</TableHead>
@@ -774,12 +773,11 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
               </TableHeader>
               <TableBody>
                 {resumoDrivers.map((d) => (
-                  <TableRow key={d.driverCodigo}>
+                  <TableRow key={`${d.driverCodigo}-${d.voltagem}`}>
                     <TableCell>
-                      <div className="font-mono text-xs">{d.driverCodigo}</div>
+                      <div className="font-mono text-xs">{d.driverCodigo} · {d.voltagem}V</div>
                       <div className="text-xs text-muted-foreground">{d.driverDescricao} ({d.potenciaDriverW}W)</div>
                     </TableCell>
-                    <TableCell className="text-right">{d.voltagem}V</TableCell>
                     <TableCell className="text-right">{d.totalConsumoW.toFixed(1)}W</TableCell>
                     <TableCell className="text-right">{d.totalDemandaM}m{d.limiteExtensaoM ? ` / ${d.limiteExtensaoM}m por driver` : ''}</TableCell>
                     <TableCell className="text-right font-semibold">{d.qtdGlobal}</TableCell>
