@@ -542,7 +542,7 @@ Fase sem dependências externas além das já presentes no projeto. Supabase, so
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Drivers com tensao null para 48V**
    - O que sabemos: LM2343 e LM2344 (drivers MAGNETO 48V) têm `tensao = null` no banco.
