@@ -16,7 +16,7 @@
 
 ### Phases
 
-- [ ] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16
+- [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16 (completed 2026-06-10)
 - [ ] **Phase 15: Tensão & Validação** — Inferir voltagem do driver a partir da fita + aviso de divergência; remover bloqueio indevido entre ambientes com voltagens diferentes; corrigir grouping key de drivers globais para (codigo + voltagem); advisory TINY 24V com oferta de driver; sugerir driver compatível ao selecionar fita
 - [ ] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo
 - [ ] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item; fita sem duplicação entre visão por ambiente e resumo final; drivers por ambiente (não apenas bloco global); duplicar/reusar sistema em outro ambiente; aviso ao avançar para revisão sem lâmpada/item esperado
@@ -36,7 +36,7 @@
 **Plans**: 3 plans
 - [x] 14-01-PLAN.md — Diagnóstico do catálogo (Queries A-D) + aprovação de regras por grupo (D-01/D-02)
 - [x] 14-02-PLAN.md — Migration idempotente de tipo_produto + push prod + fix causa-raiz MAGNETO (CAT-01/CAT-02)
-- [ ] 14-03-PLAN.md — Validação Playwright + manual (seletores, dica MAGNETO, orçamento antigo intacto)
+- [x] 14-03-PLAN.md — Validação Playwright + manual (seletores, dica MAGNETO, orçamento antigo intacto)
 
 ### Phase 15: Tensão & Validação
 **Goal**: O wizard guia o colaborador a escolher o driver certo automaticamente — inferindo voltagem a partir da fita, sugerindo driver compatível, avisando em caso de divergência — e permite usar tensão diferente em cada ambiente sem bloqueio indevido
@@ -93,7 +93,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 14. Catálogo & Dados | 2/3 | In Progress|  |
+| 14. Catálogo & Dados | 3/3 | Complete   | 2026-06-10 |
 | 15. Tensão & Validação | 0/TBD | Not started | - |
 | 16. Cálculo & Metragem | 0/TBD | Not started | - |
 | 17. Resumo & Apresentação | 0/TBD | Not started | - |
@@ -131,7 +131,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
