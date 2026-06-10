@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.2
-milestone_name: "**Goal**: Corrigir o subsistema fita/perfil/driver/módulos/magneto do wizard (UAT 19 comentários, 2026-06-10) sem quebrar luminária comum nem orçamentos antigos"
-status: defining_requirements
+milestone_name: "Correções UAT + UX do Wizard de Sistemas de Iluminação"
+status: roadmap_ready
 last_updated: "2026-06-10T00:00:00.000Z"
 last_activity: 2026-06-10
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,35 +15,46 @@ progress:
 
 # STATE: AURA
 
-**Last updated:** 2026-06-10 — Milestone v1.2 iniciado (Correções UAT do Wizard de Sistemas de Iluminação). Definindo requisitos a partir dos 19 comentários dos funcionários (com prints). Roadmap continua no phase 14.
+**Last updated:** 2026-06-10 — Roadmap v1.2 criado. 5 fases (14–18), 18/18 reqs mapeados. Pronto para `/gsd-plan-phase 14`.
 
 ## Project Reference
 
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
-- **Current Milestone:** v1.2 — Correções UAT do Wizard de Sistemas de Iluminação (iniciado 2026-06-10)
+- **Current Milestone:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (iniciado 2026-06-10)
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Definindo requisitos do v1.2 a partir dos 19 comentários dos funcionários (UAT com prints).
+- **Current Focus:** Phase 14 — Catálogo & Dados (próximo a ser planejado)
 
 ## Current Position
 
-Phase: Not started (definindo requisitos)
+Phase: 14 (não iniciada)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-10 — Milestone v1.2 iniciado (continua no phase 14)
+Status: Roadmap ready — aguardando `/gsd-plan-phase 14`
+Last activity: 2026-06-10 — Roadmap v1.2 criado (5 fases, 18 reqs)
 
-## Roadmap v1.1 (resumo final)
+```
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (0/5 phases)
+```
+
+## Roadmap v1.2
 
 | Phase | Tema | Reqs | Status |
 |-------|------|------|--------|
-| 7 | Schema & Prep | RLS-03, AUTO-03 | Complete (2026-05-11) |
-| 8 | Cadastros (FORM) | FORM-01..04 | Complete (2026-05-14) |
-| 9 | Multi-tenancy RLS | RLS-01, RLS-02 | Complete (2026-05-15) |
-| 10 | Wizard edição | WIZ-01..05 | Complete (2026-05-14) |
-| 11 | PDF + Dashboard | PDF-01, PDF-02, DASH-01 | Complete (2026-05-15) |
-| 12 | Automação aniversário | AUTO-01, AUTO-02 | Complete (2026-05-15) |
-| 13 | Smoke & Closure | (closure) | Complete (2026-05-15) |
+| 14 | Catálogo & Dados | CAT-01, CAT-02 | Not started |
+| 15 | Tensão & Validação | TENS-01, TENS-02, SIST-04, UX-02 | Not started |
+| 16 | Cálculo & Metragem | CALC-01, CALC-02, CALC-03 | Not started |
+| 17 | Resumo & Apresentação | RES-01..05 | Not started |
+| 18 | UX Transversal | UX-01, UX-03, UX-04, UX-05 | Not started |
+
+## Build Order & Key Constraints
+
+- **Phase 14 first (hard):** CAT-01 é SQL puro aditivo; corrige `tipo_produto` errado (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) que bloqueia os seletores de perfil/driver usados pelas Phases 15–16.
+- **Phase 16 atomic calc patch:** CALC-01/02/03 exigem patch simultâneo dos 5 sites de cálculo (`calcularDemandaFita`, `calcularConsumoW`, `calcularQtdDrivers`, `calcularSubtotalSistemaSemFita`, `isSistemaVazio` em pdfTemplates/v2.ts) — risco de fita com wm=0 sumindo do PDF silenciosamente. Não dividir.
+- **Phase 16 migration antes de UI:** CALC-03 exige migration de sync `passadas_padrao` (`regras_compatibilidade_perfil` → `produtos`) ANTES do unlock da UI, senão perfil 50mm fica com 1 passada em vez de 3.
+- **Phase 15 grouping key fix:** TENS-02 exige mudança do grouping key de `calcularDriversPorProjeto` para `(codigo + voltagem)` ANTES de desbloquear tensões diferentes por ambiente — evita subtotal fisicamente nonsensical.
+- **Schema sempre aditivo** — não quebrar wizard, orçamentos antigos, PDF v1/v2.
+- **UX-05 (checklist pré-PDF)** é flag estrutural: se implementação exigir mudança no Step 3 além de overlay/panel, registrar decisão antes de prosseguir.
 
 ## Latest Milestone Shipped
 
@@ -58,81 +69,47 @@ Last activity: 2026-06-10 — Milestone v1.2 iniciado (continua no phase 14)
 - BUG-13-01 capturado e fixed inline (`b3ae4db`) durante smoke
 - Archive: `.planning/milestones/v1.1-ROADMAP.md` + `v1.1-REQUIREMENTS.md` + `MILESTONES.md`
 
-**Previous milestone:** v1.0 — Melhorias v1 (2026-04-23 → 2026-05-07, 15 dias, 28 plans, 163 commits, 40/42 entregues + 1 obsoleto + 1 deferido). Archive em [milestones/MILESTONES.md](milestones/MILESTONES.md).
+**Previous milestone:** v1.0 — Melhorias v1 (2026-04-23 → 2026-05-07, 15 dias, 28 plans, 163 commits, 40/42 entregues + 1 obsoleto + 1 deferido).
 
 ## Accumulated Context
 
-### Decisions carryover (v1.0 → v1.1 → v1.2+)
+### Decisions carryover (v1.0 → v1.1 → v1.2)
 
 - **Schema sempre aditivo (perpetual)** — confirmado v1.0 (9 migrations) + v1.1 (11 migrations, zero regressão)
-- **Drive RLS via `user_id` direto (D-02 errata)** — replicado em `arquitetos` + `clientes` na Phase 9 com sucesso (zero-code-change no client, preflight 11 callsites = 0 Risk)
-- **PDF v1/v2 router (`pdf_template_version`)** — ajustes da Phase 11 ficam no template v2 apenas; v1 não pode regredir
-- **ImportMaster XLSX (2.088 SKUs oficiais)** é fonte da verdade pra descrição rica (WIZ-05 Phase 10: builder `construirDescricaoRica` com fallback ao snapshot puro pra produtos removidos do master)
-- **Phase 9 zero-code-change no client** — auditoria dos 11 callsites em `arquitetos`/`clientes` classifica todos como OK natural/admin-only. RLS + DEFAULT `auth.uid()` cobre 100% sem mexer em frontend.
-- **Phase 12 multi-admin dinâmico via `has_role(admin)` (D-22)** — substitui hardcode "David Grabarz" do AUTO-02. RPC `buscar_admins_emails()` SECURITY DEFINER escala pra N admins sem redeploy. Pattern também usado pra substituir `ADMIN_EMAIL` legacy do `request-access`.
-- **Vault subquery em RUNTIME (Phase 12-03)** — cron command lê `decrypted_secret` a cada disparo (não em schedule-time) — rotação propaga sem redeploy.
-- **UNIQUE(cliente_id, ano_referencia) = idempotência atomic (Phase 12-01)** — edge fn trata PG 23505 como "já enviado nesse ano".
+- **Drive RLS via `user_id` direto (D-02 errata)** — replicado em `arquitetos` + `clientes` na Phase 9
+- **PDF v1/v2 router (`pdf_template_version`)** — ajustes ficam no template v2 apenas; v1 não pode regredir
+- **ImportMaster XLSX (2.088 SKUs oficiais)** é fonte da verdade pra descrição rica
+- **Multi-admin dinâmico via `has_role(admin)` (D-22)** — RPC `buscar_admins_emails()` SECURITY DEFINER
+- **Vault subquery em RUNTIME (Phase 12-03)** — cron lê `decrypted_secret` a cada disparo
+
+### v1.2 Technical Notes (da pesquisa PITFALLS.md)
+
+- **Snapshot backward-compat (C-1):** recategorizar `tipo_produto` não afeta snapshots salvos (jsonb autocontido) — só novas buscas. OK.
+- **isSistemaVazio pitfall (C-2):** patch obrigatório em `isSistemaVazio` ao tocar tipos de sistema — fita com wm=0 some do PDF silenciosamente.
+- **metragemManual=null pitfall (C-3):** guard no Step 2 advancement é a fix correta para CALC-01; não alterar defaults de `addSistema()`.
+- **Voltage cross-ambiente pitfall (C-4):** grouping key deve mudar para `(codigo+voltagem)` antes de desbloquear tensões por ambiente (TENS-02).
+- **passadas_padrao sync pitfall (C-5):** migration de sync `regras_compatibilidade_perfil` → `produtos` antes do unlock UI (CALC-03).
+- **Step 3 JSX fita dedup pitfall (M-1):** RES-02 fix não pode tocar `rowFita` em pdfTemplates/v2.ts — são code paths separados.
+- **LOCAL no fita summary pitfall (N-1):** RES-01 precisa de decisão design (annotation vs accounting separado) antes de codar.
+
+### v1.2 Execution Directives (Lenny — aprovação do roadmap 2026-06-10)
+
+- **Filosofia (todas as fases):** não só corrigir o sintoma reportado — atacar a causa-raiz e propor melhorias que deixem o sistema mais intuitivo, didático e difícil de configurar errado.
+- **Sinalizar antes de absorver:** qualquer item que comece a virar mudança estrutural relevante deve ser sinalizado e avaliado com o Lenny, não absorvido silenciosamente na v1.2.
+- **RES-01 (decisão travada):** apenas **anotação visual do LOCAL** no resumo. NÃO mexer em cálculos nem em subtotais por LOCAL nesta milestone (não tocar `calcularRolosPorGrupo`).
+- **UX-05 (decisão travada):** checklist/painel de validação antes do PDF **dentro do fluxo atual** (overlay/panel no Step 3). Se exigir reestruturar os steps ou mudar significativamente a navegação → **consultar o Lenny antes**.
 
 ### Todos
 
-- (nenhum — marco fechado)
+- (nenhum — aguardando plano Phase 14)
 
 ### Blockers
 
 - (nenhum)
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260511-cwq | Fix request-access HTTP status: retornar 200 nos casos pending/approved (frontend cai em res.error e mostra toast genérico) | 2026-05-11 | 16c0b14 | [260511-cwq-fix-request-access-http-status-retornar-](./quick/260511-cwq-fix-request-access-http-status-retornar-/) |
-
 ## Next Action
 
-**Definir próximo marco** via `/gsd-new-milestone` ou pausar até Lenny escolher foco.
-
-**Candidatos provisórios para v1.2+** (do PROJECT.md + follow-ups deferidos do v1.1):
-
-- **Preços via CSV** (IMP-02 deferido v1.0) + tabela de custos (desbloqueia margem)
-- **Margem no pedido** — agregada por arquiteto/colaborador/período
-- **Documentação + testes das fórmulas de cálculo** (fita/driver/perfil/agrupamento)
-- **Follow-ups técnicos v1.1:**
-  - SPF/DKIM/DMARC do domínio `orcamentosaura.com.br` (email Junk em Outlook)
-  - WR-02 pg_net 4xx/5xx monitoring/alerts pro cron aniversário
-  - Dedup `toList` na edge fn aniversário (owner=admin)
-  - Bucket singular `produto-imagens` cleanup + `has_role(admin)` gate explícito em edge fn
-
-### Phase 12 — Decisões carryover (preservadas para futuras referências de automação)
-
-- **Stored fns vs JOIN inline (12-01):** `buscar_aniversariantes_d5()` + `buscar_admins_emails()` SECURITY DEFINER pra evitar N+1 e desacoplar schema da edge fn
-- **UNIQUE(cliente_id, ano_referencia) = idempotência atomic (12-01):** edge fn trata PG 23505 como "já enviado nesse ano"
-- **LEFT JOIN auth.users (12-01):** cliente órfão (D-06) retorna `colab_email=NULL` → edge fn registra `status='skipped_no_owner'`
-- **Edge case 29/02 (12-01):** já tratado no SQL — dispara em 28/02 em ano não-bissexto
-- **REVOKE EXECUTE pattern (12-01):** authenticated não chama as fns; só service role via RPC
-- **target-based ano_referencia (12-02):** edge fn calcula ano a partir de today+5d (não today) — corrige Pitfall 3 cross-year
-- **INSERT optimistic 'sent' + UPDATE 'failed' (12-02):** mantém row única por (cliente, ano), preserva auditoria mesmo em falha de Resend
-- **Multi-admin dinâmico via RPC (12-02):** substitui hardcode ADMIN_EMAIL legacy do request-access; suporta N admins sem redeploy
-- **Pattern Deno + Resend (12-02):** edge fn replica request-access (imports esm.sh + npm:, createClient com SERVICE_ROLE, OPTIONS+CORS, from `noreply@orcamentosaura.com.br`)
-- **Vault subquery em RUNTIME (12-03):** cron command lê `decrypted_secret` a cada disparo
-- **DO $$ BEGIN ... END $$ defensive cleanup (12-03):** `cron.unschedule` retorna void, bloco anônimo PL/pgSQL é o padrão
-- **timeout_milliseconds=60000 (12-03):** 60s folgado pro volume atual
-- **Schedule literal `'0 9 * * *'` (12-03):** 09:00 UTC = 06:00 BR direto, sem timezone math em SQL
-
-### Phase 12 — Follow-ups deferidos pra v1.2+
-
-- [ ] Auditoria SPF/DKIM/DMARC do domínio `orcamentosaura.com.br` — email caiu em Junk no Outlook do Lenny no smoke 12-02
-- [ ] Dedup do `toList` na edge fn: `Array.from(new Set([colab_email, ...admin_emails]))` — owner=admin causa duplicação no campo Para
-- [ ] WR-02 pg_net 4xx/5xx monitoring/alerts pro cron aniversário
-
-## Session Continuity
-
-- **ROADMAP.md:** Phase 13 marcada [x], nota "v1.1 archived 2026-05-15" no topo, Shipped Milestones atualizado com entry v1.1
-- **REQUIREMENTS.md:** 18 REQs marcados [x] (AUTO-02 com flag `[~]` deviation), Traceability com coluna Status, marco fechado no header
-- **MILESTONES.md:** criado com entries v1.0 + v1.1, stats acumulados, "Next milestone" com candidatos v1.2+
-- **PROJECT.md:** Current Milestone agora "Nenhum marco ativo", section "Validated Requirements (v1.1)" adicionada
-- **Archives criados:** `.planning/milestones/v1.1-ROADMAP.md` + `v1.1-REQUIREMENTS.md`
-
-**Last activity:** 2026-05-15 — Phase 13 Plan 02 (archive) completo. Marco v1.1 oficialmente fechado.
+`/gsd-plan-phase 14` — Catálogo & Dados (CAT-01, CAT-02)
 
 ---
-*STATE refreshed: 2026-05-15 — milestone v1.1 archived (17 DELIVERED + 1 DELIVERED with deviation = 18/18 covered). Próxima ação: `/gsd-new-milestone` para definir foco v1.2+.*
+*STATE refreshed: 2026-06-10 — roadmap v1.2 criado (5 fases, 18/18 reqs). Próxima ação: `/gsd-plan-phase 14`.*

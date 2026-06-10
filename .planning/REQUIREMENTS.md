@@ -2,7 +2,7 @@
 
 **Milestone:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação
 **Opened:** 2026-06-10
-**Status:** Defining requirements
+**Status:** Roadmap ready — 18/18 requirements mapped
 
 > Capturados a partir do UAT dos funcionários da Aura ("COMENTÁRIOS - SITE ORÇAMENTO", 19 comentários com prints, 2026-06-10). **Escopo decidido:** v1.2 = correções incrementais + melhorias de UX de raiz dentro do fluxo atual (baixo risco, ciclo curto). Os fluxos de **sistemas compostos (MAGNETO/TINY/MODULAR)** são evolução estrutural e foram movidos para o **marco v1.3** (registrado abaixo). Diretriz do Lenny: não só corrigir os 19 comentários, mas deixar o sistema mais intuitivo, didático e difícil de usar errado — propostas de UX de raiz incluídas (UX-01..05), mantidas incrementais (sinalizar no roadmap se alguma exigir mudança estrutural). Pesquisa de suporte em `.planning/research/SUMMARY.md`. **18 requirements em 6 categorias.**
 
@@ -111,4 +111,23 @@ Movido da v1.2 por ser **evolução estrutural** (decisão de arquitetura de mod
 
 ## Traceability
 
-_(preenchido pelo roadmap — cada REQ v1.2 mapeado para exatamente uma fase)_
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CAT-01 | Phase 14 | Pending |
+| CAT-02 | Phase 14 | Pending |
+| TENS-01 | Phase 15 | Pending |
+| TENS-02 | Phase 15 | Pending |
+| SIST-04 | Phase 15 | Pending |
+| UX-02 | Phase 15 | Pending |
+| CALC-01 | Phase 16 | Pending |
+| CALC-02 | Phase 16 | Pending |
+| CALC-03 | Phase 16 | Pending |
+| RES-01 | Phase 17 | Pending |
+| RES-02 | Phase 17 | Pending |
+| RES-03 | Phase 17 | Pending |
+| RES-04 | Phase 17 | Pending |
+| RES-05 | Phase 17 | Pending |
+| UX-01 | Phase 18 | Pending |
+| UX-03 | Phase 18 | Pending |
+| UX-04 | Phase 18 | Pending |
+| UX-05 | Phase 18 | Pending |
