@@ -299,15 +299,17 @@ export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverPr
     for (const sis of amb.sistemas) {
       const cod = sis.driver.codigo;
       if (!cod || sis.driver.potencia <= 0 || !sis.fita.wm) continue;
+      // Chave composta codigo+voltagem — mesmo driver em voltagens diferentes = linhas distintas (D-08/C-4)
+      const chave = `${sis.driver.codigo}|${sis.driver.voltagem}`;
       const consumo = calcularConsumoW(sis);
       const demanda = calcularDemandaFita(sis);
-      const existing = grupos.get(cod);
+      const existing = grupos.get(chave);
       if (existing) {
         existing.totalConsumoW += consumo;
         existing.totalDemandaM += demanda;
         existing.qtdSomaIndividual += calcularQtdDrivers(sis);
       } else {
-        grupos.set(cod, {
+        grupos.set(chave, {
           descricao: sis.driver.descricao,
           potenciaDriverW: sis.driver.potencia,
           voltagem: sis.driver.voltagem,
@@ -320,13 +322,14 @@ export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverPr
   }
 
   const resultado: ResumoDriverProjeto[] = [];
-  for (const [cod, g] of grupos) {
+  for (const [chave, g] of grupos) {
+    const driverCodigo = chave.split('|')[0];
     const limite = limiteExtensaoMetros(g.voltagem);
     const qtdPorPotencia = Math.ceil((g.totalConsumoW * MARGEM_SEGURANCA_DRIVER) / g.potenciaDriverW);
     const qtdPorExtensao = limite ? Math.ceil(g.totalDemandaM / limite) : 0;
     const qtdGlobal = Math.max(qtdPorPotencia, qtdPorExtensao);
     resultado.push({
-      driverCodigo: cod,
+      driverCodigo,
       driverDescricao: g.descricao,
       potenciaDriverW: g.potenciaDriverW,
       voltagem: g.voltagem,
