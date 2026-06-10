@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "foto-produto-nao-aparece-pdf — A foto do produto não aparece no PDF de orçamento gerado (client-side). Orçamento Ablim Cozinha, criado 2026-06-10."
 created: 2026-06-10T00:00:00Z
-updated: 2026-06-10T00:20:00Z
+updated: 2026-06-10T15:30:00Z
 ---
 
 ## Current Focus
@@ -71,7 +71,7 @@ started: Percebido 2026-06-10. Antes aparecia (suíte e2e/imagens cobria isso).
 
 root_cause: Timing issue entre container.innerHTML = html e a rasterização pelo html2pdf/html2canvas. Após setar o innerHTML, o browser inicia o decode das <img src="data:image/jpg;base64,..."> de forma assíncrona. O html2pdf (snapdom deepCloneBasic) clona o elemento imediatamente e usa img.currentSrc — que ainda está vazio se o decode não terminou — resultando em img sem src no clone e espaço em branco no PDF. O fix de inlineImagensSnapshot já converte as URLs para base64 corretamente (CORS, HTTP 200, blob 77KB confirmados), mas esse await de decode estava ausente.
 fix: Adicionado await Promise.all(imgs.map(img => img.complete ? resolve : img.decode().catch(()=>{}))) imediatamente após document.body.appendChild(container) e antes de chamar html2pdf(), nos dois call sites (Step3Revisao.tsx e OrcamentoDetalhe.tsx). img.decode() resolve quando a imagem está pronta para exibição; fallback onload/onerror para Safari < 14.
-verification: lint sem novos erros, 55 testes passando. Verificação human: gerar PDF com produto que tem foto e confirmar que aparece.
+verification: lint sem novos erros (3 erros no-explicit-any em Step3Revisao são pré-existentes, fora das linhas do fix), 55 testes passando, build limpo. Verificação human end-to-end em produção (2026-06-10): bundle index-BvTX4Nlc.js servido em orcamentosaura.com.br e auraoramentos-kappa.vercel.app (hash bate com build local do fix). PDF gerado na prod via Playwright com produto LM029 (que tem foto) → raster JPEG embutido extraído e inspecionado → foto do BULBO LED renderizada na linha do produto (antes ficava em branco). Fix commitado em 2f5b02d e deployado. CONFIRMADO.
 files_changed:
   - src/components/Step3Revisao.tsx
   - src/pages/OrcamentoDetalhe.tsx
