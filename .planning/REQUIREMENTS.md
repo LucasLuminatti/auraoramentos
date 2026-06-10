@@ -1,114 +1,114 @@
-# Requirements — Milestone v1.1
+# Requirements — Milestone v1.2
 
-**Milestone:** v1.1 — Polimento UAT + Multi-tenancy + Automação
-**Opened:** 2026-05-11
-**Shipped:** 2026-05-15
-**Status:** Milestone v1.1 archived 2026-05-15 — 18/18 delivered (1 with deviation: AUTO-02). Archive em [milestones/v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md).
+**Milestone:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação
+**Opened:** 2026-06-10
+**Status:** Defining requirements
 
-> Capturadas a partir do UAT pessoal do Lenny em prod (2026-05-11) após arquivamento do v1.0. 18 requirements em 6 categorias. **Marco fechado 2026-05-15 — outcome tracking detalhado em [milestones/v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md).**
-
----
-
-## Active Requirements (v1.1) — todos entregues
-
-### FORM — Cadastros (opcionalizar + expandir + imagens)
-
-- [x] **FORM-01:** Colaborador/admin pode criar cliente sem Contato, sem CPF/CNPJ e sem Arquiteto (todos opcionais; só Nome obrigatório) — DELIVERED (Phase 8, 2026-05-14)
-- [x] **FORM-02:** Admin pode preencher data de nascimento, endereço do escritório e dados bancários no cadastro do arquiteto — DELIVERED (Phase 8, 2026-05-14)
-- [x] **FORM-03:** Admin pode editar descrição e imagem dos produtos coringa AU001..AU016 (hoje fixos/só leitura) — DELIVERED (Phase 8, 2026-05-14)
-- [x] **FORM-04:** Admin pode anexar/trocar imagem manual em qualquer produto pelo row da tab Cadastros > Produtos (complementa ImportImagens em massa) — DELIVERED (Phase 8, 2026-05-14)
-
-### RLS — Multi-tenancy por colaborador
-
-- [x] **RLS-01:** Colaborador vê apenas os clientes que ele cadastrou (próprios); admin vê todos — DELIVERED (Phase 9, 2026-05-15)
-- [x] **RLS-02:** Colaborador vê apenas os arquitetos que ele cadastrou (próprios); admin vê todos — DELIVERED (Phase 9, 2026-05-15)
-- [x] **RLS-03:** Schema aditivo: `user_id` em `arquitetos` e `clientes` + RLS policies replicando padrão Drive v1.0 D-02 — DELIVERED (Phase 7, 2026-05-11)
-
-### WIZ — Wizard / Orçamento (edição + status + descrição rica)
-
-- [x] **WIZ-01:** Colaborador pode editar preço unitário de item no Step 3 antes de gerar PDF, com floor mínimo no `preco_minimo` do produto — DELIVERED (Phase 10, 2026-05-14)
-- [x] **WIZ-02:** Colaborador pode editar quantidade de item no Step 3 antes de gerar PDF — DELIVERED (Phase 10, 2026-05-14)
-- [x] **WIZ-03:** Colaborador pode reabrir orçamento com `status='rascunho'` clicando no card de Clientes/Pedidos → continua wizard de onde parou — DELIVERED (Phase 10, 2026-05-14)
-- [x] **WIZ-04:** Colaborador ou admin pode marcar status do orçamento (aprovado / perdido / pendente) após geração de PDF — DELIVERED (Phase 10, 2026-05-14)
-- [x] **WIZ-05:** Descrição do produto exibida no wizard e no PDF puxa `nome + temperatura(K) + potência + IRC + nicho` a partir da planilha master ImportMaster — DELIVERED (Phase 10, 2026-05-14; builder `construirDescricaoRica` com fallback ao snapshot puro)
-
-### PDF — PDF v2 ajustes
-
-- [x] **PDF-01:** PDF v2 não renderiza bloco "Sistemas de Iluminação" quando o sistema está vazio (0m fita / 0W consumo / 0 driver) — DELIVERED (Phase 11, 2026-05-15)
-- [x] **PDF-02:** Seção "Prazo de Entrega" no PDF v2 acrescenta "prazo médio de 20 dias úteis" após o texto existente — DELIVERED (Phase 11, 2026-05-15)
-
-### DASH — Dashboard (métrica única)
-
-- [x] **DASH-01:** Tab Início substitui os 6 cards atuais (Receita Efetiva/Prevista/Pipeline/Ticket Médio/Conversão/Ciclo Médio) por um único card de **somatório de orçamentos em aberto** somando todos os representantes — DELIVERED (Phase 11, 2026-05-15)
-
-### AUTO — Automação aniversário
-
-- [x] **AUTO-01:** Sistema envia email 5 dias antes do aniversário do cliente para o colaborador dono do cliente — DELIVERED (Phase 12, 2026-05-15)
-- [~] **AUTO-02 (DELIVERED with deviation):** Sistema envia email 5 dias antes do aniversário do cliente para admin → entregue via `has_role(admin)` dinâmico (RPC `buscar_admins_emails()`) em vez de hardcode email "David Grabarz". Deviation consciente (Phase 12 D-22) — suporta N admins sem redeploy, cobre intent original. Detalhe em [milestones/v1.1-REQUIREMENTS.md#AUTO-02](milestones/v1.1-REQUIREMENTS.md).
-- [x] **AUTO-03:** Schema aditivo: campo `data_nascimento DATE` em `clientes`; cron pg_cron + edge function chamando Resend — DELIVERED (Phase 7 schema + Phase 12 automation, 2026-05-15)
+> Capturados a partir do UAT dos funcionários da Aura ("COMENTÁRIOS - SITE ORÇAMENTO", 19 comentários com prints, 2026-06-10). **Escopo decidido:** v1.2 = correções incrementais + melhorias de UX de raiz dentro do fluxo atual (baixo risco, ciclo curto). Os fluxos de **sistemas compostos (MAGNETO/TINY/MODULAR)** são evolução estrutural e foram movidos para o **marco v1.3** (registrado abaixo). Diretriz do Lenny: não só corrigir os 19 comentários, mas deixar o sistema mais intuitivo, didático e difícil de usar errado — propostas de UX de raiz incluídas (UX-01..05), mantidas incrementais (sinalizar no roadmap se alguma exigir mudança estrutural). Pesquisa de suporte em `.planning/research/SUMMARY.md`. **18 requirements em 6 categorias.**
 
 ---
 
-## Future Requirements (post-v1.1)
+## Active Requirements (v1.2)
 
-Não inflando o marco — carryover do PROJECT.md + follow-ups do v1.1:
-- Preços via CSV (IMP-02 deferido de v1.0) + tabela de custos
-- Margem no pedido (depende da tabela de custos)
-- Documentação + testes das fórmulas de cálculo (fita/driver/perfil/agrupamento)
-- WR-02 pg_net 4xx/5xx monitoring/alerts (Phase 12 follow-up)
-- SPF/DKIM/DMARC do domínio `orcamentosaura.com.br` (email Junk em Outlook)
-- Dedup `toList` na edge fn aniversário (owner=admin causa duplicação)
+### CAT — Catálogo & Busca (dados)
+
+- [ ] **CAT-01**: Colaborador encontra na busca de perfil/driver TODOS os produtos da família (ex.: PERFIL CANTONEIRA, WALL WASHER, LM3475, LM3291), corrigindo `tipo_produto` errado/nulo via migração SQL aditiva (WALL WASHER → `'perfil'`, pois `'wall_washer'` não é valor válido no CHECK).
+- [ ] **CAT-02**: O aviso/dica exibido ao adicionar o MAGNETO corresponde ao MAGNETO (não ao TINY MAGNETO) — corrigir o mapeamento/dado.
+
+### SIST — Sistemas (advisory que cabe em v1.2)
+
+- [ ] **SIST-04**: Ao adicionar um item da linha Tiny (ex.: TINY SPOT 24V), o sistema avisa que requer driver 24V e oferece a opção de incluí-lo. _(advisory simples; a montagem completa de sistemas compostos é v1.3 — SIST-01/02/03.)_
+
+### TENS — Tensão / Voltagem (redução de erro)
+
+- [ ] **TENS-01**: A voltagem do driver é inferida/validada a partir da fita; quando a voltagem não bate, o sistema avisa (em vez de seleção manual silenciosa).
+- [ ] **TENS-02**: Colaborador usa tensão diferente em ambientes diferentes sem bloqueio indevido (remover o link à tensão do ambiente anterior), com a agregação global de drivers agrupando por (código + voltagem).
+
+### CALC — Cálculo / Contabilização
+
+- [ ] **CALC-01**: Fita sem perfil contabiliza a metragem informada (exigir/preencher a metragem manual; não deixar passar como 0m → R$ 0,00 silencioso).
+- [ ] **CALC-02**: A metragem/comprimento do perfil reflete automaticamente na descrição após inserir o código.
+- [ ] **CALC-03**: A sugestão de passadas de fita é editável (permite reduzir) e respeita a regra de que perfil de 50mm aceita até 3 passadas (sincronizar `passadas_padrao`).
+
+### RES — Apresentação / UX do resumo
+
+- [ ] **RES-01**: O Resumo Global de Fitas/Drivers mostra o LOCAL de cada item (ex.: SANCA, MARCENARIA).
+- [ ] **RES-02**: A fita não aparece de forma duplicada/confusa (no ambiente e no resumo final) — apresentação coerente para o cliente.
+- [ ] **RES-03**: Os drivers aparecem no respectivo ambiente (não apenas em bloco global).
+- [ ] **RES-04**: Colaborador duplica/reusa um sistema já montado em outro ambiente (agilidade quando o LOCAL se repete).
+- [ ] **RES-05**: Ao avançar para revisão/pagamento, o sistema avisa quando uma peça ficou sem a lâmpada/item esperado.
+
+### UX — Melhorias de raiz (propostas, não citadas literalmente; incrementais)
+
+- [ ] **UX-01**: Quando o colaborador busca na Luminária um código que é perfil/fita/driver (ou vice-versa), o sistema reconhece e direciona ("LM1370 é um perfil — adicione em Sistemas de Iluminação") em vez de "Nenhum produto encontrado". _(ataca a raiz do LM1370/perfis somem)_
+- [ ] **UX-02**: Ao escolher a fita, o sistema sugere automaticamente um driver compatível (voltagem + potência) como default. _(estende TENS-01 de "avisar" para "já preencher certo")_
+- [ ] **UX-03**: Microcopy/rótulos inline explicando o que entra em "Luminárias" vs "Sistemas de Iluminação" e o que é fita/perfil/driver. _(reduz treinamento)_
+- [ ] **UX-04**: Colaborador duplica um ambiente inteiro em um clique (além de duplicar um sistema). _(reduz retrabalho em quartos/sancas iguais)_
+- [ ] **UX-05**: A revisão destaca visualmente itens incompletos/suspeitos (fita 0m, sistema sem driver, voltagem divergente, peça sem lâmpada) num checklist antes de gerar o PDF. _(generaliza RES-05; camada de segurança)_
 
 ---
 
-## Out of Scope (v1.1)
+## Cobertura dos 19 comentários (v1.2)
 
-| Feature | Reason |
-|---------|--------|
-| Métrica de orçamentos abertos replicada em tab Pedidos | Lenny confirmou: só na tab Início |
-| Validação adicional de CPF/CNPJ no cliente | Campos vão virar opcionais — validar dado opcional não faz sentido |
-| Migração de descrições antigas via UPDATE em massa | WIZ-05 garante leitura nova; backfill se necessário fica pra fase de qualidade |
-| Refatoração de cálculos (fita/driver/perfil) | Out of Scope perpétuo — só após documentação + testes (próximo marco) |
-| Margem no orçamento | Out of Scope perpétuo até tabela de custos chegar |
-| Permitir alterar `status='aprovado'` voltando pra rascunho | Status é one-way (até feedback contrário) |
+| # | Comentário (resumo) | REQ |
+|---|---------------------|-----|
+| 1a | Perfil: metragem não vai automática na descrição | CALC-02 |
+| 1b | Driver: voltagem é manual (deveria inferir/avisar) | TENS-01 (+UX-02) |
+| 2 | Refazer escolha de fita em cada ambiente (SANCA) | RES-04 (+UX-04) |
+| 3 | Busca não traz a família toda (perfil + driver) | CAT-01 (+UX-01) |
+| 4 | Avança pro pagamento sem avisar lâmpada faltando | RES-05 (+UX-05) |
+| 5 | Resumo global de fitas precisa do LOCAL | RES-01 |
+| 6 | Fita em outro ambiente com tensão diferente: não deixa | TENS-02 |
+| 7 | Só fita sem perfil: não contabiliza | CALC-01 |
+| 8 | Sistema modular não mostra opções de módulos | → v1.3 (SIST-03) |
+| 9 | Módulo: não dá pra incluir fita+driver | → v1.3 (SIST-03) |
+| 10 | MAGNETO sem módulos + info é do TINY | CAT-02 (dica) + v1.3 (SIST-01 montagem) |
+| 11 | TINY MAGNETO sem opções de módulos/componentes | → v1.3 (SIST-02) |
+| 12 | Linha Tiny deve avisar driver 24V e oferecer | SIST-04 |
+| 13 | WALL WASHER não aparece | CAT-01 |
+| 14 | Alguns perfis não aparecem | CAT-01 |
+| 15 | Passadas não devem ficar travadas | CALC-03 |
+| 16 | Perfil 50mm pode ter até 3 passadas | CALC-03 |
+| 17 | Fita aparece no ambiente e no final (confuso) | RES-02 |
+| 18 | Drivers devem ficar no ambiente, não global | RES-03 |
+
+Os 19 pontos seguem 100% endereçados: 16 resolvidos na v1.2; os de **montagem** de sistemas compostos (8, 9, 11 e a parte de montagem do 10) vão pra v1.3. A **dica** trocada do MAGNETO (parte do 10) é corrigida já na v1.2 (CAT-02).
 
 ---
 
-## Pré-requisito bloqueante (fix por fora)
+## Registrado para v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
 
-`request-access` quebrado em prod (2026-05-11) — David Grabarz + Lenny não conseguem solicitar convite. Fix via `/gsd-quick` (commit `16c0b14`) antes da primeira execução de fase do v1.1. Não conta como requirement do marco — é restauração de funcionalidade v1.0. **Resolvido em 2026-05-11.**
+Movido da v1.2 por ser **evolução estrutural** (decisão de arquitetura de modelo de dados + novos fluxos de montagem + edge function + provável PDF v3), ~40% do esforço e ~todo o risco do escopo original.
+
+- **SIST-01**: Montar sistema MAGNETO 48V — módulos + dimensionamento de driver (LM2343/LM2344) + componentes obrigatórios (conector LM2338, kit LM2987).
+- **SIST-02**: Montar sistema TINY MAGNETO 24V — módulos + driver 24V + conector (LM3168/LM3169).
+- **SIST-03**: Montar sistema modular SYSTEM MOLD (perfil modular + módulos difusos + fita + driver).
+- **Decisão de arquitetura pendente**: compostos em `sistemas[]` (discriminated union) vs `luminarias[].composicao?` (recomendação da pesquisa: o 2º, mais conservador). Resolver no início da v1.3.
+- **PDF v3** com seção rica de sistemas compostos.
+
+---
+
+## Out of Scope (v1.2)
+
+| Item | Motivo |
+|------|--------|
+| Montagem de sistemas compostos (MAGNETO/TINY/MODULAR) | Movido para v1.3 (evolução estrutural) |
+| Motor de cálculo v1 / `MARGEM_SEGURANCA_DRIVER` / agrupamento de drivers | Marco 3 — spec em `.planning/notes/motor-calculo-led-spec.md` |
+| PDF v3 (seção rica de compostos) | v1.3; v1.2 mantém PDF v2 compatível |
+| Auto-divisão de circuitos / mistura de voltagens no trilho / módulos de terceiros | Anti-features (pesquisa) |
+| Migração para PDF vetorial | Backlog 999.1 |
+
+---
+
+## Future Requirements (deferidos)
+
+- Preços via CSV (IMP-02, carryover v1.0) + tabela de custos
+- Margem no pedido (Marco 3)
+- Documentação + testes das fórmulas de cálculo (Marco 3)
+- Follow-ups técnicos v1.1 (SPF/DKIM, dedup toList aniversário, WR-02 monitoring, bucket singular cleanup)
 
 ---
 
 ## Traceability
 
-| REQ-ID | Phase | Plan | Status |
-|--------|-------|------|--------|
-| FORM-01 | Phase 8 | 08-02 | DELIVERED (2026-05-14) |
-| FORM-02 | Phase 8 | 08-01 + 08-05 | DELIVERED (2026-05-14) |
-| FORM-03 | Phase 8 | 08-03 | DELIVERED (2026-05-14) |
-| FORM-04 | Phase 8 | 08-03 | DELIVERED (2026-05-14) |
-| RLS-01 | Phase 9 | 09-03 + 09-04 + 09-06 | DELIVERED (2026-05-15) |
-| RLS-02 | Phase 9 | 09-03 + 09-04 + 09-06 | DELIVERED (2026-05-15) |
-| RLS-03 | Phase 7 | 07-01 | DELIVERED (2026-05-11) |
-| WIZ-01 | Phase 10 | 10-01 | DELIVERED (2026-05-14) |
-| WIZ-02 | Phase 10 | 10-02 | DELIVERED (2026-05-14) |
-| WIZ-03 | Phase 10 | 10-03 | DELIVERED (2026-05-14) |
-| WIZ-04 | Phase 10 | 10-03 | DELIVERED (2026-05-14) |
-| WIZ-05 | Phase 10 | 10-04 + 10-05 | DELIVERED (2026-05-14) |
-| PDF-01 | Phase 11 | 11-01 | DELIVERED (2026-05-15) |
-| PDF-02 | Phase 11 | 11-01 | DELIVERED (2026-05-15) |
-| DASH-01 | Phase 11 | 11-02 | DELIVERED (2026-05-15) |
-| AUTO-01 | Phase 12 | 12-01 + 12-02 + 12-03 | DELIVERED (2026-05-15) |
-| AUTO-02 | Phase 12 | 12-01 + 12-02 + 12-03 | DELIVERED with deviation (2026-05-15) |
-| AUTO-03 | Phase 7 + 12 | 07-02 + 12-01 | DELIVERED (2026-05-15) |
-
-**Coverage:** 18/18 mapped · 0 orphaned · 100%
-
-**Outcome:** 17 DELIVERED · 1 DELIVERED with deviation (AUTO-02) · 0 DEFERRED
-
----
-
-*Generated 2026-05-11 by /gsd-new-milestone — milestone v1.1.*
-*Traceability filled 2026-05-11 by gsd-roadmapper (7 phases, 18 reqs, 100% coverage).*
-*Last updated: 2026-05-15 — milestone v1.1 archived (17 DELIVERED + 1 DELIVERED with deviation = 18/18 covered). Archive em [milestones/v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md).*
+_(preenchido pelo roadmap — cada REQ v1.2 mapeado para exatamente uma fase)_

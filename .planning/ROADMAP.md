@@ -190,5 +190,20 @@
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
+### Phase 999.2: Sistemas Compostos — MAGNETO / TINY / MODULAR (BACKLOG · candidato a marco v1.3)
+
+**Goal:** Fluxo de montagem de sistemas compostos no wizard — trilho magnético MAGNETO 48V, TINY MAGNETO 24V e perfil modular SYSTEM MOLD — assemblando módulos + driver dimensionado + componentes obrigatórios, em vez de entrarem como luminária avulsa.
+
+**Contexto:** separado da v1.2 (UAT) por ser evolução estrutural (~40% do esforço e ~todo o risco). Origem: comentários UAT 8, 9, 11 e parte do 10. Requisitos SIST-01 (MAGNETO 48V), SIST-02 (TINY 24V), SIST-03 (SYSTEM MOLD). Pesquisa em `.planning/research/SUMMARY.md`.
+
+**Decisão de arquitetura pendente (resolver no início):** compostos em `sistemas[]` (discriminated union) vs `luminarias[].composicao?` — pesquisa recomenda o 2º (mais conservador; evita guards no cálculo, snapshot-compat via campo undefined).
+
+**Inclui:** modelo de dados aditivo (ex. tabela `produto_composicao`), extensão de `useProdutoSearch` (módulo/trilho), `analisarMagneto48V` (já ~80%), 5 sites de cálculo atômicos, edge fn `validar-sistema-orcamento`, **PDF v3** (seção rica de compostos).
+**Restrição:** schema aditivo; não quebrar wizard v1.2 nem snapshots/PDF antigos.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-new-milestone ou /gsd-review-backlog when ready)
+
 ---
-*Last updated: 2026-06-09 — backlog 999.1 (PDF vetorial) adicionado. Milestone v1.1 archived 2026-05-15 (18/18 covered). Próximo marco TBD via `/gsd-new-milestone`.*
+*Last updated: 2026-06-10 — marco v1.2 iniciado (Correções UAT + UX, 18 reqs). Backlog 999.2 (Sistemas Compostos → v1.3) registrado. Backlog 999.1 (PDF vetorial) ativo.*
