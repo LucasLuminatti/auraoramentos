@@ -34,7 +34,7 @@
   3. Ao adicionar produto MAGNETO, o aviso/dica exibido descreve características do MAGNETO — não do TINY MAGNETO
   4. Orçamentos antigos continuam abrindo normalmente; nenhum orçamento existente perde dados ou quebra (snapshot é autocontido — recategorização não afeta jsonb)
 **Plans**: 3 plans
-- [ ] 14-01-PLAN.md — Diagnóstico do catálogo (Queries A-D) + aprovação de regras por grupo (D-01/D-02)
+- [x] 14-01-PLAN.md — Diagnóstico do catálogo (Queries A-D) + aprovação de regras por grupo (D-01/D-02)
 - [ ] 14-02-PLAN.md — Migration idempotente de tipo_produto + push prod + fix causa-raiz MAGNETO (CAT-01/CAT-02)
 - [ ] 14-03-PLAN.md — Validação Playwright + manual (seletores, dica MAGNETO, orçamento antigo intacto)
 
@@ -93,7 +93,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 14. Catálogo & Dados | 0/3 | Not started | - |
+| 14. Catálogo & Dados | 1/3 | In Progress|  |
 | 15. Tensão & Validação | 0/TBD | Not started | - |
 | 16. Cálculo & Metragem | 0/TBD | Not started | - |
 | 17. Resumo & Apresentação | 0/TBD | Not started | - |
@@ -131,7 +131,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 0 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
