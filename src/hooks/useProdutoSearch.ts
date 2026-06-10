@@ -4,7 +4,7 @@ import type { Produto } from "@/types/orcamento";
 
 export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'luminaria' | 'todos';
 
-export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos') {
+export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos', filtroVoltagem?: number) {
   const [results, setResults] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -29,6 +29,11 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos')
           queryBuilder = queryBuilder.or('tipo_produto.is.null,tipo_produto.in.(spot,lampada,acessorio,conector,suporte)');
         }
 
+        // Pré-filtro de voltagem do driver: 46/61 drivers têm tensao=null mas são compatíveis (D-01)
+        if (filtro === 'driver' && filtroVoltagem !== undefined) {
+          queryBuilder = queryBuilder.or(`tensao.eq.${filtroVoltagem},tensao.is.null`);
+        }
+
         if (query.trim().length >= 2) {
           queryBuilder = queryBuilder.or(`codigo.ilike.%${query}%,descricao.ilike.%${query}%`);
         }
@@ -45,7 +50,7 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos')
     }, query.trim().length < 2 ? 0 : 300);
 
     return () => clearTimeout(timer);
-  }, [query, filtro]);
+  }, [query, filtro, filtroVoltagem]);
 
   return { results, loading };
 }
