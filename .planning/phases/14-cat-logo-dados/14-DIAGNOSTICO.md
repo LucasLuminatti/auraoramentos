@@ -110,6 +110,26 @@ Lista explícita gravada na seção "## SKUs aprovados (para migration)" abaixo.
 
 ---
 
+
+## Delta pós-migration (D-04)
+
+Aplicado via service role em 2026-06-10 (escopo Tier 1 aprovado). Migration `20260610000001` marcada como `applied` no histórico (`supabase migration repair`).
+
+| tipo_produto | ANTES | DEPOIS | Δ |
+|---|---|---|---|
+| perfil | 222 | 623 | **+401** |
+| fita | 298 | 316 | **+18** |
+| (null) | 4053 | 3634 | **−419** |
+| acessorio / conector / driver / lampada / spot | 19 / 18 / 61 / 100 / 204 | (inalterados) | 0 |
+
+- **401 perfis** corrigidos (0 já eram perfil, 0 não-encontrados) — inclui WALL WASHER (LM3475–3480), CANTONEIRA (LM982/983/2429…), NANO (LM3291…), PERFIL DE SOBREPOR/EMBUTIR.
+- **18 fitas** corrigidas (FITA LED ULTRA POWER / DIRECT COB / etc., + AU004).
+- Total mudado = **419** = tamanho exato da lista aprovada. ✓
+- **Idempotência confirmada:** re-execução → 0 linhas alteradas, contagens idênticas.
+- Spot-check via view `produtos` (o que o app consulta): LM3475→perfil, LM3291→perfil, LM982→perfil, AU004→fita, LM3825→fita. ✓
+
+---
+
 ## Apêndice — Listas explícitas (Tier 1, para a migration do Plano 02)
 
 ### Lista PERFIL (401 SKUs → tipo_produto = perfil)

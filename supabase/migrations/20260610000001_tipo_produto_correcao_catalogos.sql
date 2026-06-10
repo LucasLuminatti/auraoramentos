@@ -1,0 +1,86 @@
+-- Migration: corrigir tipo_produto de PERFIS e FITAS sem categoria (CAT-01, Phase 14 / Plan 02)
+-- Motivo: 401 perfis e 18 fitas estavam com tipo_produto = NULL e por isso
+-- NÃO apareciam nos seletores de perfil/fita do wizard (useProdutoSearch.ts:27 filtra .eq('tipo_produto', filtro)).
+-- Famílias afetadas: WALL WASHER, CANTONEIRA, NANO, PERFIL DE SOBREPOR/EMBUTIR (perfis); FITA LED DIRECT/COB/ULTRA (fitas).
+-- Escopo aprovado por Lenny (D-02, 2026-06-10): Tier 1 apenas — produtos funcionalmente escondidos do seletor.
+-- Lista explícita derivada da varredura do 14-DIAGNOSTICO.md (regra: descrição começa com PERFIL/FITA).
+-- CAT-02 (MAGNETO): nenhum UPDATE — dado já está correto (sistema='magneto_48v'/'tiny_magneto').
+-- Aditiva, idempotente (guarda IS DISTINCT FROM), transacional. Mira a TABELA product_variants (não a view produtos).
+--
+-- ROLLBACK:
+--   BEGIN;
+--   UPDATE public.product_variants SET tipo_produto = NULL
+--     WHERE codigo IN (<lista PERFIL>) AND tipo_produto = 'perfil';
+--   UPDATE public.product_variants SET tipo_produto = NULL
+--     WHERE codigo IN (<lista FITA>) AND tipo_produto = 'fita';
+--   COMMIT;
+--   (Todos os SKUs desta migration tinham tipo_produto = NULL antes — baseline Query A do 14-DIAGNOSTICO.md.)
+
+BEGIN;
+
+-- CAT-01: 401 perfis (null → 'perfil')
+UPDATE public.product_variants
+  SET tipo_produto = 'perfil'
+  WHERE codigo IN (
+    'LM1481', 'LM1481AC', 'LM1482', 'LM1482AC', 'LM1483', 'LM1483AC', 'LM1484', 'LM1484AC',
+    'LM1485', 'LM1485AC', 'LM1486', 'LM1486AC', 'LM1487', 'LM1487AC', 'LM1488', 'LM1488AC',
+    'LM1489', 'LM1489AC', 'LM1490AC', 'LM1491AC', 'LM1492AC', 'LM1493AC', 'LM1494AC',
+    'LM1495AC', 'LM1496AC', 'LM1497AC', 'LM1498AC', 'LM1538', 'LM1538AC', 'LM1539', 'LM1539AC',
+    'LM1540', 'LM1540AC', 'LM1541', 'LM1541AC', 'LM1542', 'LM1542AC', 'LM1543', 'LM1543AC',
+    'LM1544', 'LM1544AC', 'LM1545', 'LM1545AC', 'LM1546', 'LM1546AC', 'LM1547AC', 'LM1548AC',
+    'LM1549AC', 'LM1550AC', 'LM1551AC', 'LM1552AC', 'LM1553AC', 'LM1554AC', 'LM1555AC',
+    'LM1592', 'LM1592AC', 'LM1593', 'LM1593AC', 'LM1594', 'LM1594AC', 'LM1595', 'LM1595AC',
+    'LM1596', 'LM1596AC', 'LM1597', 'LM1597AC', 'LM1598', 'LM1598AC', 'LM1599', 'LM1599AC',
+    'LM1600', 'LM1600AC', 'LM1601AC', 'LM1602AC', 'LM1603AC', 'LM1604AC', 'LM1605AC',
+    'LM1606AC', 'LM1607AC', 'LM1608AC', 'LM1609AC', 'LM1646', 'LM1646AC', 'LM1647', 'LM1647AC',
+    'LM1648', 'LM1648AC', 'LM1649', 'LM1649AC', 'LM1650', 'LM1650AC', 'LM1651', 'LM1651AC',
+    'LM1652', 'LM1652AC', 'LM1653', 'LM1653AC', 'LM1654', 'LM1654AC', 'LM1655', 'LM1655AC',
+    'LM1656', 'LM1656AC', 'LM1657', 'LM1657AC', 'LM1658', 'LM1658AC', 'LM1659', 'LM1659AC',
+    'LM1660', 'LM1660AC', 'LM1661', 'LM1661AC', 'LM1662', 'LM1662AC', 'LM1663', 'LM1663AC',
+    'LM1664AC', 'LM1665AC', 'LM1666AC', 'LM1667AC', 'LM1668AC', 'LM1669AC', 'LM1670AC',
+    'LM1671AC', 'LM1672AC', 'LM1709', 'LM1709AC', 'LM1710', 'LM1710AC', 'LM1711', 'LM1711AC',
+    'LM1712', 'LM1712AC', 'LM1713', 'LM1713AC', 'LM1714', 'LM1714AC', 'LM1715', 'LM1715AC',
+    'LM1716', 'LM1716AC', 'LM1717', 'LM1717AC', 'LM1718AC', 'LM1719AC', 'LM1720AC', 'LM1721AC',
+    'LM1722AC', 'LM1723AC', 'LM1724AC', 'LM1725AC', 'LM1726AC', 'LM1764', 'LM1764AC', 'LM1765',
+    'LM1765AC', 'LM1766', 'LM1766AC', 'LM1767', 'LM1767AC', 'LM1768', 'LM1768AC', 'LM1769',
+    'LM1769AC', 'LM1770', 'LM1770AC', 'LM1771', 'LM1771AC', 'LM1772', 'LM1772AC', 'LM1773AC',
+    'LM1774AC', 'LM1775AC', 'LM1776AC', 'LM1777AC', 'LM1778AC', 'LM1779AC', 'LM1780AC',
+    'LM1781AC', 'LM1855', 'LM1855AC', 'LM1856', 'LM1856AC', 'LM1857', 'LM1857AC', 'LM1858',
+    'LM1858AC', 'LM1859', 'LM1859AC', 'LM1860', 'LM1860AC', 'LM1861', 'LM1861AC', 'LM1862',
+    'LM1862AC', 'LM1863', 'LM1863AC', 'LM1873', 'LM1874', 'LM1875', 'LM1876', 'LM1877',
+    'LM1878', 'LM1879', 'LM1880', 'LM1881', 'LM1885', 'LM1886', 'LM1887', 'LM1888', 'LM1889',
+    'LM1890', 'LM1891', 'LM1892', 'LM1893', 'LM1981', 'LM1982', 'LM1983', 'LM1984', 'LM1985',
+    'LM1986', 'LM1987', 'LM1987AC', 'LM1988', 'LM1988AC', 'LM1989', 'LM1989AC', 'LM1990',
+    'LM1991', 'LM1991AC', 'LM1993', 'LM1993AC', 'LM1994', 'LM1994AC', 'LM1995', 'LM1995AC',
+    'LM2378', 'LM2379', 'LM2388', 'LM2394', 'LM2395', 'LM2400', 'LM2401', 'LM2402', 'LM2403',
+    'LM2404', 'LM2405', 'LM2406', 'LM2407', 'LM2408', 'LM2409', 'LM2411', 'LM2413', 'LM2414',
+    'LM2415', 'LM2416', 'LM2417', 'LM2418', 'LM2419', 'LM2420', 'LM2421', 'LM2422', 'LM2423',
+    'LM2424', 'LM2425', 'LM2426', 'LM2427', 'LM2428', 'LM2429', 'LM2430', 'LM2431', 'LM2432',
+    'LM2433', 'LM2434', 'LM2830', 'LM2831', 'LM2832', 'LM2833', 'LM2834', 'LM2835', 'LM2855',
+    'LM2925', 'LM2926', 'LM2927', 'LM2928', 'LM2929', 'LM2930', 'LM2951', 'LM2952', 'LM2953',
+    'LM2954', 'LM2955', 'LM2956', 'LM2965', 'LM2966', 'LM2967', 'LM2968', 'LM2969', 'LM2970',
+    'LM3057', 'LM3058', 'LM3059', 'LM3060', 'LM3061', 'LM3062', 'LM3063', 'LM3064', 'LM3065',
+    'LM3066', 'LM3067', 'LM3068', 'LM3069', 'LM3070', 'LM3071', 'LM3072', 'LM3073', 'LM3074',
+    'LM3211', 'LM3219', 'LM3222', 'LM3291', 'LM3291AC', 'LM3292', 'LM3292AC', 'LM3293',
+    'LM3293AC', 'LM3294', 'LM3294AC', 'LM3295', 'LM3295AC', 'LM3296', 'LM3296AC', 'LM3303',
+    'LM3304', 'LM3392', 'LM3393', 'LM3398', 'LM3399', 'LM3400', 'LM3404', 'LM3410', 'LM3411',
+    'LM3442', 'LM3442AC', 'LM3443', 'LM3443AC', 'LM3444', 'LM3444AC', 'LM3445', 'LM3445AC',
+    'LM3446', 'LM3446AC', 'LM3447', 'LM3447AC', 'LM3475', 'LM3476', 'LM3477', 'LM3478',
+    'LM3479', 'LM3480', 'LM3583', 'LM3584', 'LM3585', 'LM3586', 'LM3587', 'LM3588', 'LM974',
+    'LM974AC', 'LM975', 'LM975AC', 'LM978', 'LM978AC', 'LM979', 'LM979AC', 'LM982', 'LM982AC',
+    'LM983', 'LM983AC', 'LM984', 'LM984AC', 'LM985', 'LM985AC', 'LM988', 'LM988AC', 'LM989',
+    'LM989AC', 'LM992', 'LM993', 'OR2096', 'OR2097', 'OR2098', 'OR2099', 'OR2100', 'OR2101',
+    'OR2170', 'OR2171', 'OR2172', 'OR2173', 'OR2174', 'OR2175'
+  )
+  AND tipo_produto IS DISTINCT FROM 'perfil';
+
+-- CAT-01: 18 fitas (null → 'fita')
+UPDATE public.product_variants
+  SET tipo_produto = 'fita'
+  WHERE codigo IN (
+    'AU004', 'LM3634', 'LM3635', 'LM3636', 'LM3637', 'LM3638', 'LM3665', 'LM3666', 'LM3667',
+    'LM3668', 'LM3669', 'LM3670', 'LM3823', 'LM3824', 'LM3825', 'LM3826', 'LM3827', 'LM3828'
+  )
+  AND tipo_produto IS DISTINCT FROM 'fita';
+
+COMMIT;
