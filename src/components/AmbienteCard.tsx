@@ -89,9 +89,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
       }
     } else if (produto.sistema_magnetico === 'tiny_magneto' || /TINY\s+MAG/.test(d)) {
       if (/TRILHO.*EMBUTIR/.test(d)) {
-        toast.warning(`⚡ Tiny Mag 24V Embutir: Kit de fixação vendido separadamente + Conector LM3168/LM3169 + Driver 24V externo.`, { duration: 10000 });
+        toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
       } else {
-        toast.warning(`⚡ Tiny Mag 24V: requer Conector de Driver LM3168 (preto) ou LM3169 (branco) + Driver 24V. Driver externo é obrigatório.`, { duration: 10000 });
+        toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
       }
     }
 
@@ -357,6 +357,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                         <Badge variant="secondary" className="text-xs">
                           Subtotal: {formatarMoeda(calcularSubtotalLuminaria(item))}
                         </Badge>
+                      )}
+                      {item.sistema === 'tiny_magneto' && (
+                        <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 bg-amber-50">requer driver 24V externo</Badge>
                       )}
                     </div>
                   </div>
