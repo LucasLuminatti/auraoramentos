@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.2
-milestone_name: "Correções UAT + UX do Wizard de Sistemas de Iluminação"
-status: roadmap_ready
-last_updated: "2026-06-10T00:00:00.000Z"
-last_activity: 2026-06-10
+milestone_name: milestone
+status: executing
+last_updated: "2026-06-10T14:17:43.115Z"
+last_activity: 2026-06-10 -- Phase 14 planning complete
 progress:
-  total_phases: 5
+  total_phases: 7
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
   percent: 0
 ---
@@ -30,8 +30,8 @@ progress:
 
 Phase: 14 (não iniciada)
 Plan: —
-Status: Roadmap ready — aguardando `/gsd-plan-phase 14`
-Last activity: 2026-06-10 — Roadmap v1.2 criado (5 fases, 18 reqs)
+Status: Ready to execute
+Last activity: 2026-06-10 -- Phase 14 planning complete
 
 ```
 Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (0/5 phases)
