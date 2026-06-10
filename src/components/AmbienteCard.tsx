@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, Trash2, Plus, Pencil, Check, ArrowDown, Link, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER } from "@/types/orcamento";
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -88,9 +89,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
       }
     } else if (produto.sistema_magnetico === 'tiny_magneto' || /TINY\s+MAG/.test(d)) {
       if (/TRILHO.*EMBUTIR/.test(d)) {
-        toast.warning(`⚡ Tiny Mag 24V Embutir: Kit de fixação vendido separadamente + Conector LM3168/LM3169 + Driver 24V externo.`, { duration: 10000 });
+        toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
       } else {
-        toast.warning(`⚡ Tiny Mag 24V: requer Conector de Driver LM3168 (preto) ou LM3169 (branco) + Driver 24V. Driver externo é obrigatório.`, { duration: 10000 });
+        toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
       }
     }
 
@@ -127,29 +128,44 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
     });
   };
 
-  const handleSelectProdutoSistema = (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
+  // D-02a: menor potência suficiente entre drivers de mesma voltagem com tensao preenchida.
+  // Consumo estimado = metragem real (se já houver) * wm, senão 5m fallback; margem 1.05.
+  const buscarDriverSugerido = async (voltagem: number, wm: number, metragemReal: number): Promise<Produto | null> => {
+    const metragem = metragemReal > 0 ? metragemReal : 5;
+    const consumoEstimado = wm * metragem * MARGEM_SEGURANCA_DRIVER;
+    const { data } = await supabase
+      .from('produtos')
+      .select('id, codigo, descricao, preco_tabela, preco_minimo, voltagem:tensao, driver_potencia_w:potencia_watts, driver_tipo:subtipo')
+      .eq('tipo_produto', 'driver')
+      .eq('tensao', voltagem)
+      .gte('potencia_watts', consumoEstimado)
+      .not('descricao', 'ilike', '%DESCONTINUAR%')
+      .order('potencia_watts', { ascending: true })
+      .limit(1);
+    return (data?.[0] as Produto) ?? null;
+  };
+
+  const handleSelectProdutoSistema = async (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
     const sis = ambiente.sistemas[sistemaIndex];
     const imgUrl = produto.imagem_url || undefined;
     const preco = Math.round((produto.preco_tabela || 0) * 100) / 100;
     const precoMin = Math.round((produto.preco_minimo || 0) * 100) / 100;
 
-    // ── REGRA #1: Validação de Tensão (CRÍTICO) ──────────────────────────
+    // ── REGRA #1: Validação de Tensão — orientativa, não bloqueante (D-05/D-10) ──
     if (component === 'driver' && produto.voltagem && sis.fita.voltagem) {
       if (produto.voltagem !== sis.fita.voltagem) {
-        toast.error(
-          `⚠️ Tensão incompatível! A fita é ${sis.fita.voltagem}V e este driver é ${produto.voltagem}V. Selecione um driver de ${sis.fita.voltagem}V.`,
+        toast.warning(
+          `Atenção: driver ${produto.voltagem}V com fita ${sis.fita.voltagem}V — confira se a combinação está correta.`,
           { duration: 6000 }
         );
-        return;
       }
     }
-    if (component === 'fita' && produto.voltagem && sis.driver.voltagem) {
+    if (component === 'fita' && produto.voltagem && sis.driver.codigo && sis.driver.voltagem) {
       if (produto.voltagem !== sis.driver.voltagem) {
-        toast.error(
-          `⚠️ Tensão incompatível! O driver é ${sis.driver.voltagem}V e esta fita é ${produto.voltagem}V. Selecione uma fita de ${sis.driver.voltagem}V.`,
+        toast.warning(
+          `Atenção: fita ${produto.voltagem}V com driver ${sis.driver.voltagem}V — confira se a combinação está correta.`,
           { duration: 6000 }
         );
-        return;
       }
     }
 
@@ -196,20 +212,39 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
         },
       });
     } else if (component === 'fita') {
-      updateSistema(sistemaIndex, {
-        ...sis,
-        fita: {
-          ...sis.fita,
-          codigo: produto.codigo,
-          descricao: produto.descricao,
-          precoUnitario: preco,
-          precoMinimo: precoMin,
-          imagemUrl: imgUrl,
-          voltagem: (produto.voltagem ?? sis.fita.voltagem) as 12 | 24 | 48,
-          wm: produto.wm ?? sis.fita.wm,
-          is_baby: produto.is_baby,
-        },
-      });
+      const fitaAtualizada = {
+        ...sis.fita,
+        codigo: produto.codigo,
+        descricao: produto.descricao,
+        precoUnitario: preco,
+        precoMinimo: precoMin,
+        imagemUrl: imgUrl,
+        voltagem: (produto.voltagem ?? sis.fita.voltagem) as 12 | 24 | 48,
+        wm: produto.wm ?? sis.fita.wm,
+        is_baby: produto.is_baby,
+      };
+
+      let driverAtualizado = sis.driver;
+      const fitaVolt = fitaAtualizada.voltagem;
+      const driverVazio = !sis.driver.codigo; // D-03: só preenche se vazio
+      if (driverVazio && fitaVolt) {
+        const metragemReal = calcularDemandaFita(sis); // metragem efetiva atual (0 se ainda não definida)
+        const sugerido = await buscarDriverSugerido(fitaVolt, fitaAtualizada.wm, metragemReal);
+        if (sugerido) {
+          driverAtualizado = {
+            ...sis.driver,
+            codigo: sugerido.codigo,
+            descricao: sugerido.descricao,
+            voltagem: (sugerido.voltagem ?? fitaVolt) as 12 | 24 | 48,
+            potencia: sugerido.driver_potencia_w ?? sis.driver.potencia,
+            precoUnitario: Math.round((sugerido.preco_tabela || 0) * 100) / 100,
+            precoMinimo: Math.round((sugerido.preco_minimo || 0) * 100) / 100,
+            driver_tipo: sugerido.driver_tipo,
+          };
+        }
+      }
+
+      updateSistema(sistemaIndex, { ...sis, fita: fitaAtualizada, driver: driverAtualizado });
     } else {
       // ── REGRA #10/#11: Driver restrito por perfil ────────────────────────
       if (sis.perfil?.driver_restr_tipo === 'slim' && produto.driver_tipo !== 'slim') {
@@ -323,6 +358,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                           Subtotal: {formatarMoeda(calcularSubtotalLuminaria(item))}
                         </Badge>
                       )}
+                      {item.sistema === 'tiny_magneto' && (
+                        <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 bg-amber-50">requer driver 24V externo</Badge>
+                      )}
                     </div>
                   </div>
                   <Button size="icon" variant="ghost" className="text-destructive shrink-0" onClick={() => removeLuminaria(i)}>
@@ -347,7 +385,16 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                 return (
                   <div key={sis.id} className="rounded-lg border bg-muted/20 overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
-                      <span className="text-sm font-semibold text-foreground">Sistema {si + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">Sistema {si + 1}</span>
+                        {(() => {
+                          const fv = sis.fita.voltagem, dv = sis.driver.voltagem;
+                          const temDivergencia = !!sis.fita.codigo && !!sis.driver.codigo && fv !== undefined && dv !== undefined && fv !== dv;
+                          return temDivergencia ? (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">⚠ {fv}V × {dv}V</Badge>
+                          ) : null;
+                        })()}
+                      </div>
                       <div className="flex items-center gap-2">
                         {subtotal > 0 && <Badge variant="outline" className="text-xs">Subtotal (s/ fita): {formatarMoeda(subtotal)}</Badge>}
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeSistema(si)}>
@@ -483,7 +530,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                       {/* ── DRIVER ── */}
                       <div className="space-y-2">
                         <span className="text-xs font-semibold text-primary uppercase tracking-wide">Driver</span>
-                        <ProdutoAutocomplete value={sis.driver.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'driver')} placeholder="Código do driver" filtro="driver" />
+                        <ProdutoAutocomplete value={sis.driver.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'driver')} placeholder="Código do driver" filtro="driver" filtroVoltagem={sis.fita.voltagem} />
                         <Input value={sis.driver.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
                         <div className="flex items-center gap-3 flex-wrap">
                           <div className="flex items-center gap-1">
