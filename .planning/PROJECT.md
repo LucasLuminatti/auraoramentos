@@ -8,11 +8,20 @@ Sistema web de criação de orçamentos de iluminação da Luminatti, em produç
 
 Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com dados organizados por arquiteto e filtráveis — e o admin consegue controlar preços, pedidos e margens sem planilha paralela.
 
-## Current Milestone
+## Current Milestone: v1.2 — Correções UAT do Wizard de Sistemas de Iluminação
 
-_Nenhum marco ativo._ v1.1 shipped 2026-05-15. Próximo marco a ser definido — candidatos em "Next Milestone Goals" (Preços via CSV + tabela de custos, Margem no pedido, Documentação + testes das fórmulas, follow-ups técnicos do v1.1).
+**Goal:** Corrigir o subsistema fita/perfil/driver/módulos/magneto do wizard com base nos 19 feedbacks dos funcionários (UAT 2026-06-10, com prints) — sem quebrar o caminho de luminária comum (validado) nem orçamentos antigos (PDF v1/v2).
 
-Definir via `/gsd-new-milestone`.
+**Target features (5 áreas):**
+- **Catálogo & Busca (dados):** perfis/drivers que somem na busca por `tipo_produto` errado (LM3475, LM3291, WALL WASHER, família CANTONEIRA incompleta); dica MAGNETO trocada com TINY.
+- **Sistemas compostos (modular/magneto/tiny):** fluxo de montagem (módulos + fita + driver + componentes) em vez de entrar como luminária avulsa; avisos com oferta de driver obrigatório.
+- **Tensão/Voltagem (redução de erro):** inferir/validar voltagem do driver vs fita; permitir tensão diferente por ambiente.
+- **Cálculo/Contabilização:** fita sem perfil contabilizar metragem; metragem do perfil automática na descrição; passadas não travadas (+ regra perfil 50mm = até 3).
+- **Apresentação/UX do resumo:** LOCAL no resumo global; resolver duplicação fita (ambiente + resumo); drivers por ambiente; duplicar/reusar sistema entre ambientes; avisar ao avançar sem lâmpada.
+
+**Origem:** documento "COMENTÁRIOS - SITE ORÇAMENTO" (19 pontos com prints), coletado de funcionários da Aura em 2026-06-10.
+
+Roadmap começa no **phase 14** (continua numeração do v1.1).
 
 ## Current State
 

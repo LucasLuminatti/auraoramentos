@@ -1,42 +1,37 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: "**Goal**: Base de dados pronta para receber multi-tenancy, edição de wizard, descrição rica e automação — todas as migrations aditivas aplicadas em produção sem quebrar nada existente"
-status: completed
-last_updated: "2026-05-15T14:34:02.881Z"
-last_activity: 2026-05-15
+milestone: v1.2
+milestone_name: "**Goal**: Corrigir o subsistema fita/perfil/driver/módulos/magneto do wizard (UAT 19 comentários, 2026-06-10) sem quebrar luminária comum nem orçamentos antigos"
+status: defining_requirements
+last_updated: "2026-06-10T00:00:00.000Z"
+last_activity: 2026-06-10
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 29
-  completed_plans: 29
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-05-15 — Milestone v1.1 archived. Phase 13 (closure) completa: smoke integration 4/4 PASS + BUG-13-01 fixed inline + archive formal em `.planning/milestones/v1.1-*.md` + MILESTONES.md criado.
+**Last updated:** 2026-06-10 — Milestone v1.2 iniciado (Correções UAT do Wizard de Sistemas de Iluminação). Definindo requisitos a partir dos 19 comentários dos funcionários (com prints). Roadmap continua no phase 14.
 
 ## Project Reference
 
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
-- **Current Milestone:** _Nenhum marco ativo_ (v1.1 archived 2026-05-15)
+- **Current Milestone:** v1.2 — Correções UAT do Wizard de Sistemas de Iluminação (iniciado 2026-06-10)
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Milestone v1.1 archived. Awaiting v1.2 definition via `/gsd-new-milestone`.
+- **Current Focus:** Definindo requisitos do v1.2 a partir dos 19 comentários dos funcionários (UAT com prints).
 
 ## Current Position
 
-Phase: _none_ (marco fechado)
-Plan: _none_
-Next: definir próximo marco via `/gsd-new-milestone` ou pausa até Lenny escolher foco
-
-- **Phase:** 13
-- **Plan:** Not started
-- **Status:** Milestone complete
-- **Progress:** [██████████] 100% (v1.1 completo: 7/7 phases, 29/29 plans)
-- **Last activity:** 2026-05-15
+Phase: Not started (definindo requisitos)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-10 — Milestone v1.2 iniciado (continua no phase 14)
 
 ## Roadmap v1.1 (resumo final)
 
