@@ -464,6 +464,23 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
       container.innerHTML = html;
       document.body.appendChild(container);
 
+      // Aguarda todas as <img> carregarem antes de rasterizar (fix: timing issue onde
+      // html2canvas captura antes do browser decodificar as data: URLs).
+      // img.decode() resolve quando a imagem está pronta para exibição; fallback para
+      // onload/onerror quando decode() não está disponível (Safari < 14).
+      await Promise.all(
+        Array.from(container.querySelectorAll("img")).map((img) =>
+          img.complete
+            ? Promise.resolve()
+            : img.decode
+              ? img.decode().catch(() => {})
+              : new Promise<void>((res) => {
+                  img.onload = () => res();
+                  img.onerror = () => res();
+                })
+        )
+      );
+
       const filename = `Proposta_${sanitizarNomeArquivo(clienteNome)}_${sanitizarNomeArquivo(projetoNome)}.pdf`;
       const html2pdf = (await import("html2pdf.js")).default;
 

@@ -191,6 +191,20 @@ const OrcamentoDetalhe = () => {
       document.body.appendChild(container);
       appended = true;
 
+      // Aguarda todas as <img> carregarem antes de rasterizar (mesmo fix do Step3Revisao).
+      await Promise.all(
+        Array.from(container.querySelectorAll("img")).map((img) =>
+          img.complete
+            ? Promise.resolve()
+            : img.decode
+              ? img.decode().catch(() => {})
+              : new Promise<void>((res) => {
+                  img.onload = () => res();
+                  img.onerror = () => res();
+                })
+        )
+      );
+
       const filename = `Proposta_${sanitizarNomeArquivo(params.clienteNome)}_${sanitizarNomeArquivo(params.projetoNome)}.pdf`;
       const html2pdf = (await import("html2pdf.js")).default;
 
