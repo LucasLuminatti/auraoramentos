@@ -17,8 +17,8 @@ const PERFIS = [
   { codigo: "LM982", fam: "CANTONEIRA" },
   { codigo: "LM3291", fam: "NANO" },
 ];
-// Família corrigida para 'fita'
-const FITA = { codigo: "LM3825" }; // FITA LED ULTRA POWER ... 48V? (não — 24V/12V); rolo de fita real
+// Família corrigida para 'fita' — rolo de fita real (FITA LED ULTRA POWER)
+const FITA = { codigo: "LM3825" };
 // MAGNETO 48V (tipo null → seletor luminária; sistema='magneto_48v' → toast 48V)
 const MAGNETO = { codigo: "LM2331" }; // TRILHO DE SOBREPOR MAGNETICO PT 1M - MAX. 48V
 
@@ -32,13 +32,9 @@ test.beforeEach(async () => {
 });
 
 test.afterEach(async () => {
-  // Defensivo: o teste fica no Step 2, então normalmente 0 rascunhos são criados.
-  let total = 0;
-  for (let i = 0; i < 3; i++) {
-    total += await deleteOrcamentoDeTeste(idsAntes, janelaInicio, { tipo: TIPO, valor: 0, status: "rascunho" });
-    if (total >= 1) break;
-    await new Promise((r) => setTimeout(r, 1000));
-  }
+  // O teste fica no Step 2 (persistência só no Step 3), então nada é gravado.
+  // Chamada única defensiva: apaga só rascunho NOVO da janela, se por algum motivo surgir.
+  const total = await deleteOrcamentoDeTeste(idsAntes, janelaInicio, { tipo: TIPO, valor: 0, status: "rascunho" });
   expect(total, "cleanup não deve apagar mais de 1 linha").toBeLessThanOrEqual(1);
 });
 
@@ -77,7 +73,7 @@ test("CAT-01: WALL WASHER, CANTONEIRA, NANO aparecem no seletor de PERFIL e a fi
     await perfilBox.fill("");
     await perfilBox.fill(p.codigo);
     await expect(
-      page.getByRole("button", { name: new RegExp(p.codigo, "i") }).first(),
+      page.getByRole("button", { name: new RegExp(`^${p.codigo}\\b`, "i") }).first(),
       `${p.codigo} (${p.fam}) deve aparecer no seletor de perfil`,
     ).toBeVisible({ timeout: 15_000 });
     await page.keyboard.press("Escape"); // fecha o dropdown sem selecionar
@@ -87,7 +83,7 @@ test("CAT-01: WALL WASHER, CANTONEIRA, NANO aparecem no seletor de PERFIL e a fi
   const fitaBox = page.getByRole("textbox", { name: /Código da fita/i }).first();
   await fitaBox.fill(FITA.codigo);
   await expect(
-    page.getByRole("button", { name: new RegExp(FITA.codigo, "i") }).first(),
+    page.getByRole("button", { name: new RegExp(`^${FITA.codigo}\\b`, "i") }).first(),
     `${FITA.codigo} deve aparecer no seletor de fita`,
   ).toBeVisible({ timeout: 15_000 });
 });
@@ -98,7 +94,7 @@ test("CAT-02: ao adicionar MAGNETO 48V, a dica descreve o MAGNETO (48V), não o 
   // MAGNETO 48V tem tipo_produto null → aparece no seletor de luminária
   await page.getByRole("button", { name: /Adicionar Luminária/i }).click();
   await page.getByRole("textbox", { name: /Código do item/i }).first().fill(MAGNETO.codigo);
-  const opt = page.getByRole("button", { name: new RegExp(MAGNETO.codigo, "i") });
+  const opt = page.getByRole("button", { name: new RegExp(`^${MAGNETO.codigo}\\b`, "i") });
   await expect(opt.first()).toBeVisible({ timeout: 15_000 });
   await opt.first().click();
 
