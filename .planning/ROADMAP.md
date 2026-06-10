@@ -93,7 +93,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 14. Catálogo & Dados | 3/3 | Complete   | 2026-06-10 |
+| 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
 | 15. Tensão & Validação | 0/TBD | Not started | - |
 | 16. Cálculo & Metragem | 0/TBD | Not started | - |
 | 17. Resumo & Apresentação | 0/TBD | Not started | - |
