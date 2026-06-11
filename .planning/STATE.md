@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
 status: executing
-stopped_at: 17-02 checkpoint — tasks 1+2 complete, awaiting human-verify Task 3
-last_updated: "2026-06-11T19:47:24.328Z"
+stopped_at: Completed 17-02-PLAN.md — Phase 17 Plan 02 complete (RES-01/02/03)
+last_updated: "2026-06-11T20:30:00.000Z"
 last_activity: 2026-06-11
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-11 — Phase 17 Plan 04 completo. Advisory NÃO-bloqueante no gate Step 2 → Step 3 com 4 gatilhos de itens incompletos (RES-05).
+**Last updated:** 2026-06-11 — Phase 17 Plan 02 completo. Step 3 reorganizado: chips LOCAL no Resumo de Fitas (RES-01), rótulo referência fita inline (RES-02), bloco de drivers rebaixado a Collapsible interno (RES-03).
 
 ## Project Reference
 
@@ -30,13 +30,13 @@ progress:
 ## Current Position
 
 Phase: 17
-Plan: 05
-Status: Executing Phase 17 (Plans 01–04 complete)
+Plan: 03
+Status: Executing Phase 17 (Plans 01, 02, 04 complete — 03 pending)
 Last activity: 2026-06-11
-Stopped at: 17-02 checkpoint — tasks 1+2 complete, awaiting human-verify Task 3
+Stopped at: Completed 17-02-PLAN.md — Phase 17 Plan 02 complete (RES-01/02/03)
 
 ```
-Progress: [████████░░] 75% (9/12 plans)
+Progress: [█████████░] 92% (11/12 plans)
 ```
 
 ## Roadmap v1.2
@@ -101,9 +101,14 @@ Progress: [████████░░] 75% (9/12 plans)
 - **RES-01 (decisão travada):** apenas **anotação visual do LOCAL** no resumo. NÃO mexer em cálculos nem em subtotais por LOCAL nesta milestone (não tocar `calcularRolosPorGrupo`).
 - **UX-05 (decisão travada):** checklist/painel de validação antes do PDF **dentro do fluxo atual** (overlay/panel no Step 3). Se exigir reestruturar os steps ou mudar significativamente a navegação → **consultar o Lenny antes**.
 
+### Decisions (v1.2)
+
+- **RES-01/02 display-only (17-02):** chips de localBreakdown expandem a célula Descrição em vez de adicionar coluna — preserva layout mobile sem tocar colunas Demanda/Rolos/Preço/Subtotal
+- **RES-03 Collapsible (17-02):** bloco de drivers global mantido mas secundário via `defaultOpen={false}` + badge "interno" — insight de otimização preservado sem competir com drivers por ambiente
+
 ### Todos
 
-- (nenhum — aguardando plano Phase 14)
+- (nenhum)
 
 ### Blockers
 
@@ -111,7 +116,7 @@ Progress: [████████░░] 75% (9/12 plans)
 
 ## Next Action
 
-`/gsd-plan-phase 14` — Catálogo & Dados (CAT-01, CAT-02)
+`/gsd-execute-phase 17 03` — PDF v2 localBreakdown chips + foto da fita (RES-01/02)
 
 ---
-*STATE refreshed: 2026-06-10 — roadmap v1.2 criado (5 fases, 18/18 reqs). Próxima ação: `/gsd-plan-phase 14`.*
+*STATE refreshed: 2026-06-11 — 17-02 complete (RES-01/02/03). Next: 17-03 PDF v2.*
