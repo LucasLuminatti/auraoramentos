@@ -287,6 +287,7 @@ export interface ResumoDriverProjeto {
 
 export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverProjeto[] {
   const grupos = new Map<string, {
+    codigo: string;
     descricao: string;
     potenciaDriverW: number;
     voltagem: 12 | 24 | 48;
@@ -310,6 +311,7 @@ export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverPr
         existing.qtdSomaIndividual += calcularQtdDrivers(sis);
       } else {
         grupos.set(chave, {
+          codigo: sis.driver.codigo,
           descricao: sis.driver.descricao,
           potenciaDriverW: sis.driver.potencia,
           voltagem: sis.driver.voltagem,
@@ -322,8 +324,8 @@ export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverPr
   }
 
   const resultado: ResumoDriverProjeto[] = [];
-  for (const [chave, g] of grupos) {
-    const driverCodigo = chave.split('|')[0];
+  for (const [, g] of grupos) {
+    const driverCodigo = g.codigo;
     const limite = limiteExtensaoMetros(g.voltagem);
     const qtdPorPotencia = Math.ceil((g.totalConsumoW * MARGEM_SEGURANCA_DRIVER) / g.potenciaDriverW);
     const qtdPorExtensao = limite ? Math.ceil(g.totalDemandaM / limite) : 0;

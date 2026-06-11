@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +46,12 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
 
   const uid = () => crypto.randomUUID();
   const { validacoes } = useValidarSistemas(ambiente.sistemas);
+
+  // Ref sempre apontando para o ambiente mais recente — usado para reconciliar
+  // escritas que acontecem após um await (ex.: sugestão de driver assíncrona),
+  // evitando snapshot estável / escrita por índice em linha errada (WR-01).
+  const ambienteRef = useRef(ambiente);
+  useEffect(() => { ambienteRef.current = ambiente; }, [ambiente]);
 
   // ─── Luminárias ───
   const addLuminaria = () => {
@@ -224,27 +230,41 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
         is_baby: produto.is_baby,
       };
 
-      let driverAtualizado = sis.driver;
+      // Aplica a fita imediatamente (síncrono) — nunca pode ser perdida pela
+      // janela do await da sugestão de driver.
+      updateSistema(sistemaIndex, { ...sis, fita: fitaAtualizada });
+
       const fitaVolt = fitaAtualizada.voltagem;
       const driverVazio = !sis.driver.codigo; // D-03: só preenche se vazio
       if (driverVazio && fitaVolt) {
-        const metragemReal = calcularDemandaFita(sis); // metragem efetiva atual (0 se ainda não definida)
+        const metragemReal = calcularDemandaFita({ ...sis, fita: fitaAtualizada });
         const sugerido = await buscarDriverSugerido(fitaVolt, fitaAtualizada.wm, metragemReal);
         if (sugerido) {
-          driverAtualizado = {
-            ...sis.driver,
-            codigo: sugerido.codigo,
-            descricao: sugerido.descricao,
-            voltagem: (sugerido.voltagem ?? fitaVolt) as 12 | 24 | 48,
-            potencia: sugerido.driver_potencia_w ?? sis.driver.potencia,
-            precoUnitario: Math.round((sugerido.preco_tabela || 0) * 100) / 100,
-            precoMinimo: Math.round((sugerido.preco_minimo || 0) * 100) / 100,
-            driver_tipo: sugerido.driver_tipo,
-          };
+          // Reconcilia contra o estado mais recente, localizando o sistema por id
+          // (não por índice — pode ter sido reordenado/removido durante o await)
+          // e só preenche se o driver continuar vazio (não sobrescreve edição do usuário).
+          const latest = ambienteRef.current;
+          const idx = latest.sistemas.findIndex((s) => s.id === sis.id);
+          if (idx !== -1 && !latest.sistemas[idx].driver.codigo) {
+            const alvo = latest.sistemas[idx];
+            const arr = [...latest.sistemas];
+            arr[idx] = {
+              ...alvo,
+              driver: {
+                ...alvo.driver,
+                codigo: sugerido.codigo,
+                descricao: sugerido.descricao,
+                voltagem: (sugerido.voltagem ?? fitaVolt) as 12 | 24 | 48,
+                potencia: sugerido.driver_potencia_w ?? alvo.driver.potencia,
+                precoUnitario: Math.round((sugerido.preco_tabela || 0) * 100) / 100,
+                precoMinimo: Math.round((sugerido.preco_minimo || 0) * 100) / 100,
+                driver_tipo: sugerido.driver_tipo,
+              },
+            };
+            onChange({ ...latest, sistemas: arr });
+          }
         }
       }
-
-      updateSistema(sistemaIndex, { ...sis, fita: fitaAtualizada, driver: driverAtualizado });
     } else {
       // ── REGRA #10/#11: Driver restrito por perfil ────────────────────────
       if (sis.perfil?.driver_restr_tipo === 'slim' && produto.driver_tipo !== 'slim') {
