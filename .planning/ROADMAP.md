@@ -18,7 +18,7 @@
 
 - [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16 (completed 2026-06-10)
 - [x] **Phase 15: Tensão & Validação** — Inferir voltagem do driver a partir da fita + aviso de divergência; remover bloqueio indevido entre ambientes com voltagens diferentes; corrigir grouping key de drivers globais para (codigo + voltagem); advisory TINY 24V com oferta de driver; sugerir driver compatível ao selecionar fita (completed 2026-06-10)
-- [ ] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo
+- [x] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo (completed 2026-06-11)
 - [ ] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item; fita sem duplicação entre visão por ambiente e resumo final; drivers por ambiente (não apenas bloco global); duplicar/reusar sistema em outro ambiente; aviso ao avançar para revisão sem lâmpada/item esperado
 - [ ] **Phase 18: UX Transversal** — Redirecionamento ao buscar código de categoria errada (perfil buscado em Luminárias); microcopy inline explicando Luminárias vs Sistemas + o que é fita/perfil/driver; duplicar ambiente inteiro; checklist visual pré-PDF destacando itens incompletos/suspeitos
 
@@ -95,7 +95,7 @@
 |-------|----------------|--------|-----------|
 | 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
-| 16. Cálculo & Metragem | 1/3 | In Progress|  |
+| 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
 | 17. Resumo & Apresentação | 0/TBD | Not started | - |
 | 18. UX Transversal | 0/TBD | Not started | - |
 
@@ -131,7 +131,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
