@@ -163,9 +163,11 @@ describe('calcularRolosPorGrupo — localBreakdown e imagemUrl (Phase 17 / RES-0
 
     expect(resultado).toHaveLength(1);
     const grupo = resultado[0];
-    // 20m com rolos de 5m: 4 rolos (5+5+5+5) — sem desperdício
-    expect(grupo.qtdRolosTotal).toBe(4);
+    // Algoritmo usa rolos 15/10/5: 20m → 1×15 + 1×5 = 2 rolos (mesma lógica anterior, não muda com extensão)
+    expect(grupo.qtdRolosTotal).toBe(2);
     expect(grupo.subtotal).toBe(fita.precoUnitario * grupo.qtdRolosTotal);
+    // demandaTotal deve ser 20 (soma das metragens manuais)
+    expect(grupo.demandaTotal).toBe(20);
   });
 
   it('Teste 5: fita com imagemUrl → grupo.imagemUrl reflete o valor; sem imagemUrl → undefined', () => {

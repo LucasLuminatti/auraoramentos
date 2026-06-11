@@ -365,6 +365,13 @@ export function calcularDriversPorProjeto(ambientes: Ambiente[]): ResumoDriverPr
 
 // ─── Cálculo global de fitas (nível orçamento) ───
 
+export interface LocalBreakdown {
+  /** Identificador de origem da fita: "Ambiente — Local" (com local) OU "Ambiente" (sem local) */
+  label: string;
+  /** Metragem de fita demandada nesse Ambiente — Local */
+  demanda: number;
+}
+
 export interface GrupoFita {
   codigo: string;
   descricao: string;
@@ -375,19 +382,35 @@ export interface GrupoFita {
   rolos: { tamanho: number; quantidade: number }[];
   qtdRolosTotal: number;
   subtotal: number;
+  /** NOVO (Phase 17 / RES-01 D-04/D-05): breakdown da demanda por "Ambiente — Local" */
+  localBreakdown?: LocalBreakdown[];
+  /** NOVO (Phase 17 / RES-01 D-08): URL da imagem/thumbnail da fita para o Resumo de Fitas do PDF */
+  imagemUrl?: string;
 }
 
 export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
-  const grupos = new Map<string, { descricao: string; demanda: number; metragemRolo: 5 | 10 | 15; precoUnitario: number; precoMinimo: number }>();
+  const grupos = new Map<string, {
+    descricao: string;
+    demanda: number;
+    metragemRolo: 5 | 10 | 15;
+    precoUnitario: number;
+    precoMinimo: number;
+    imagemUrl?: string;
+    localAcc: Map<string, number>;
+  }>();
 
   for (const amb of ambientes) {
     for (const sis of amb.sistemas) {
       const key = sis.fita.codigo;
       if (!key) continue;
       const demanda = calcularDemandaFita(sis);
+      const label = (sis.local && sis.local.trim())
+        ? `${amb.nome} — ${sis.local.trim()}`
+        : amb.nome;
       const existing = grupos.get(key);
       if (existing) {
         existing.demanda += demanda;
+        existing.localAcc.set(label, (existing.localAcc.get(label) ?? 0) + demanda);
       } else {
         grupos.set(key, {
           descricao: sis.fita.descricao,
@@ -395,6 +418,8 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
           metragemRolo: sis.fita.metragemRolo,
           precoUnitario: sis.fita.precoUnitario,
           precoMinimo: sis.fita.precoMinimo,
+          imagemUrl: sis.fita.imagemUrl,
+          localAcc: new Map([[label, demanda]]),
         });
       }
     }
@@ -435,6 +460,8 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
       rolos,
       qtdRolosTotal,
       subtotal: g.precoUnitario * qtdRolosTotal,
+      localBreakdown: Array.from(g.localAcc.entries()).map(([label, demanda]) => ({ label, demanda })),
+      imagemUrl: g.imagemUrl,
     });
   }
 
