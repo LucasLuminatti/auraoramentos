@@ -652,7 +652,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                                 {violacaoIndicator(sis.fita.codigo, sis.fita.precoUnitario, sis.fita.precoMinimo)}
                               </div>
                             </TableCell>
-                            <TableCell className="text-right text-xs text-muted-foreground italic">Global →</TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground italic">incluída no Resumo de Fitas</TableCell>
                           </TableRow>
                           {/* Perfil (se existir) */}
                           {sis.perfil && (
@@ -732,7 +732,18 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                 {gruposFita.map((g) => (
                   <TableRow key={g.codigo}>
                     <TableCell className="font-mono">{g.codigo}</TableCell>
-                    <TableCell>{g.descricao}</TableCell>
+                    <TableCell>
+                      <div>{g.descricao}</div>
+                      {g.localBreakdown && g.localBreakdown.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {g.localBreakdown.map((lb, i) => (
+                            <Badge key={i} variant="outline" className="text-[10px] font-normal text-muted-foreground">
+                              {lb.label} · {lb.demanda}m
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">{g.demandaTotal}m</TableCell>
                     <TableCell className="text-right">
                       {g.rolos.map((r, i) => (
