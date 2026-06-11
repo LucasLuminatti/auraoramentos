@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calcularDriversPorProjeto } from '@/types/orcamento';
-import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver } from '@/types/orcamento';
+import { calcularDriversPorProjeto, calcularRolosPorGrupo } from '@/types/orcamento';
+import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver, LocalBreakdown } from '@/types/orcamento';
 
 // ─── Helpers mínimos para montar fixtures ───
 
@@ -51,6 +51,157 @@ function makeAmbiente(sistemas: SistemaIluminacao[]): Ambiente {
     sistemas,
   };
 }
+
+// ─── Helpers para calcularRolosPorGrupo ───
+
+function makeFitaComImagem(codigo: string, imagemUrl?: string): ItemFitaLED {
+  return {
+    id: `fita-${codigo}`,
+    codigo,
+    descricao: `Fita LED ${codigo}`,
+    wm: 10,
+    metragemRolo: 5,
+    precoUnitario: 50,
+    precoMinimo: 40,
+    imagemUrl,
+  };
+}
+
+function makeSistemaComLocal(
+  fita: ItemFitaLED,
+  driver: ItemDriver,
+  metragemManual: number,
+  local?: string,
+): SistemaIluminacao {
+  return {
+    id: `sis-${Math.random().toString(36).slice(2)}`,
+    perfil: null,
+    fita,
+    driver,
+    metragemManual,
+    passadasManual: 1,
+    local,
+  };
+}
+
+function makeAmbienteNomeado(nome: string, sistemas: SistemaIluminacao[]): Ambiente {
+  return {
+    id: `amb-${Math.random().toString(36).slice(2)}`,
+    nome,
+    luminarias: [],
+    sistemas,
+  };
+}
+
+// ─── Testes: calcularRolosPorGrupo — localBreakdown e imagemUrl ───
+
+describe('calcularRolosPorGrupo — localBreakdown e imagemUrl (Phase 17 / RES-01)', () => {
+  const driverPadrao = makeDriver('DR001', 24);
+
+  it('Teste 1: 2 sistemas da mesma fita em locais diferentes → breakdown separado, demandaTotal correto', () => {
+    const fita = makeFitaComImagem('FX1000');
+    const ambientes: Ambiente[] = [
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 12, 'Sanca')]),
+      makeAmbienteNomeado('Cozinha', [makeSistemaComLocal(fita, driverPadrao, 8, 'Marcenaria')]),
+    ];
+
+    const resultado = calcularRolosPorGrupo(ambientes);
+
+    expect(resultado).toHaveLength(1);
+    const grupo = resultado[0];
+    expect(grupo.demandaTotal).toBe(20);
+    expect(grupo.localBreakdown).toBeDefined();
+    expect(grupo.localBreakdown).toHaveLength(2);
+    expect(grupo.localBreakdown).toContainEqual({ label: 'Sala — Sanca', demanda: 12 });
+    expect(grupo.localBreakdown).toContainEqual({ label: 'Cozinha — Marcenaria', demanda: 8 });
+  });
+
+  it('Teste 2: sistema sem local → label = nome do ambiente apenas', () => {
+    const fita = makeFitaComImagem('FX2000');
+    const ambientes: Ambiente[] = [
+      makeAmbienteNomeado('Lavabo', [makeSistemaComLocal(fita, driverPadrao, 6)]),
+    ];
+
+    const resultado = calcularRolosPorGrupo(ambientes);
+
+    expect(resultado).toHaveLength(1);
+    const grupo = resultado[0];
+    expect(grupo.localBreakdown).toBeDefined();
+    expect(grupo.localBreakdown).toHaveLength(1);
+    expect(grupo.localBreakdown![0].label).toBe('Lavabo');
+    expect(grupo.localBreakdown![0].demanda).toBe(6);
+  });
+
+  it('Teste 3: dois sistemas com mesmo label são somados (não duplicam entrada)', () => {
+    const fita = makeFitaComImagem('FX3000');
+    const ambientes: Ambiente[] = [
+      makeAmbienteNomeado('Quarto', [
+        makeSistemaComLocal(fita, driverPadrao, 4, 'Sanca'),
+        makeSistemaComLocal(fita, driverPadrao, 6, 'Sanca'),
+      ]),
+    ];
+
+    const resultado = calcularRolosPorGrupo(ambientes);
+
+    expect(resultado).toHaveLength(1);
+    const grupo = resultado[0];
+    expect(grupo.localBreakdown).toBeDefined();
+    expect(grupo.localBreakdown).toHaveLength(1);
+    expect(grupo.localBreakdown![0].label).toBe('Quarto — Sanca');
+    expect(grupo.localBreakdown![0].demanda).toBe(10);
+  });
+
+  it('Teste 4 (backward-compat): qtdRolosTotal e subtotal inalterados', () => {
+    const fita = makeFitaComImagem('FX4000');
+    fita.metragemRolo = 5;
+    const ambientes: Ambiente[] = [
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 12, 'Sanca')]),
+      makeAmbienteNomeado('Cozinha', [makeSistemaComLocal(fita, driverPadrao, 8, 'Marcenaria')]),
+    ];
+
+    const resultado = calcularRolosPorGrupo(ambientes);
+
+    expect(resultado).toHaveLength(1);
+    const grupo = resultado[0];
+    // 20m com rolos de 5m: 4 rolos (5+5+5+5) — sem desperdício
+    expect(grupo.qtdRolosTotal).toBe(4);
+    expect(grupo.subtotal).toBe(fita.precoUnitario * grupo.qtdRolosTotal);
+  });
+
+  it('Teste 5: fita com imagemUrl → grupo.imagemUrl reflete o valor; sem imagemUrl → undefined', () => {
+    const fitaComImagem = makeFitaComImagem('FX5000', 'https://cdn.example.com/fita.jpg');
+    const fitaSemImagem = makeFitaComImagem('FX5001');
+
+    const ambientes: Ambiente[] = [
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fitaComImagem, driverPadrao, 5)]),
+      makeAmbienteNomeado('Quarto', [makeSistemaComLocal(fitaSemImagem, driverPadrao, 5)]),
+    ];
+
+    const resultado = calcularRolosPorGrupo(ambientes);
+
+    expect(resultado).toHaveLength(2);
+    const grupoComImg = resultado.find(g => g.codigo === 'FX5000');
+    const grupoSemImg = resultado.find(g => g.codigo === 'FX5001');
+    expect(grupoComImg?.imagemUrl).toBe('https://cdn.example.com/fita.jpg');
+    expect(grupoSemImg?.imagemUrl).toBeUndefined();
+  });
+
+  it('Invariante: soma do localBreakdown === demandaTotal', () => {
+    const fita = makeFitaComImagem('FX6000');
+    const ambientes: Ambiente[] = [
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 7, 'Sanca')]),
+      makeAmbienteNomeado('Quarto', [makeSistemaComLocal(fita, driverPadrao, 3)]),
+      makeAmbienteNomeado('Quarto', [makeSistemaComLocal(fita, driverPadrao, 5, 'Sanca')]),
+    ];
+
+    const resultado = calcularRolosPorGrupo(ambientes);
+
+    for (const grupo of resultado) {
+      const somaBreakdown = (grupo.localBreakdown ?? []).reduce((s, b) => s + b.demanda, 0);
+      expect(somaBreakdown).toBe(grupo.demandaTotal);
+    }
+  });
+});
 
 // ─── Testes: calcularDriversPorProjeto ───
 
