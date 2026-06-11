@@ -19,8 +19,8 @@
 - [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16 (completed 2026-06-10)
 - [x] **Phase 15: Tensão & Validação** — Inferir voltagem do driver a partir da fita + aviso de divergência; remover bloqueio indevido entre ambientes com voltagens diferentes; corrigir grouping key de drivers globais para (codigo + voltagem); advisory TINY 24V com oferta de driver; sugerir driver compatível ao selecionar fita (completed 2026-06-10)
 - [x] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo (completed 2026-06-11)
-- [ ] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item; fita sem duplicação entre visão por ambiente e resumo final; drivers por ambiente (não apenas bloco global); duplicar/reusar sistema em outro ambiente; aviso ao avançar para revisão sem lâmpada/item esperado
-- [ ] **Phase 18: UX Transversal** — Redirecionamento ao buscar código de categoria errada (perfil buscado em Luminárias); microcopy inline explicando Luminárias vs Sistemas + o que é fita/perfil/driver; duplicar ambiente inteiro; checklist visual pré-PDF destacando itens incompletos/suspeitos
+- [ ] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item (breakdown por Ambiente — Local); fita sem duplicação entre visão por ambiente e resumo final (global = compra, ambiente = referência); drivers por ambiente (bloco global vira análise interna secundária); aviso ao avançar para revisão sem lâmpada/item esperado
+- [ ] **Phase 18: UX Transversal** — Redirecionamento ao buscar código de categoria errada (perfil buscado em Luminárias); microcopy inline explicando Luminárias vs Sistemas + o que é fita/perfil/driver; duplicar sistema em outro ambiente (RES-04, movido da Phase 17) + duplicar ambiente inteiro; checklist visual pré-PDF destacando itens incompletos/suspeitos
 
 ## Phase Details
 
@@ -65,26 +65,25 @@
 **UI hint**: yes
 
 ### Phase 17: Resumo & Apresentação
-**Goal**: Step 3 e o Resumo Global apresentam fitas, perfis e drivers de forma coerente — sem duplicação confusa, com localização (LOCAL) visível, drivers por ambiente — e o colaborador pode duplicar um sistema já montado em vez de refazer tudo
+**Goal**: Step 3 e o Resumo Global apresentam fitas, perfis e drivers de forma coerente — sem duplicação confusa, com localização (LOCAL) visível e drivers por ambiente — tanto na tela quanto no PDF do cliente
 **Depends on**: Phase 15 (voltage grouping corrigido afeta o resumo de drivers), Phase 16 (metragem correta afeta cálculos do resumo)
-**Requirements**: RES-01, RES-02, RES-03, RES-04, RES-05
+**Requirements**: RES-01, RES-02, RES-03, RES-05
 **Success Criteria** (what must be TRUE):
-  1. O Resumo Global de Fitas mostra a coluna LOCAL (ex.: SANCA, MARCENARIA) para cada linha de fita agrupada
-  2. A fita de um sistema aparece uma vez na apresentação — ou no card do ambiente ou no resumo global, nunca duplicada de forma confusa para o cliente
-  3. Os drivers aparecem listados dentro do respectivo ambiente no Step 3 (além ou em vez do bloco global)
-  4. Colaborador clica em "Duplicar sistema" em um sistema já montado e ele aparece em outro ambiente escolhido, com os mesmos itens e novo UUID — economizando remontagem manual
-  5. Ao clicar "Avançar" do Step 2 para o Step 3, o wizard exibe aviso se algum ambiente tem sistema sem o item esperado (ex.: fita sem driver, driver sem fita)
+  1. O Resumo Global de Fitas (tela + PDF) mostra o LOCAL de cada fita como breakdown por "Ambiente — Local" (ex.: SANCA 12m · MARCENARIA 8m → 20m), mantendo o agrupamento por código e a otimização de rolos cross-projeto; o Resumo de Fitas do PDF também exibe a foto da fita
+  2. A fita aparece de forma coerente: o Resumo Global é a fonte oficial de compra/rolos/preço e a fita no card do ambiente é referência contextual explícita ("incluída no Resumo de Fitas") — sem duplicação confusa para o cliente
+  3. Os drivers aparecem por ambiente no Step 3 como fonte oficial; o bloco "Resumo Global de Drivers" é rebaixado a análise de otimização interna secundária (colapsável/claramente rotulada), não competindo com o pedido
+  4. Ao clicar "Avançar" do Step 2 para o Step 3, o wizard exibe aviso advisory (não-bloqueante, com "avançar mesmo assim") listando sistemas/peças incompletos: fita sem driver, driver sem fita, perfil sem fita, peça/luminária sem lâmpada esperada
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 18: UX Transversal
 **Goal**: O wizard é difícil de usar errado — o colaborador é redirecionado quando busca no lugar errado, rótulos inline explicam o que vai em cada seção, e uma camada de checklist antes do PDF destaca tudo que parece incompleto
 **Depends on**: Phase 17 (checklist pré-PDF é natural extensão dos avisos de RES-05)
-**Requirements**: UX-01, UX-03, UX-04, UX-05
+**Requirements**: RES-04, UX-01, UX-03, UX-04, UX-05
 **Success Criteria** (what must be TRUE):
   1. Quando colaborador busca no seletor de Luminária um código que é perfil, fita ou driver (ex.: LM1370), aparece mensagem de redirecionamento ("Este produto é um perfil — adicione em Sistemas de Iluminação") em vez de "Nenhum produto encontrado"
   2. Cards de Luminárias e de Sistemas de Iluminação têm microcopy inline explicando o que entra em cada seção (ex.: "Luminárias = spots/tubulares individuais", "Sistemas = fita LED + perfil + driver")
-  3. Colaborador clica em "Duplicar ambiente" e um ambiente inteiro (com todos os itens e sistemas) é clonado com novo UUID — útil para quartos/sancas iguais
+  3. Colaborador clica em "Duplicar sistema" (RES-04, movido da Phase 17) e o sistema é clonado em outro ambiente/local escolhido com os mesmos itens e novo UUID; e clica em "Duplicar ambiente" (UX-04) clonando o ambiente inteiro com todos os itens e sistemas — ambas economizando remontagem manual
   4. Antes de gerar o PDF, o Step 3 exibe checklist visual destacando itens suspeitos: fita com 0m, sistema sem driver, voltagem divergente, peça sem lâmpada — cada item com link para corrigir
 **Plans**: TBD
 **UI hint**: yes
@@ -113,8 +112,8 @@
 | 14 | CAT-01, CAT-02 | 2 |
 | 15 | TENS-01, TENS-02, SIST-04, UX-02 | 4 |
 | 16 | CALC-01, CALC-02, CALC-03 | 3 |
-| 17 | RES-01, RES-02, RES-03, RES-04, RES-05 | 5 |
-| 18 | UX-01, UX-03, UX-04, UX-05 | 4 |
+| 17 | RES-01, RES-02, RES-03, RES-05 | 4 |
+| 18 | RES-04, UX-01, UX-03, UX-04, UX-05 | 5 |
 
 ## Shipped Milestones
 
@@ -152,4 +151,4 @@ Plans:
 - [ ] TBD (promote with /gsd-new-milestone ou /gsd-review-backlog when ready)
 
 ---
-*Last updated: 2026-06-10 — v1.2 roadmap criado (Correções UAT + UX, 18 reqs, 5 fases: 14–18). Backlog 999.1 (PDF vetorial) + 999.2 (Sistemas Compostos → v1.3) preservados.*
+*Last updated: 2026-06-11 — Phase 17 discutida (RES-01/02/03/05): fita global=compra + LOCAL breakdown (tela+PDF), drivers por ambiente (global vira análise interna), aviso advisory de item faltando. RES-04 (duplicar sistema) movido para Phase 18 junto de UX-04 (família duplicação). Cobertura v1.2 segue 18/18.*
