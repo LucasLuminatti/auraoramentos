@@ -95,7 +95,7 @@
 |-------|----------------|--------|-----------|
 | 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
-| 16. Cálculo & Metragem | 0/TBD | Not started | - |
+| 16. Cálculo & Metragem | 0/3 | Planned     | - |
 | 17. Resumo & Apresentação | 0/TBD | Not started | - |
 | 18. UX Transversal | 0/TBD | Not started | - |
 
