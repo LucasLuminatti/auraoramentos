@@ -269,10 +269,13 @@ function blocoResumoFitas(ambientes: Ambiente[]): string {
   const totalFitas = grupos.reduce((s, g) => s + g.subtotal, 0);
   const rows = grupos.map(g => {
     const rolosStr = g.rolos.map(r => `${r.quantidade}×${r.tamanho}m`).join(" + ");
-    const chipsHtml = [chip(`${g.demandaTotal}m demanda`, "orange"), chip(rolosStr), chip(`${g.qtdRolosTotal} rolos`)].join("");
+    const localChips = (g.localBreakdown ?? [])
+      .map(lb => chip(`${lb.label} · ${lb.demanda}m`))
+      .join("");
+    const chipsHtml = [chip(`${g.demandaTotal}m demanda`, "orange"), chip(rolosStr), chip(`${g.qtdRolosTotal} rolos`), localChips].filter(Boolean).join("");
     return `
       <tr class="item-row">
-        <td class="thumb-cell"><div class="thumb-empty"></div></td>
+        <td class="thumb-cell">${thumb(g.imagemUrl)}</td>
         <td class="desc-cell">
           <div class="desc-name">${esc(g.descricao)}</div>
           <div class="chips">${chipsHtml}</div>
