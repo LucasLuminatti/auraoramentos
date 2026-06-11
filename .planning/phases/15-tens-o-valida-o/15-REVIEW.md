@@ -16,6 +16,12 @@ findings:
   info: 3
   total: 5
 status: issues_found
+resolution:
+  WR-01: resolved in 588dffe (sync fita write + reconcile driver by id against latest state)
+  WR-02: resolved in 588dffe (store codigo in grouping map value, no split('|'))
+  IN-01: wontfix (badge/toast desync acceptable by design)
+  IN-02: acknowledged (stacked .or() correct)
+  IN-03: deferred (buscarDriverSugerido perfil restrictions — follow-up backlog)
 ---
 
 # Phase 15: Code Review Report
