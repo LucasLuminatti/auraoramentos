@@ -73,7 +73,11 @@
   2. A fita aparece de forma coerente: o Resumo Global é a fonte oficial de compra/rolos/preço e a fita no card do ambiente é referência contextual explícita ("incluída no Resumo de Fitas") — sem duplicação confusa para o cliente
   3. Os drivers aparecem por ambiente no Step 3 como fonte oficial; o bloco "Resumo Global de Drivers" é rebaixado a análise de otimização interna secundária (colapsável/claramente rotulada), não competindo com o pedido
   4. Ao clicar "Avançar" do Step 2 para o Step 3, o wizard exibe aviso advisory (não-bloqueante, com "avançar mesmo assim") listando sistemas/peças incompletos: fita sem driver, driver sem fita, perfil sem fita, peça/luminária sem lâmpada esperada
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 17-01-PLAN.md — Estender GrupoFita + calcularRolosPorGrupo com LOCAL breakdown e imagemUrl (camada de dados, upstream)
+- [ ] 17-02-PLAN.md — Step 3: LOCAL no Resumo de Fitas, fita inline como referência, bloco de drivers colapsável (RES-01/02/03)
+- [ ] 17-03-PLAN.md — PDF v2 blocoResumoFitas: foto da fita + chips de LOCAL (RES-01/02)
+- [ ] 17-04-PLAN.md — Advisory não-bloqueante de itens incompletos no gate Step 2 → Step 3 (RES-05)
 **UI hint**: yes
 
 ### Phase 18: UX Transversal
@@ -95,7 +99,7 @@
 | 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
 | 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
-| 17. Resumo & Apresentação | 0/TBD | Not started | - |
+| 17. Resumo & Apresentação | 0/4 | Planned     | - |
 | 18. UX Transversal | 0/TBD | Not started | - |
 
 ## Coverage Summary
@@ -151,4 +155,4 @@ Plans:
 - [ ] TBD (promote with /gsd-new-milestone ou /gsd-review-backlog when ready)
 
 ---
-*Last updated: 2026-06-11 — Phase 17 discutida (RES-01/02/03/05): fita global=compra + LOCAL breakdown (tela+PDF), drivers por ambiente (global vira análise interna), aviso advisory de item faltando. RES-04 (duplicar sistema) movido para Phase 18 junto de UX-04 (família duplicação). Cobertura v1.2 segue 18/18.*
+*Last updated: 2026-06-11 — Phase 17 planejada: 4 plans em 2 waves (Wave 1: 17-01 dados + 17-04 gate advisory; Wave 2: 17-02 tela + 17-03 PDF). RES-01/02/03/05 cobertos. RES-04 segue na Phase 18.*
