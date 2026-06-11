@@ -195,9 +195,17 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                       const isProjExpanded = expandedProjeto === projeto.id;
                       return (
                         <div key={projeto.id} className="rounded-lg border bg-background overflow-hidden">
-                          <button
-                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer"
                             onClick={() => setExpandedProjeto(isProjExpanded ? null : projeto.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setExpandedProjeto(isProjExpanded ? null : projeto.id);
+                              }
+                            }}
                           >
                             <div className="flex items-center gap-2">
                               <FolderOpen className="h-4 w-4 text-primary/70" />
@@ -223,7 +231,7 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                             ) : (
                               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                             )}
-                          </button>
+                          </div>
                           {isProjExpanded && (
                             <div className="border-t px-4 py-2 space-y-1.5">
                               {projeto.orcamentos.map((orc) => (
