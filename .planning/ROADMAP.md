@@ -134,7 +134,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)

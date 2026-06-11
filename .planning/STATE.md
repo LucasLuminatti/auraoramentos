@@ -3,14 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-11T19:04:42.052Z"
+stopped_at: 17-02 checkpoint — tasks 1+2 complete, awaiting human-verify Task 3
+last_updated: "2026-06-11T19:47:24.328Z"
 last_activity: 2026-06-11
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # STATE: AURA
@@ -32,7 +33,7 @@ Phase: 17
 Plan: 05
 Status: Executing Phase 17 (Plans 01–04 complete)
 Last activity: 2026-06-11
-Stopped at: Completed 17-resumo-apresenta-o/17-04-PLAN.md
+Stopped at: 17-02 checkpoint — tasks 1+2 complete, awaiting human-verify Task 3
 
 ```
 Progress: [████████░░] 75% (9/12 plans)
