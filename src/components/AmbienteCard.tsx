@@ -13,7 +13,7 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, aplicarSufixoMetragem } from "@/types/orcamento";
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -206,11 +206,12 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
         perfil: {
           ...base,
           codigo: produto.codigo,
-          descricao: produto.descricao,
+          descricao: aplicarSufixoMetragem(produto.descricao, base.comprimentoPeca, base.quantidade),
           precoUnitario: preco,
           precoMinimo: precoMin,
           imagemUrl: imgUrl,
           passadas: passadasAuto,
+          passadasPadrao: passadasAuto,
           familia_perfil: produto.familia_perfil,
           driver_restr_tipo: produto.driver_restr_tipo,
           driver_restr_max_w: produto.driver_restr_max_w,
@@ -414,6 +415,12 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                             <Badge variant="destructive" className="text-[10px] px-1.5 py-0">⚠ {fv}V × {dv}V</Badge>
                           ) : null;
                         })()}
+                        {(() => {
+                          const semPerfilEInvalido = !!sis.fita.codigo && !sis.perfil && (!sis.metragemManual || sis.metragemManual <= 0);
+                          return semPerfilEInvalido ? (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">⚠ Metragem obrigatória</Badge>
+                          ) : null;
+                        })()}
                       </div>
                       <div className="flex items-center gap-2">
                         {subtotal > 0 && <Badge variant="outline" className="text-xs">Subtotal (s/ fita): {formatarMoeda(subtotal)}</Badge>}
@@ -497,7 +504,10 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                             <div className="flex items-center gap-3 flex-wrap">
                               <div className="flex items-center gap-1">
                                 <span className="text-xs text-muted-foreground">Comprimento:</span>
-                                <Select value={String(sis.perfil.comprimentoPeca)} onValueChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, comprimentoPeca: Number(v) as 1 | 2 | 3 } })}>
+                                <Select value={String(sis.perfil.comprimentoPeca)} onValueChange={(v) => {
+                                  const novoComp = Number(v) as 1 | 2 | 3;
+                                  updateSistema(si, { ...sis, perfil: { ...sis.perfil!, comprimentoPeca: novoComp, descricao: aplicarSufixoMetragem(sis.perfil!.descricao, novoComp, sis.perfil!.quantidade) } });
+                                }}>
                                   <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="1">1m</SelectItem>
@@ -508,11 +518,21 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                               </div>
                               <div className="flex items-center gap-1">
                                 <span className="text-xs text-muted-foreground">Qtd:</span>
-                                <Input type="number" min={1} value={sis.perfil.quantidade} onChange={(e) => { const raw = e.target.value; updateSistema(si, { ...sis, perfil: { ...sis.perfil!, quantidade: raw === "" ? 0 : (parseInt(raw) || 0) } }); }} className="w-20 h-8" />
+                                <Input type="number" min={1} value={sis.perfil.quantidade} onChange={(e) => { const raw = e.target.value; const qtd = raw === "" ? 0 : (parseInt(raw) || 0); updateSistema(si, { ...sis, perfil: { ...sis.perfil!, quantidade: qtd, descricao: aplicarSufixoMetragem(sis.perfil!.descricao, sis.perfil!.comprimentoPeca, qtd) } }); }} className="w-20 h-8" />
                               </div>
                               <div className="flex items-center gap-1">
                                 <span className="text-xs text-muted-foreground">Passadas:</span>
-                                <Badge variant="secondary" className="text-xs">{sis.perfil.passadas}× (auto)</Badge>
+                                <Select
+                                  value={String(sis.perfil.passadas)}
+                                  onValueChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, passadas: Number(v) as 1 | 2 | 3 } })}
+                                >
+                                  <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {[1, 2, 3]
+                                      .filter((n) => n <= (sis.perfil!.passadasPadrao ?? 3))
+                                      .map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                             <div className="flex items-center gap-3 flex-wrap">
