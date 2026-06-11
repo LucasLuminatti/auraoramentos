@@ -1,8 +1,40 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
 import type { Ambiente } from "@/types/orcamento";
 import { toast } from "sonner";
+
+interface AdvisoryItem {
+  ambienteNome: string;
+  tipo: 'fita-sem-driver' | 'driver-sem-fita' | 'perfil-sem-fita' | 'peca-sem-lampada';
+  descricao: string;
+}
+
+// Reutiliza o predicado da Regra #24 (AmbienteCard.tsx:104-108)
+function luminariaPrecisaLampada(descricao: string): boolean {
+  const d = (descricao ?? '').toUpperCase();
+  const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
+  const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
+  return temBaseLampada && !temLedIntegrado;
+}
+
+function ambienteTemLampada(amb: Ambiente): boolean {
+  return amb.luminarias.some(
+    (l) => /l[âa]mpada/i.test(l.descricao ?? '') || (l as any).tipo_produto === 'lampada'
+  );
+}
 
 interface Step2Props {
   ambientes: Ambiente[];
@@ -11,7 +43,17 @@ interface Step2Props {
   onPrev: () => void;
 }
 
+const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
+  'fita-sem-driver': 'Fita sem driver',
+  'driver-sem-fita': 'Driver sem fita',
+  'perfil-sem-fita': 'Perfil sem fita LED',
+  'peca-sem-lampada': 'Peça sem lâmpada (não tem LED integrado)',
+};
+
 const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => {
+  const [advisoryOpen, setAdvisoryOpen] = useState(false);
+  const [advisoryItems, setAdvisoryItems] = useState<AdvisoryItem[]>([]);
+
   const addAmbiente = () => {
     const novo: Ambiente = {
       id: crypto.randomUUID(),
@@ -79,6 +121,36 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
       );
     }
 
+    // RES-05 / D-12..D-16: advisory NÃO-bloqueante sobre itens incompletos
+    // Opera sobre ambientesLimpos (pós-remoção de vazios, D-16)
+    const itensIncompletos: AdvisoryItem[] = [];
+    for (const amb of ambientesLimpos) {
+      for (const sis of amb.sistemas) {
+        if (sis.fita.codigo && !sis.driver.codigo) {
+          itensIncompletos.push({ ambienteNome: amb.nome, tipo: 'fita-sem-driver', descricao: sis.fita.descricao });
+        }
+        if (sis.driver.codigo && !sis.fita.codigo) {
+          itensIncompletos.push({ ambienteNome: amb.nome, tipo: 'driver-sem-fita', descricao: sis.driver.descricao });
+        }
+        if (sis.perfil && !sis.fita.codigo) {
+          itensIncompletos.push({ ambienteNome: amb.nome, tipo: 'perfil-sem-fita', descricao: sis.perfil.descricao });
+        }
+      }
+      if (!ambienteTemLampada(amb)) {
+        for (const lum of amb.luminarias) {
+          if (luminariaPrecisaLampada(lum.descricao)) {
+            itensIncompletos.push({ ambienteNome: amb.nome, tipo: 'peca-sem-lampada', descricao: lum.descricao });
+          }
+        }
+      }
+    }
+
+    if (itensIncompletos.length > 0) {
+      setAdvisoryItems(itensIncompletos);
+      setAdvisoryOpen(true);
+      return; // aguarda decisão do usuário (não-bloqueante — D-12)
+    }
+
     onNext();
   };
 
@@ -122,6 +194,36 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
           Próximo <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
+
+      <AlertDialog open={advisoryOpen} onOpenChange={setAdvisoryOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Alguns itens parecem incompletos
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Verifique se foi intencional. Você pode revisar ou continuar mesmo assim.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <ul className="max-h-60 overflow-y-auto space-y-2 text-sm">
+            {advisoryItems.map((it, i) => (
+              <li key={i} className="rounded-md border bg-muted/30 px-3 py-2">
+                <span className="font-medium">{it.ambienteNome}</span>
+                {' — '}
+                <span className="text-muted-foreground">{ADVISORY_LABELS[it.tipo]}</span>
+                <div className="text-xs text-muted-foreground truncate">{it.descricao}</div>
+              </li>
+            ))}
+          </ul>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Revisar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setAdvisoryOpen(false); onNext(); }}>
+              Continuar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
