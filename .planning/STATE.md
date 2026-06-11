@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-11T17:50:59.169Z"
+last_updated: "2026-06-11T19:04:42.052Z"
 last_activity: 2026-06-11
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_plans: 12
+  completed_plans: 9
+  percent: 75
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-10 — Roadmap v1.2 criado. 5 fases (14–18), 18/18 reqs mapeados. Pronto para `/gsd-plan-phase 14`.
+**Last updated:** 2026-06-11 — Phase 17 Plan 01 completo. GrupoFita estendido com localBreakdown + imagemUrl; 11/11 testes passando.
 
 ## Project Reference
 
@@ -24,17 +24,18 @@ progress:
 - **Current Milestone:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (iniciado 2026-06-10)
 - **Mode:** yolo
 - **Granularity:** coarse
-- **Current Focus:** Phase 16 — c-lculo-metragem
+- **Current Focus:** Phase 17 — resumo-apresenta-o
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Executing Phase 16
+Phase: 17
+Plan: 02
+Status: Executing Phase 17 (Plan 01 complete)
 Last activity: 2026-06-11
+Stopped at: Completed 17-resumo-apresenta-o/17-01-PLAN.md
 
 ```
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (0/5 phases)
+Progress: [████████░░] 75% (9/12 plans)
 ```
 
 ## Roadmap v1.2
