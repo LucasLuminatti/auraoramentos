@@ -19,7 +19,7 @@
 - [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16 (completed 2026-06-10)
 - [x] **Phase 15: Tensão & Validação** — Inferir voltagem do driver a partir da fita + aviso de divergência; remover bloqueio indevido entre ambientes com voltagens diferentes; corrigir grouping key de drivers globais para (codigo + voltagem); advisory TINY 24V com oferta de driver; sugerir driver compatível ao selecionar fita (completed 2026-06-10)
 - [x] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo (completed 2026-06-11)
-- [ ] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item (breakdown por Ambiente — Local); fita sem duplicação entre visão por ambiente e resumo final (global = compra, ambiente = referência); drivers por ambiente (bloco global vira análise interna secundária); aviso ao avançar para revisão sem lâmpada/item esperado
+- [x] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item (breakdown por Ambiente — Local); fita sem duplicação entre visão por ambiente e resumo final (global = compra, ambiente = referência); drivers por ambiente (bloco global vira análise interna secundária); aviso ao avançar para revisão sem lâmpada/item esperado (completed 2026-06-11)
 - [ ] **Phase 18: UX Transversal** — Redirecionamento ao buscar código de categoria errada (perfil buscado em Luminárias); microcopy inline explicando Luminárias vs Sistemas + o que é fita/perfil/driver; duplicar sistema em outro ambiente (RES-04, movido da Phase 17) + duplicar ambiente inteiro; checklist visual pré-PDF destacando itens incompletos/suspeitos
 
 ## Phase Details
@@ -76,7 +76,7 @@
 **Plans**: 4 plans
 - [x] 17-01-PLAN.md — Estender GrupoFita + calcularRolosPorGrupo com LOCAL breakdown e imagemUrl (camada de dados, upstream)
 - [x] 17-02-PLAN.md — Step 3: LOCAL no Resumo de Fitas, fita inline como referência, bloco de drivers colapsável (RES-01/02/03)
-- [ ] 17-03-PLAN.md — PDF v2 blocoResumoFitas: foto da fita + chips de LOCAL (RES-01/02)
+- [x] 17-03-PLAN.md — PDF v2 blocoResumoFitas: foto da fita + chips de LOCAL (RES-01/02)
 - [x] 17-04-PLAN.md — Advisory não-bloqueante de itens incompletos no gate Step 2 → Step 3 (RES-05)
 **UI hint**: yes
 
@@ -99,7 +99,7 @@
 | 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
 | 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
-| 17. Resumo & Apresentação | 3/4 | In Progress|  |
+| 17. Resumo & Apresentação | 4/4 | Complete   | 2026-06-11 |
 | 18. UX Transversal | 0/TBD | Not started | - |
 
 ## Coverage Summary
@@ -134,7 +134,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 2/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)

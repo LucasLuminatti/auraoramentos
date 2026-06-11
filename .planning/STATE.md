@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 17-02-PLAN.md — Phase 17 Plan 02 complete (RES-01/02/03)
-last_updated: "2026-06-11T20:30:00.000Z"
+stopped_at: Completed 17-03-PLAN.md — Phase 17 complete (RES-01/02/03/04+05)
+last_updated: "2026-06-11T20:29:15.480Z"
 last_activity: 2026-06-11
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-11 — Phase 17 Plan 02 completo. Step 3 reorganizado: chips LOCAL no Resumo de Fitas (RES-01), rótulo referência fita inline (RES-02), bloco de drivers rebaixado a Collapsible interno (RES-03).
+**Last updated:** 2026-06-11 — Phase 17 completa (plans 01–04). PDF v2 Resumo de Fitas com foto (thumb) + LOCAL breakdown chips. Todos os 12 plans do v1.2 entregues.
 
 ## Project Reference
 
@@ -30,13 +30,13 @@ progress:
 ## Current Position
 
 Phase: 17
-Plan: 03
-Status: Executing Phase 17 (Plans 01, 02, 04 complete — 03 pending)
+Plan: 04
+Status: Phase 17 complete — all 4 plans delivered (RES-01/02/03/04+05)
 Last activity: 2026-06-11
-Stopped at: Completed 17-02-PLAN.md — Phase 17 Plan 02 complete (RES-01/02/03)
+Stopped at: Completed 17-03-PLAN.md — Phase 17 complete (RES-01/02/03/04+05)
 
 ```
-Progress: [█████████░] 92% (11/12 plans)
+Progress: [██████████] 100% (12/12 plans)
 ```
 
 ## Roadmap v1.2
@@ -105,6 +105,7 @@ Progress: [█████████░] 92% (11/12 plans)
 
 - **RES-01/02 display-only (17-02):** chips de localBreakdown expandem a célula Descrição em vez de adicionar coluna — preserva layout mobile sem tocar colunas Demanda/Rolos/Preço/Subtotal
 - **RES-03 Collapsible (17-02):** bloco de drivers global mantido mas secundário via `defaultOpen={false}` + badge "interno" — insight de otimização preservado sem competir com drivers por ambiente
+- **17-03 thumb inline (17-03):** chips de LOCAL inline no div de chips existente — sem nova coluna, layout PDF v2 aprovado preservado
 
 ### Todos
 
@@ -116,7 +117,7 @@ Progress: [█████████░] 92% (11/12 plans)
 
 ## Next Action
 
-`/gsd-execute-phase 17 03` — PDF v2 localBreakdown chips + foto da fita (RES-01/02)
+Phase 17 completa. Próximo: Phase 18 (UX Transversal — UX-01, UX-03, UX-04, UX-05).
 
 ---
-*STATE refreshed: 2026-06-11 — 17-02 complete (RES-01/02/03). Next: 17-03 PDF v2.*
+*STATE refreshed: 2026-06-11 — 17-03 complete (RES-01/02). Phase 17 fully delivered.*

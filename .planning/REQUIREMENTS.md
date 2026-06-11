@@ -33,7 +33,7 @@
 ### RES — Apresentação / UX do resumo
 
 - [x] **RES-01**: O Resumo Global de Fitas/Drivers mostra o LOCAL de cada item (ex.: SANCA, MARCENARIA).
-- [ ] **RES-02**: A fita não aparece de forma duplicada/confusa (no ambiente e no resumo final) — apresentação coerente para o cliente.
+- [x] **RES-02**: A fita não aparece de forma duplicada/confusa (no ambiente e no resumo final) — apresentação coerente para o cliente.
 - [ ] **RES-03**: Os drivers aparecem no respectivo ambiente (não apenas em bloco global).
 - [ ] **RES-04**: Colaborador duplica/reusa um sistema já montado em outro ambiente (agilidade quando o LOCAL se repete).
 - [ ] **RES-05**: Ao avançar para revisão/pagamento, o sistema avisa quando uma peça ficou sem a lâmpada/item esperado.
@@ -123,7 +123,7 @@ Movido da v1.2 por ser **evolução estrutural** (decisão de arquitetura de mod
 | CALC-02 | Phase 16 | Pending |
 | CALC-03 | Phase 16 | Pending |
 | RES-01 | Phase 17 | Complete |
-| RES-02 | Phase 17 | Pending |
+| RES-02 | Phase 17 | Complete |
 | RES-03 | Phase 17 | Pending |
 | RES-04 | Phase 17 | Pending |
 | RES-05 | Phase 17 | Pending |
