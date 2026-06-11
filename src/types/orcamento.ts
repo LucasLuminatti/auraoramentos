@@ -47,6 +47,9 @@ export interface ItemPerfil {
   driver_restr_tipo?: string | null;
   driver_restr_max_w?: number | null;
   somente_baby?: boolean | null;
+  /** Máximo de passadas válidas para a família do perfil (CALC-03 / D-11).
+   *  Opcional — backwards-compatible com snapshots antigos; fallback de UI: ?? 3. */
+  passadasPadrao?: 1 | 2 | 3;
 }
 
 export interface ItemFitaLED {
@@ -120,6 +123,20 @@ export const MARGEM_SEGURANCA_DRIVER = 1.05;
 /** Metragem total do perfil (se existir) */
 export function calcularMetragemTotal(perfil: ItemPerfil): number {
   return perfil.comprimentoPeca * perfil.quantidade;
+}
+
+/**
+ * Aplica/regenera o sufixo de metragem na descrição do perfil (CALC-02 / D-09).
+ * Remove qualquer sufixo " — N,Nm" anterior antes de re-anexar, preservando o texto manual.
+ * Formato pt-BR: " — 2,5m" (travessão em dash + espaço, vírgula decimal, sem espaço antes de "m").
+ */
+export function aplicarSufixoMetragem(descricaoBase: string, comprimentoPeca: number, quantidade: number): string {
+  const baseStripped = descricaoBase.replace(/ — \d+(,\d+)?m$/, '').trimEnd();
+  const metragem = comprimentoPeca * quantidade;
+  const metragemFormatada = metragem % 1 === 0
+    ? `${metragem}m`
+    : `${metragem.toString().replace('.', ',')}m`;
+  return `${baseStripped} — ${metragemFormatada}`;
 }
 
 /** Metragem de fita necessária para o sistema */
