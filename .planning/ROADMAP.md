@@ -95,7 +95,7 @@
 |-------|----------------|--------|-----------|
 | 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
-| 16. Cálculo & Metragem | 0/3 | Planned     | - |
+| 16. Cálculo & Metragem | 1/3 | In Progress|  |
 | 17. Resumo & Apresentação | 0/TBD | Not started | - |
 | 18. UX Transversal | 0/TBD | Not started | - |
 
@@ -131,7 +131,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 2/2 plans complete
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
