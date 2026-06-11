@@ -36,6 +36,49 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
       toast.error("Adicione pelo menos um ambiente");
       return;
     }
+
+    // CALC-01 (D-01..D-05): bloquear sistemas com fita, sem perfil, metragem null/0
+    const sistemasInvalidos: string[] = [];
+    // D-06/D-07: detectar sistemas totalmente vazios para remover (não bloqueia)
+    const ambientesLimpos = ambientes.map((amb) => {
+      amb.sistemas.forEach((sis, idx) => {
+        const totalmenteVazio = !sis.fita.codigo && !sis.driver.codigo && !sis.perfil;
+        if (totalmenteVazio) return; // removido abaixo
+        if (sis.fita.codigo && !sis.perfil) {
+          const metragemInvalida = !sis.metragemManual || sis.metragemManual <= 0;
+          if (metragemInvalida) {
+            sistemasInvalidos.push(`${amb.nome} — Sistema ${idx + 1}`);
+          }
+        }
+      });
+      return {
+        ...amb,
+        sistemas: amb.sistemas.filter(
+          (sis) => !(!sis.fita.codigo && !sis.driver.codigo && !sis.perfil)
+        ),
+      };
+    });
+
+    if (sistemasInvalidos.length > 0) {
+      toast.error("Informe uma metragem válida para este sistema antes de continuar.", {
+        description: sistemasInvalidos.join(" · "),
+      });
+      return; // BLOQUEIO (D-02)
+    }
+
+    const removidos =
+      ambientes.reduce((acc, a) => acc + a.sistemas.length, 0) -
+      ambientesLimpos.reduce((acc, a) => acc + a.sistemas.length, 0);
+
+    if (removidos > 0) {
+      onChange(ambientesLimpos); // remove vazios (D-06)
+      toast.info(
+        removidos === 1
+          ? "1 sistema vazio foi removido do orçamento."
+          : `${removidos} sistemas vazios foram removidos do orçamento.`
+      );
+    }
+
     onNext();
   };
 
