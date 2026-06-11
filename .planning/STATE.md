@@ -15,7 +15,7 @@ progress:
 
 # STATE: AURA
 
-**Last updated:** 2026-06-11 — Phase 17 Plan 01 completo. GrupoFita estendido com localBreakdown + imagemUrl; 11/11 testes passando.
+**Last updated:** 2026-06-11 — Phase 17 Plan 04 completo. Advisory NÃO-bloqueante no gate Step 2 → Step 3 com 4 gatilhos de itens incompletos (RES-05).
 
 ## Project Reference
 
@@ -29,10 +29,10 @@ progress:
 ## Current Position
 
 Phase: 17
-Plan: 02
-Status: Executing Phase 17 (Plan 01 complete)
+Plan: 05
+Status: Executing Phase 17 (Plans 01–04 complete)
 Last activity: 2026-06-11
-Stopped at: Completed 17-resumo-apresenta-o/17-01-PLAN.md
+Stopped at: Completed 17-resumo-apresenta-o/17-04-PLAN.md
 
 ```
 Progress: [████████░░] 75% (9/12 plans)

@@ -77,7 +77,7 @@
 - [x] 17-01-PLAN.md — Estender GrupoFita + calcularRolosPorGrupo com LOCAL breakdown e imagemUrl (camada de dados, upstream)
 - [ ] 17-02-PLAN.md — Step 3: LOCAL no Resumo de Fitas, fita inline como referência, bloco de drivers colapsável (RES-01/02/03)
 - [ ] 17-03-PLAN.md — PDF v2 blocoResumoFitas: foto da fita + chips de LOCAL (RES-01/02)
-- [ ] 17-04-PLAN.md — Advisory não-bloqueante de itens incompletos no gate Step 2 → Step 3 (RES-05)
+- [x] 17-04-PLAN.md — Advisory não-bloqueante de itens incompletos no gate Step 2 → Step 3 (RES-05)
 **UI hint**: yes
 
 ### Phase 18: UX Transversal
@@ -99,7 +99,7 @@
 | 14. Catálogo & Dados | 3/3 | Complete    | 2026-06-10 |
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
 | 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
-| 17. Resumo & Apresentação | 1/4 | In Progress|  |
+| 17. Resumo & Apresentação | 2/4 | In Progress|  |
 | 18. UX Transversal | 0/TBD | Not started | - |
 
 ## Coverage Summary
