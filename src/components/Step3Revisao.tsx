@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileDown, AlertTriangle, MessageSquare } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { ArrowLeft, FileDown, AlertTriangle, MessageSquare, ChevronDown } from "lucide-react";
 import type { Orcamento, Ambiente, SistemaIluminacao, GrupoFita, StatusOrcamento } from "@/types/orcamento";
 import type { Json } from "@/integrations/supabase/types";
 import { construirDescricaoRica } from "@/lib/produtoDescricao";
@@ -763,53 +764,65 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         </div>
       )}
 
-      {/* ─── Resumo Global de Drivers (Regra 26) ─── */}
+      {/* ─── Análise de Otimização de Drivers (Regra 26) — interno ─── */}
       {resumoDrivers.length > 0 && (
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-          <div className="bg-accent/30 px-5 py-3 border-b">
-            <h3 className="text-lg font-semibold text-foreground">Resumo Global de Drivers</h3>
-            <p className="text-xs text-muted-foreground">Análise por projeto — soma consumo e extensão de todos os ambientes que usam o mesmo driver</p>
+        <Collapsible defaultOpen={false}>
+          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <CollapsibleTrigger className="w-full text-left">
+              <div className="bg-muted/50 px-5 py-3 border-b flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                    Análise de Otimização de Drivers
+                    <Badge variant="outline" className="text-xs">interno</Badge>
+                  </h3>
+                  <p className="text-xs text-muted-foreground">Ferramenta de análise — não aparece no PDF do cliente</p>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="p-5">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Driver</TableHead>
+                      <TableHead className="text-right">Consumo Total</TableHead>
+                      <TableHead className="text-right">Extensão Total</TableHead>
+                      <TableHead className="text-right">Qtd Global</TableHead>
+                      <TableHead className="text-right">Soma p/ Ambiente</TableHead>
+                      <TableHead className="text-right">Economia Potencial</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {resumoDrivers.map((d) => (
+                      <TableRow key={`${d.driverCodigo}-${d.voltagem}`}>
+                        <TableCell>
+                          <div className="font-mono text-xs">{d.driverCodigo} · {d.voltagem}V</div>
+                          <div className="text-xs text-muted-foreground">{d.driverDescricao} ({d.potenciaDriverW}W)</div>
+                        </TableCell>
+                        <TableCell className="text-right">{d.totalConsumoW.toFixed(1)}W</TableCell>
+                        <TableCell className="text-right">{d.totalDemandaM}m{d.limiteExtensaoM ? ` / ${d.limiteExtensaoM}m por driver` : ''}</TableCell>
+                        <TableCell className="text-right font-semibold">{d.qtdGlobal}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{d.qtdSomaIndividual}</TableCell>
+                        <TableCell className="text-right">
+                          {d.economiaDrivers > 0 ? (
+                            <Badge variant="secondary" className="text-xs">−{d.economiaDrivers} driver{d.economiaDrivers > 1 ? 's' : ''}</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <p className="text-xs text-muted-foreground mt-3">
+                  ⚡ <strong>Qtd Global</strong>: dimensionamento agregado considerando todos os ambientes como um único circuito.
+                  Compare com a soma por ambiente para identificar onde dá pra economizar drivers compartilhando entre ambientes adjacentes.
+                </p>
+              </div>
+            </CollapsibleContent>
           </div>
-          <div className="p-5">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Driver</TableHead>
-                  <TableHead className="text-right">Consumo Total</TableHead>
-                  <TableHead className="text-right">Extensão Total</TableHead>
-                  <TableHead className="text-right">Qtd Global</TableHead>
-                  <TableHead className="text-right">Soma p/ Ambiente</TableHead>
-                  <TableHead className="text-right">Economia Potencial</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resumoDrivers.map((d) => (
-                  <TableRow key={`${d.driverCodigo}-${d.voltagem}`}>
-                    <TableCell>
-                      <div className="font-mono text-xs">{d.driverCodigo} · {d.voltagem}V</div>
-                      <div className="text-xs text-muted-foreground">{d.driverDescricao} ({d.potenciaDriverW}W)</div>
-                    </TableCell>
-                    <TableCell className="text-right">{d.totalConsumoW.toFixed(1)}W</TableCell>
-                    <TableCell className="text-right">{d.totalDemandaM}m{d.limiteExtensaoM ? ` / ${d.limiteExtensaoM}m por driver` : ''}</TableCell>
-                    <TableCell className="text-right font-semibold">{d.qtdGlobal}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">{d.qtdSomaIndividual}</TableCell>
-                    <TableCell className="text-right">
-                      {d.economiaDrivers > 0 ? (
-                        <Badge variant="secondary" className="text-xs">−{d.economiaDrivers} driver{d.economiaDrivers > 1 ? 's' : ''}</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <p className="text-xs text-muted-foreground mt-3">
-              ⚡ <strong>Qtd Global</strong>: dimensionamento agregado considerando todos os ambientes como um único circuito.
-              Compare com a soma por ambiente para identificar onde dá pra economizar drivers compartilhando entre ambientes adjacentes.
-            </p>
-          </div>
-        </div>
+        </Collapsible>
       )}
 
       {/* Total Geral */}
