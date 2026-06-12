@@ -874,7 +874,9 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         <Button variant="outline" onClick={onPrev} className="gap-2 print:hidden">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
-        <Button onClick={handlePDF} className="gap-2 print:hidden" disabled={hasUnresolved || savingOrcamento} title={hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : ""}>
+        <Button onClick={handlePDF} className="gap-2 print:hidden"
+          disabled={hasUnresolved || savingOrcamento || temErroBloqueante}
+          title={temErroBloqueante ? "Corrija a fita sem metragem (0m) antes de gerar o PDF" : (hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : "")}>
           <FileDown className="h-4 w-4" /> {savingOrcamento ? "Salvando..." : "Gerar PDF"}
         </Button>
       </div>
