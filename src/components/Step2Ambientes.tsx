@@ -14,26 +14,13 @@ import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
 import type { Ambiente } from "@/types/orcamento";
+import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente } from "@/types/orcamento";
 import { toast } from "sonner";
 
 interface AdvisoryItem {
   ambienteNome: string;
   tipo: 'fita-sem-driver' | 'driver-sem-fita' | 'perfil-sem-fita' | 'peca-sem-lampada';
   descricao: string;
-}
-
-// Reutiliza o predicado da Regra #24 (AmbienteCard.tsx:104-108)
-function luminariaPrecisaLampada(descricao: string): boolean {
-  const d = (descricao ?? '').toUpperCase();
-  const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
-  const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
-  return temBaseLampada && !temLedIntegrado;
-}
-
-function ambienteTemLampada(amb: Ambiente): boolean {
-  return amb.luminarias.some(
-    (l) => /l[âa]mpada/i.test(l.descricao ?? '') || (l as any).tipo_produto === 'lampada'
-  );
 }
 
 interface Step2Props {
