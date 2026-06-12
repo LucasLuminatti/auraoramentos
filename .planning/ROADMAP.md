@@ -16,10 +16,14 @@
 
 ### Phases
 
-- [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16 (completed 2026-06-10)
-- [x] **Phase 15: Tensão & Validação** — Inferir voltagem do driver a partir da fita + aviso de divergência; remover bloqueio indevido entre ambientes com voltagens diferentes; corrigir grouping key de drivers globais para (codigo + voltagem); advisory TINY 24V com oferta de driver; sugerir driver compatível ao selecionar fita (completed 2026-06-10)
-- [x] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo (completed 2026-06-11)
-- [x] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item (breakdown por Ambiente — Local); fita sem duplicação entre visão por ambiente e resumo final (global = compra, ambiente = referência); drivers por ambiente (bloco global vira análise interna secundária); aviso ao avançar para revisão sem lâmpada/item esperado (completed 2026-06-11)
+- [x] **Phase 14: Catálogo & Dados** — Migração SQL corrigindo `tipo_produto` errado/nulo (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) + corrigir mapeamento de dica MAGNETO/TINY; zero frontend, desbloqueia fases 15 e 16
+ (completed 2026-06-10)
+- [x] **Phase 15: Tensão & Validação** — Inferir voltagem do driver a partir da fita + aviso de divergência; remover bloqueio indevido entre ambientes com voltagens diferentes; corrigir grouping key de drivers globais para (codigo + voltagem); advisory TINY 24V com oferta de driver; sugerir driver compatível ao selecionar fita
+ (completed 2026-06-10)
+- [x] **Phase 16: Cálculo & Metragem** — Exigir metragem manual quando não há perfil (bloquear avanço com 0m silencioso); descrição do perfil reflete comprimento automaticamente; passadas editáveis + sync migration `passadas_padrao` para perfil 50mm (até 3 passadas); patch atômico nos 5 sites de cálculo
+ (completed 2026-06-11)
+- [x] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item (breakdown por Ambiente — Local); fita sem duplicação entre visão por ambiente e resumo final (global = compra, ambiente = referência); drivers por ambiente (bloco global vira análise interna secundária); aviso ao avançar para revisão sem lâmpada/item esperado
+ (completed 2026-06-11)
 - [ ] **Phase 18: UX Transversal** — Redirecionamento ao buscar código de categoria errada (perfil buscado em Luminárias); microcopy inline explicando Luminárias vs Sistemas + o que é fita/perfil/driver; duplicar sistema em outro ambiente (RES-04, movido da Phase 17) + duplicar ambiente inteiro; checklist visual pré-PDF destacando itens incompletos/suspeitos
 
 ## Phase Details
@@ -89,7 +93,11 @@
   2. Cards de Luminárias e de Sistemas de Iluminação têm microcopy inline explicando o que entra em cada seção (ex.: "Luminárias = spots/tubulares individuais", "Sistemas = fita LED + perfil + driver")
   3. Colaborador clica em "Duplicar sistema" (RES-04, movido da Phase 17) e o sistema é clonado em outro ambiente/local escolhido com os mesmos itens e novo UUID; e clica em "Duplicar ambiente" (UX-04) clonando o ambiente inteiro com todos os itens e sistemas — ambas economizando remontagem manual
   4. Antes de gerar o PDF, o Step 3 exibe checklist visual destacando itens suspeitos: fita com 0m, sistema sem driver, voltagem divergente, peça sem lâmpada — cada item com link para corrigir
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 18-01-PLAN.md — Helpers de clonagem (novos UUIDs) + detector unificado de checklist em orcamento.ts + testes (RES-04/UX-04/UX-05, fundação)
+- [ ] 18-02-PLAN.md — Redirect na busca de Luminária + microcopy inline + duplicar sistema (UX-01/UX-03/RES-04)
+- [ ] 18-03-PLAN.md — Duplicar ambiente inteiro + advisory refatorado para detector compartilhado (UX-04)
+- [ ] 18-04-PLAN.md — Checklist pré-PDF no Step 3 + gate do botão Gerar PDF (UX-05)
 **UI hint**: yes
 
 ## Progress
@@ -100,7 +108,7 @@
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
 | 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
 | 17. Resumo & Apresentação | 4/4 | Complete    | 2026-06-11 |
-| 18. UX Transversal | 0/TBD | Not started | - |
+| 18. UX Transversal | 0/4 | Not started | - |
 
 ## Coverage Summary
 
@@ -155,4 +163,4 @@ Plans:
 - [ ] TBD (promote with /gsd-new-milestone ou /gsd-review-backlog when ready)
 
 ---
-*Last updated: 2026-06-11 — Phase 17 planejada: 4 plans em 2 waves (Wave 1: 17-01 dados + 17-04 gate advisory; Wave 2: 17-02 tela + 17-03 PDF). RES-01/02/03/05 cobertos. RES-04 segue na Phase 18.*
+*Last updated: 2026-06-12 — Phase 18 planejada: 4 plans em 3 waves (Wave 1: 18-01 fundação orcamento.ts; Wave 2: 18-02 redirect+microcopy+dup-sistema + 18-04 checklist Step3; Wave 3: 18-03 dup-ambiente). RES-04/UX-01/UX-03/UX-04/UX-05 cobertos.*
