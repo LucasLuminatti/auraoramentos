@@ -152,6 +152,7 @@ Outros candidatos na fila (carryover):
 | RES-01 display-only (chips de LOCAL, sem tocar cálculo) | Decisão travada do Lenny: anotação visual, não accounting por LOCAL; preserva `calcularRolosPorGrupo` e layout | ✓ Validated v1.2 (Phase 17) |
 | Clones com `crypto.randomUUID()` em toda a árvore | Duplicar sistema/ambiente sem colisão de key; cálculo agrupa por código (não id), clones somam corretamente | ✓ Validated v1.2 (Phase 18, RES-04/UX-04) |
 | Checklist pré-PDF como painel inline no Step 3 (não modal/reestruturação) | Decisão travada do Lenny: dentro do fluxo atual; gate `temErroBloqueante` aditivo preserva `hasUnresolved` | ✓ Validated v1.2 (Phase 18, UX-05) |
+| Compostos em `luminarias[].composicao?`, não em `sistemas[]` (D-01) | Opção mais conservadora (pesquisa HIGH); evita guards nas funções de cálculo de fita; snapshot-compat via campo opcional undefined; `sistemas[]` permanece exclusivo para Fita Padrão | ✓ Validated v1.3 (Phase 19, D-01) — os 5 calc sites (calcularDemandaFita/ConsumoW/QtdDrivers/SubtotalSistemaSemFita + isSistemaVazio no v2.ts) confirmados intocados via git diff; ItemComposicao forward-complete + calcularSubtotalComposicao folha + REGRAS_COMPOSICAO no código (D-07) |
 
 ## Evolution
 
@@ -171,4 +172,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Current State + Validated Requirements + Key Decisions
 
 ---
-*Last updated: 2026-06-12 — milestone v1.3 iniciado (Sistemas Compostos MAGNETO/TINY/MODULAR). v1.2 shipped e arquivado em `.planning/milestones/v1.2-*.md`. Pesquisa reusada de `.planning/research/`. Próximo: definir requirements + roadmap (fases continuam a partir da 19).*
+*Last updated: 2026-06-12 — Phase 19 (fundação de compostos) registrou D-01: compostos em `luminarias[].composicao?` (arquitetura conservadora, 5 calc sites de Fita Padrão intocados). milestone v1.3 iniciado (Sistemas Compostos MAGNETO/TINY/MODULAR). v1.2 shipped e arquivado em `.planning/milestones/v1.2-*.md`. Pesquisa reusada de `.planning/research/`.*
