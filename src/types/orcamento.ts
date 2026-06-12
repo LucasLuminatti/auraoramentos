@@ -31,6 +31,29 @@ export interface ItemLuminaria {
   sistema?: string | null;
   potencia_watts?: number | null;
   tensao?: number | null;
+  /** Sub-itens de um sistema composto (MAGNETO/TINY/MODULAR). Phase 19 / D-01.
+   *  Opcional — snapshots antigos têm undefined e continuam funcionando. */
+  composicao?: ItemComposicao[];
+}
+
+/** Sub-item de um sistema composto (módulo, driver, conector, kit, acessório).
+ *  Forward-complete (Phase 19 / D-02): inclui comprimento (SYSTEM MOLD, Phase 21)
+ *  e potenciaW (auto-load magnético, Phase 20), ambos opcionais → zero quebra.
+ *  Campos técnicos e preço são SNAPSHOT do catálogo no add-time (D-03). */
+export interface ItemComposicao {
+  id: string;
+  codigo: string;
+  descricao: string;
+  quantidade: number;
+  precoUnitario: number;
+  precoMinimo: number;
+  imagemUrl?: string;
+  papel: 'modulo' | 'driver_recomendado' | 'driver_obrigatorio' | 'conector_energia' | 'kit_fixacao' | 'acessorio_opcional';
+  obrigatorio: boolean;
+  /** Comprimento em metros do módulo (SYSTEM MOLD deriva fita de Σ(comprimento × qtd)). Phase 21. */
+  comprimento?: number;
+  /** Potência individual em watts do módulo (auto-load magnético deriva carga total). Phase 20. */
+  potenciaW?: number;
 }
 
 export interface ItemPerfil {
@@ -119,6 +142,27 @@ export type StatusOrcamento = 'rascunho' | 'aprovado' | 'perdido' | 'pendente';
  * Mantém paridade com a edge function `validar-sistema-orcamento` (fator 1.05).
  */
 export const MARGEM_SEGURANCA_DRIVER = 1.05;
+
+/** Regras de conector/kit obrigatório por família de sistema composto (Phase 19 / D-07).
+ *  Vive no código (3 famílias fixas, regra estrutural estável), NÃO na tabela produto_composicao.
+ *  A produto_composicao fica reservada para sugestões SKU↔SKU. Consumido pelo validador da Phase 20 (COMP-01).
+ *  `sistema` corresponde a product_variants.sistema ('magneto_48v' | 'tiny_magneto' | 's_mode'). */
+export const REGRAS_COMPOSICAO: Record<string, {
+  conectoresObrigatorios: string[];
+  kitFixacaoEmbutir?: string;
+  descricao: string;
+}> = {
+  magneto_48v: {
+    conectoresObrigatorios: ['LM2338'],
+    kitFixacaoEmbutir: 'LM2987',
+    descricao: 'MAGNETO 48V — conector de energia direcional LM2338; versão embutir requer kit LM2987.',
+  },
+  tiny_magneto: {
+    conectoresObrigatorios: ['LM3168', 'LM3169'],
+    kitFixacaoEmbutir: 'LM2987',
+    descricao: 'TINY MAGNETO 24V — conector LM3168 (preto) ou LM3169 (branco); versão embutir requer kit LM2987.',
+  },
+};
 
 /** Metragem total do perfil (se existir) */
 export function calcularMetragemTotal(perfil: ItemPerfil): number {
@@ -235,6 +279,13 @@ export function motivoQtdDrivers(sistema: SistemaIluminacao): {
 
 export function calcularSubtotalLuminaria(item: ItemLuminaria): number {
   return item.precoUnitario * item.quantidade;
+}
+
+/** Subtotal dos sub-itens de composição de uma luminária (Phase 19 / D-01).
+ *  Guard ?.length → retorna 0 para snapshots antigos sem composicao (backward-compat). */
+export function calcularSubtotalComposicao(item: ItemLuminaria): number {
+  if (!item.composicao?.length) return 0;
+  return item.composicao.reduce((s, c) => s + c.precoUnitario * c.quantidade, 0);
 }
 
 export function calcularSubtotalPerfilSistema(sistema: SistemaIluminacao): number {
