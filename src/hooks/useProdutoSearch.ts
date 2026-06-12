@@ -7,8 +7,10 @@ export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'luminaria' | 'todos'
 export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos', filtroVoltagem?: number) {
   const [results, setResults] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [redirectTipo, setRedirectTipo] = useState<string | null>(null);
 
   useEffect(() => {
+    setRedirectTipo(null);
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
@@ -42,8 +44,23 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
 
         if (error) throw error;
         setResults(data || []);
+
+        // UX-01: fallback de detecção de tipo real quando luminária não acha nada
+        let redirect: string | null = null;
+        if (filtro === 'luminaria' && (data?.length ?? 0) === 0 && query.trim().length >= 2) {
+          const { data: fb } = await supabase
+            .from("produtos")
+            .select("codigo, tipo_produto")
+            .or(`codigo.ilike.%${query}%,descricao.ilike.%${query}%`)
+            .in("tipo_produto", ["perfil", "fita", "driver"])
+            .order("codigo")
+            .limit(1);
+          redirect = fb?.[0]?.tipo_produto ?? null;
+        }
+        setRedirectTipo(redirect);
       } catch {
         setResults([]);
+        setRedirectTipo(null);
       } finally {
         setLoading(false);
       }
@@ -52,5 +69,5 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
     return () => clearTimeout(timer);
   }, [query, filtro, filtroVoltagem]);
 
-  return { results, loading };
+  return { results, loading, redirectTipo };
 }
