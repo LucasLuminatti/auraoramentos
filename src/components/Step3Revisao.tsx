@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { ArrowLeft, FileDown, AlertTriangle, MessageSquare, ChevronDown } from "lucide-react";
+import { ArrowLeft, FileDown, AlertTriangle, MessageSquare, ChevronDown, CheckCircle2 } from "lucide-react";
 import type { Orcamento, Ambiente, SistemaIluminacao, GrupoFita, StatusOrcamento } from "@/types/orcamento";
 import type { Json } from "@/integrations/supabase/types";
 import { construirDescricaoRica } from "@/lib/produtoDescricao";
@@ -14,8 +14,12 @@ import {
   calcularDemandaFita, calcularConsumoW, calcularQtdDrivers,
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
   calcularSubtotalSistemaSemFita, calcularTotalAmbienteSemFita, calcularRolosPorGrupo,
-  calcularDriversPorProjeto, calcularTotalGeral, formatarMoeda
+  calcularDriversPorProjeto, calcularTotalGeral, formatarMoeda,
+  detectarChecklistIssues
 } from "@/types/orcamento";
+import type { ChecklistIssue } from "@/types/orcamento";
+import { cn } from "@/lib/utils";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { gerarOrcamentoHtml } from "@/lib/gerarPdfHtml";
 import { supabase } from "@/integrations/supabase/client";
@@ -130,6 +134,10 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
   const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes), [ambientes]);
   const resumoDrivers = useMemo(() => calcularDriversPorProjeto(ambientes), [ambientes]);
   const totalGeral = useMemo(() => calcularTotalGeral(ambientes), [ambientes]);
+
+  // UX-05: checklist pré-PDF derivado dos ambientes
+  const checklistIssues = useMemo(() => detectarChecklistIssues(ambientes), [ambientes]);
+  const temErroBloqueante = checklistIssues.some((i) => i.level === 'error');
 
   // WIZ-05 (D-23): coleta de códigos distintos para batch lookup de atributos ricos
   const allCodigos = useMemo(() => {
@@ -515,6 +523,37 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
 
   return (
     <div className="space-y-6">
+      {/* UX-05: Painel "Verificação pré-PDF" — sempre visível, primeiro elemento */}
+      <Card className="border">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            {checklistIssues.length === 0 ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <AlertTriangle className={cn("h-4 w-4", temErroBloqueante ? "text-destructive" : "text-yellow-600")} />
+            )}
+            Verificação pré-PDF
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-1">
+          {checklistIssues.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Tudo certo! Nenhum item suspeito encontrado.</p>
+          ) : (
+            checklistIssues.map((issue) => (
+              <div key={issue.id} className="flex items-center justify-between gap-3 py-1">
+                <div className="flex items-center gap-2">
+                  <span>{issue.level === 'error' ? '🔴' : '🟡'}</span>
+                  <span className="text-sm text-foreground">{issue.mensagem}</span>
+                </div>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary" onClick={onPrev}>
+                  corrigir
+                </Button>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       <div>
         <h2 className="text-2xl font-bold text-foreground">Revisão do Orçamento</h2>
         <p className="text-muted-foreground">Confira todos os dados antes de gerar o PDF.</p>
