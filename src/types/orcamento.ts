@@ -525,3 +525,94 @@ export function clonarAmbiente(amb: Ambiente): Ambiente {
     sistemas: amb.sistemas.map((sis) => clonarSistemaParaAmbiente(sis)),
   };
 }
+
+// ─── Detector unificado de itens suspeitos do checklist (Phase 18 — UX-05) ───
+
+export function luminariaPrecisaLampada(descricao: string): boolean {
+  const d = (descricao ?? '').toUpperCase();
+  const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
+  const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
+  return temBaseLampada && !temLedIntegrado;
+}
+
+export function ambienteTemLampada(amb: Ambiente): boolean {
+  return amb.luminarias.some(
+    (l) => /l[âa]mpada/i.test(l.descricao ?? '') || (l as any).tipo_produto === 'lampada'
+  );
+}
+
+export interface ChecklistIssue {
+  id: string;
+  level: 'error' | 'warning';
+  ambienteNome: string;
+  mensagem: string;
+}
+
+/** Detecta itens suspeitos em todos os ambientes. Pura — sem async, sem Supabase.
+ *  Erros (fita 0m) vêm antes dos avisos. Consumido por Step2 (advisory) e Step3 (checklist). */
+export function detectarChecklistIssues(ambientes: Ambiente[]): ChecklistIssue[] {
+  const erros: ChecklistIssue[] = [];
+  const avisos: ChecklistIssue[] = [];
+  for (const amb of ambientes) {
+    for (const sis of amb.sistemas) {
+      const fitaVazia = !sis.fita.codigo;
+      const driverVazio = !sis.driver.codigo;
+      // erro: fita sem perfil com metragem 0m (gate CALC-01)
+      if (sis.fita.codigo && !sis.perfil && (!sis.metragemManual || sis.metragemManual <= 0)) {
+        erros.push({
+          id: `${amb.id}-${sis.id}-fita0m`,
+          level: 'error',
+          ambienteNome: amb.nome,
+          mensagem: `${amb.nome} — Fita sem metragem (0m): o orçamento ficará R$ 0,00`,
+        });
+      }
+      if (sis.fita.codigo && driverVazio) {
+        avisos.push({
+          id: `${amb.id}-${sis.id}-semdriver`,
+          level: 'warning',
+          ambienteNome: amb.nome,
+          mensagem: `${amb.nome} — Sistema sem driver`,
+        });
+      }
+      if (sis.driver.codigo && fitaVazia) {
+        avisos.push({
+          id: `${amb.id}-${sis.id}-driversemfita`,
+          level: 'warning',
+          ambienteNome: amb.nome,
+          mensagem: `${amb.nome} — Driver sem fita LED`,
+        });
+      }
+      if (sis.perfil && fitaVazia) {
+        avisos.push({
+          id: `${amb.id}-${sis.id}-perfilsemfita`,
+          level: 'warning',
+          ambienteNome: amb.nome,
+          mensagem: `${amb.nome} — Perfil sem fita LED`,
+        });
+      }
+      const fv = sis.fita.voltagem;
+      const dv = sis.driver.voltagem;
+      if (sis.fita.codigo && sis.driver.codigo && fv !== undefined && fv !== null && fv !== dv) {
+        avisos.push({
+          id: `${amb.id}-${sis.id}-voltagem`,
+          level: 'warning',
+          ambienteNome: amb.nome,
+          mensagem: `${amb.nome} — Voltagem divergente: fita ${fv}V × driver ${dv}V`,
+        });
+      }
+    }
+    if (!ambienteTemLampada(amb)) {
+      for (const lum of amb.luminarias) {
+        if (luminariaPrecisaLampada(lum.descricao)) {
+          avisos.push({
+            id: `${amb.id}-${lum.id}-semlampada`,
+            level: 'warning',
+            ambienteNome: amb.nome,
+            mensagem: `${amb.nome} — Peça sem lâmpada: ${lum.descricao}`,
+          });
+        }
+      }
+    }
+  }
+  return [...erros, ...avisos];
+}
