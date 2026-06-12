@@ -33,7 +33,10 @@
   2. `ItemLuminaria` no TypeScript carrega o campo opcional `composicao?: ItemComposicao[]` sem quebrar nenhum código existente — orçamentos antigos abrem normalmente, cálculos de subtotal e totais de ambiente batem igual a antes
   3. A tabela `produto_composicao` existe no schema (migration aditiva, começa vazia); RLS permite leitura para autenticados e escrita só para admin
   4. A decision de arquitetura (compostos em `luminarias[].composicao`, não em `sistemas[]`) está documentada no PROJECT.md e os 5 calculation sites (`calcularDemandaFita`, `calcularConsumoW`, `calcularQtdDrivers`, `calcularSubtotalSistemaSemFita`, `isSistemaVazio` no v2.ts) não foram alterados — Fita Padrão funciona exatamente como antes
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 19-01-PLAN.md — Modelo de dados aditivo (ItemComposicao + composicao? em ItemLuminaria) + calcularSubtotalComposicao + REGRAS_COMPOSICAO + testes de backward-compat
+- [ ] 19-02-PLAN.md — CAT-03: filtros 'conector'/'kit_fixacao' em useProdutoSearch + migration de UPDATE de tipo_produto (escrita)
+- [ ] 19-03-PLAN.md — Tabela produto_composicao (vazia + RLS) + [BLOCKING] apply das 2 migrations via service role + doc D-01 no PROJECT.md
 **UI hint**: yes
 
 ### Phase 20: Fluxos Magnéticos
@@ -105,7 +108,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 16. Cálculo & Metragem | v1.2 | 3/3 | Complete | 2026-06-11 |
 | 17. Resumo & Apresentação | v1.2 | 4/4 | Complete | 2026-06-11 |
 | 18. UX Transversal | v1.2 | 4/4 | Complete | 2026-06-12 |
-| 19. Fundação Compostos | v1.3 | 0/? | Not started | - |
+| 19. Fundação Compostos | v1.3 | 0/3 | Planned | - |
 | 20. Fluxos Magnéticos | v1.3 | 0/? | Not started | - |
 | 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 0/? | Not started | - |
 | 22. PDF v3 — Sistemas Compostos | v1.3 | 0/? | Not started | - |
@@ -128,4 +131,4 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 > Promovido para milestone ativo **v1.3** em 2026-06-12. Requirements: SIST-01/02/03/05, DRV-01/02, COMP-01/02/03, VAL-01, CAT-03, DUP-01, PDF-03. Ver Phase Details acima (Phases 19-22).
 
 ---
-*Last updated: 2026-06-12 — v1.3 roadmap criado (Phases 19-22, 13 requirements). 999.2 promovido para milestone ativo.*
+*Last updated: 2026-06-12 — Phase 19 planejada (3 plans, 2 waves). v1.3 roadmap (Phases 19-22, 13 requirements).*
