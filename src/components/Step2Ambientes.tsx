@@ -60,6 +60,13 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
     onChange(ambientes.filter((_, i) => i !== index));
   };
 
+  const duplicarAmbiente = (index: number) => {
+    const clone = clonarAmbiente(ambientes[index]);
+    const arr = [...ambientes];
+    arr.splice(index + 1, 0, clone);
+    onChange(arr);
+  };
+
   const handleNext = () => {
     if (ambientes.length === 0) {
       toast.error("Adicione pelo menos um ambiente");
@@ -160,6 +167,7 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
             ambiente={amb}
             onChange={(a) => updateAmbiente(i, a)}
             onRemove={() => removeAmbiente(i)}
+            onDuplicate={() => duplicarAmbiente(i)}
           />
         ))}
       </div>

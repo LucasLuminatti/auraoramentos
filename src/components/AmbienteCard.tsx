@@ -19,6 +19,7 @@ interface AmbienteCardProps {
   ambiente: Ambiente;
   onChange: (ambiente: Ambiente) => void;
   onRemove: () => void;
+  onDuplicate?: () => void;
 }
 
 function PrecoInput({ value, min, onChange }: { value: number; min: number; onChange: (v: number) => void }) {
@@ -39,7 +40,7 @@ function PrecoInput({ value, min, onChange }: { value: number; min: number; onCh
   );
 }
 
-const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
+const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCardProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(ambiente.nome);
@@ -342,6 +343,12 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
               </div>
             )}
           </div>
+          {onDuplicate && (
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Duplicar ambiente" onClick={(e) => { e.stopPropagation(); onDuplicate(); }}>
+              <span className="sr-only">Duplicar ambiente</span>
+              <Copy className="h-4 w-4" />
+            </Button>
+          )}
           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onRemove(); }}>
             <Trash2 className="h-4 w-4" />
           </Button>
