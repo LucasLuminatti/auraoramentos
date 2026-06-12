@@ -522,7 +522,10 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
 // ─── Totais ───
 
 export function calcularTotalAmbienteSemFita(amb: Ambiente): number {
-  const totalLum = amb.luminarias.reduce((s, i) => s + calcularSubtotalLuminaria(i), 0);
+  const totalLum = amb.luminarias.reduce(
+    (s, i) => s + calcularSubtotalLuminaria(i) + calcularSubtotalComposicao(i),
+    0
+  );
   const totalSistemas = amb.sistemas.reduce((s, sis) => s + calcularSubtotalSistemaSemFita(sis), 0);
   return totalLum + totalSistemas;
 }
