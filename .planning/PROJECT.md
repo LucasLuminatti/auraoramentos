@@ -8,6 +8,32 @@ Sistema web de criação de orçamentos de iluminação da Luminatti, em produç
 
 Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com dados organizados por arquiteto e filtráveis — e o admin consegue controlar preços, pedidos e margens sem planilha paralela.
 
+## Current Milestone: v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
+
+**Goal:** O colaborador monta sistemas compostos direto no wizard — trilho magnético 48V (MAGNETO 22), trilho 24V (TINY MAG) e perfil modular (SYSTEM MOLD) — com módulos, driver dimensionado automaticamente (assistido, mas auditável) e componentes obrigatórios checados, em vez de adicioná-los como luminária avulsa. Resolve os comentários UAT 8, 9, 11 e parte do 10, movidos da v1.2 por serem evolução estrutural.
+
+**Target features (do MVP da pesquisa 2026-06-10, P1→P3):**
+- Seletor de tipo de sistema (Fita Padrão / Modular / Magnético 48V / Magnético 24V) — branch point; default "Fita Padrão" preserva o fluxo atual intocado
+- Fluxo Magnético 48V — trilho + módulos + conector obrigatório LM2338 + driver auto-dimensionado (LM2343 100W / LM2344 200W), promovendo `analisarMagneto48V` de aviso → ação
+- Fluxo Magnético 24V (TINY MAG) — trilho + módulos + conector LM3168/LM3169 + driver 24V dimensionado
+- Fluxo Modular SYSTEM MOLD — perfil modular + módulos difusos + fita auto-derivada + driver 24V
+- Voltage lock 48V + checklist de componentes obrigatórios + atalho "adicionar componente faltante"
+- Aviso (não-bloqueante) no Step 2→3 se sistema composto incompleto + fix de filtro de catálogo (conector/kit_fixacao)
+- Painel de recomendação de driver com "aplicar" + duplicar sistema composto entre ambientes
+- PDF v3 — seção "Sistemas Compostos" (camada nova, não substitui PDF v2)
+
+**Diretrizes de implementação (aprovadas por Lenny):**
+- Fita Padrão deve continuar funcionando exatamente como hoje
+- Arquitetura aditiva — não quebrar projetos existentes, snapshots ou PDFs já gerados
+- Decisão de modelagem prioriza a opção **mais conservadora e compatível** com a estrutura atual (`luminarias[].composicao?` vs `sistemas[].tipo` discriminator — resolver na 1ª fase)
+- Dimensionamento de driver é assistido pelo sistema mas **sempre auditável** pelo usuário (nunca silencioso/irreversível)
+- Checklists/validações previnem erro sem tornar o fluxo excessivamente bloqueante
+- PDF v3 é camada nova para compostos — não arrisca a estabilidade do PDF v2
+- **Sem ampliar escopo:** nada de BOM genérico, auto-split de circuitos 48V, dimming/CCT por módulo, módulos de terceiros, multi-voltagem no mesmo trilho
+- Tech debt entra só se tocar diretamente o fluxo de compostos (o fix de filtro de catálogo já faz parte; WR-01 passadas fica fora)
+
+**Pesquisa:** reusada integralmente de `.planning/research/` (STACK/FEATURES/ARCHITECTURE/PITFALLS, 2026-06-10, HIGH confidence) — sem reabrir fase de pesquisa.
+
 ## Current State
 
 **Latest milestone shipped:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (2026-06-10 → 2026-06-12, 3 dias)
@@ -145,4 +171,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Current State + Validated Requirements + Key Decisions
 
 ---
-*Last updated: 2026-06-12 — milestone v1.2 shipped (18/18 requirements, audit status `tech_debt` com débito aceito e rastreado). Archive completo em `.planning/milestones/v1.2-*.md` + `MILESTONES.md`. Próximo marco candidato: v1.3 — Sistemas Compostos (MAGNETO/TINY/MODULAR).*
+*Last updated: 2026-06-12 — milestone v1.3 iniciado (Sistemas Compostos MAGNETO/TINY/MODULAR). v1.2 shipped e arquivado em `.planning/milestones/v1.2-*.md`. Pesquisa reusada de `.planning/research/`. Próximo: definir requirements + roadmap (fases continuam a partir da 19).*

@@ -1,22 +1,29 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: milestone
-status: milestone_complete
-stopped_at: v1.2 archived
+milestone: v1.3
+milestone_name: Sistemas Compostos
+status: defining_requirements
+stopped_at: Milestone v1.3 started
 last_updated: "2026-06-12T14:59:32.179Z"
 last_activity: 2026-06-12
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-12 — Milestone v1.2 fechado e arquivado (Phases 14-18, 18/18 requirements). Audit `tech_debt` com débito aceito. Próximo: planejar v1.3.
+**Last updated:** 2026-06-12 — Milestone v1.3 iniciado (Sistemas Compostos MAGNETO/TINY/MODULAR). Pesquisa reusada de `.planning/research/`. Definindo requirements + roadmap.
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-12 — Milestone v1.3 started
 
 ## Project Reference
 
@@ -24,8 +31,8 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
-- **Current Milestone:** nenhum ativo — v1.2 shipped
-- **Current Focus:** Planejar próximo marco (v1.3 candidato — Sistemas Compostos) via `/gsd-new-milestone`
+- **Current Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
+- **Current Focus:** Definir requirements + roadmap (fases continuam a partir da 19)
 - **Mode:** yolo
 
 ## Latest Milestone Shipped
