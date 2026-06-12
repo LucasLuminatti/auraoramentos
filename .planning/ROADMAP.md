@@ -108,7 +108,7 @@
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
 | 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
 | 17. Resumo & Apresentação | 4/4 | Complete    | 2026-06-11 |
-| 18. UX Transversal | 4/4 | Complete   | 2026-06-12 |
+| 18. UX Transversal | 4/4 | Complete    | 2026-06-12 |
 
 ## Coverage Summary
 
