@@ -24,7 +24,7 @@
  (completed 2026-06-11)
 - [x] **Phase 17: Resumo & Apresentação** — Resumo Global mostra LOCAL de cada item (breakdown por Ambiente — Local); fita sem duplicação entre visão por ambiente e resumo final (global = compra, ambiente = referência); drivers por ambiente (bloco global vira análise interna secundária); aviso ao avançar para revisão sem lâmpada/item esperado
  (completed 2026-06-11)
-- [ ] **Phase 18: UX Transversal** — Redirecionamento ao buscar código de categoria errada (perfil buscado em Luminárias); microcopy inline explicando Luminárias vs Sistemas + o que é fita/perfil/driver; duplicar sistema em outro ambiente (RES-04, movido da Phase 17) + duplicar ambiente inteiro; checklist visual pré-PDF destacando itens incompletos/suspeitos
+- [x] **Phase 18: UX Transversal** — Redirecionamento ao buscar código de categoria errada (perfil buscado em Luminárias); microcopy inline explicando Luminárias vs Sistemas + o que é fita/perfil/driver; duplicar sistema em outro ambiente (RES-04, movido da Phase 17) + duplicar ambiente inteiro; checklist visual pré-PDF destacando itens incompletos/suspeitos (completed 2026-06-12)
 
 ## Phase Details
 
@@ -96,8 +96,8 @@
 **Plans**: 4 plans
 - [x] 18-01-PLAN.md — Helpers de clonagem (novos UUIDs) + detector unificado de checklist em orcamento.ts + testes (RES-04/UX-04/UX-05, fundação)
 - [x] 18-02-PLAN.md — Redirect na busca de Luminária + microcopy inline + duplicar sistema (UX-01/UX-03/RES-04)
-- [ ] 18-03-PLAN.md — Duplicar ambiente inteiro + advisory refatorado para detector compartilhado (UX-04)
-- [ ] 18-04-PLAN.md — Checklist pré-PDF no Step 3 + gate do botão Gerar PDF (UX-05)
+- [x] 18-03-PLAN.md — Duplicar ambiente inteiro + advisory refatorado para detector compartilhado (UX-04)
+- [x] 18-04-PLAN.md — Checklist pré-PDF no Step 3 + gate do botão Gerar PDF (UX-05)
 **UI hint**: yes
 
 ## Progress
@@ -108,7 +108,7 @@
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
 | 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
 | 17. Resumo & Apresentação | 4/4 | Complete    | 2026-06-11 |
-| 18. UX Transversal | 2/4 | In Progress|  |
+| 18. UX Transversal | 4/4 | Complete   | 2026-06-12 |
 
 ## Coverage Summary
 
@@ -142,7 +142,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 2/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
