@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useProdutoSearch, type ProdutoFiltro } from "@/hooks/useProdutoSearch";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 import type { Produto } from "@/types/orcamento";
 
 interface ProdutoAutocompleteProps {
@@ -12,12 +13,13 @@ interface ProdutoAutocompleteProps {
   className?: string;
   filtro?: ProdutoFiltro;
   filtroVoltagem?: number;
+  onRedirectToSistemas?: () => void;
 }
 
-const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className, filtro, filtroVoltagem }: ProdutoAutocompleteProps) => {
+const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className, filtro, filtroVoltagem, onRedirectToSistemas }: ProdutoAutocompleteProps) => {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
-  const { results, loading } = useProdutoSearch(query, filtro, filtroVoltagem);
+  const { results, loading, redirectTipo } = useProdutoSearch(query, filtro, filtroVoltagem);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setQuery(value); }, [value]);
@@ -48,7 +50,20 @@ const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
-          {!loading && results.length === 0 && (
+          {!loading && results.length === 0 && redirectTipo && (
+            <div className="px-3 py-3 space-y-2">
+              <p className="text-sm text-blue-900">
+                Este produto é um {({ perfil: 'perfil', fita: 'fita LED', driver: 'driver' } as Record<string,string>)[redirectTipo] ?? redirectTipo} — adicione em Sistemas de Iluminação
+              </p>
+              {onRedirectToSistemas && (
+                <Button variant="outline" size="sm" className="gap-2 w-full text-xs"
+                  onClick={() => { onRedirectToSistemas(); setOpen(false); }}>
+                  <ArrowRight className="h-3.5 w-3.5" /> Ir para Sistemas de Iluminação
+                </Button>
+              )}
+            </div>
+          )}
+          {!loading && results.length === 0 && !redirectTipo && (
             <p className="py-4 text-center text-sm text-muted-foreground">Nenhum produto encontrado</p>
           )}
           {results.map((p) => (
