@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Sistemas Compostos
-status: defining_requirements
-stopped_at: Milestone v1.3 started
-last_updated: "2026-06-12T14:59:32.179Z"
+status: roadmap_ready
+stopped_at: Phase 19 not started
+last_updated: "2026-06-12T15:30:00.000Z"
 last_activity: 2026-06-12
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,14 +16,14 @@ progress:
 
 # STATE: AURA
 
-**Last updated:** 2026-06-12 — Milestone v1.3 iniciado (Sistemas Compostos MAGNETO/TINY/MODULAR). Pesquisa reusada de `.planning/research/`. Definindo requirements + roadmap.
+**Last updated:** 2026-06-12 — Roadmap v1.3 criado (4 fases, 13 requirements, Phases 19-22). Pronto para planejar Phase 19.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 19 — Fundação Compostos (Not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-12 — Milestone v1.3 started
+Status: Roadmap ready — aguardando `/gsd-plan-phase 19`
+Last activity: 2026-06-12 — Roadmap v1.3 definido
 
 ## Project Reference
 
@@ -32,8 +32,17 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
 - **Current Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-- **Current Focus:** Definir requirements + roadmap (fases continuam a partir da 19)
+- **Current Focus:** Phase 19 — Fundação Compostos (data model + CAT-03)
 - **Mode:** yolo
+
+## Roadmap Summary (v1.3)
+
+| Phase | Goal | Requirements | Status |
+|-------|------|--------------|--------|
+| 19. Fundação Compostos | Data model aditivo + `produto_composicao` table + CAT-03 catalog fix | CAT-03 | Not started |
+| 20. Fluxos Magnéticos | Seletor de tipo + MAGNETO 48V + TINY 24V + checklist + voltage lock + driver auto | SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02 | Not started |
+| 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | Not started |
+| 22. PDF v3 — Sistemas Compostos | Seção "Sistemas Compostos" no PDF v3 sem arriscar v2 | PDF-03 | Not started |
 
 ## Latest Milestone Shipped
 
@@ -62,6 +71,17 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Recategorizar `tipo_produto` via migration aditiva (v1.2)** — snapshot jsonb autocontido; não afeta orçamentos salvos
 - **Divergência de voltagem é advisory, nunca bloqueio (v1.2)** — validação só por-sistema
 - **Clones com `crypto.randomUUID()` em toda a árvore (v1.2)** — cálculo agrupa por código, não por id
+- **Compostos em `luminarias[].composicao?`, não em `sistemas[]` (v1.3 — decisão aprovada)** — opção mais conservadora; evita guards nas funções de cálculo de fita; snapshot-compat via campo undefined; `sistemas[]` permanece exclusivo para Fita Padrão
+
+### Key v1.3 architectural constraints (pré-Phase 19)
+
+- `ItemLuminaria.composicao?: ItemComposicao[]` — campo opcional, old snapshots têm `undefined` e continuam funcionando
+- Os 5 calculation sites que NÃO devem ser alterados sem cuidado: `calcularDemandaFita`, `calcularConsumoW`, `calcularQtdDrivers`, `calcularSubtotalSistemaSemFita`, `isSistemaVazio` em v2.ts
+- `calcularSubtotalComposicao()` é função nova folha — só depois modifica `calcularTotalAmbienteSemFita()` via `?.length` guard
+- `analisarMagneto48V()` continua lendo `amb.luminarias` — não migrar para `sistemas[]`
+- `pdf_template_version: 3` só quando `ambientes.some(a => a.luminarias.some(l => l.composicao?.length))` — não bump incondicional
+- CAT-03: `useProdutoSearch` precisa de `filtro='conector'` e `filtro='kit_fixacao'` + migration de `tipo_produto` para os SKUs afetados (LM2338, LM2987, LM3168, LM3169, e famílias afins)
+- COMP-03 é hard lock (eletricamente impossível misturar voltagens no mesmo trilho) — as demais validações são advisory
 
 ### Open tech debt (v1.2 — aceito, rastreado no audit)
 
@@ -86,7 +106,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Milestone v1.2 fechado. Iniciar próximo marco com `/gsd-new-milestone` (candidato: v1.3 — Sistemas Compostos MAGNETO/TINY/MODULAR, já registrado no Backlog do ROADMAP). Alternativamente, endereçar tech debt do v1.2 (mín. WR-01) antes via `/gsd-quick` ou `/gsd-plan-milestone-gaps`.
+Roadmap v1.3 pronto. Iniciar Phase 19 com `/gsd-plan-phase 19`.
 
 ---
-*STATE refreshed: 2026-06-12 — v1.2 milestone complete + archived. Próximo marco a planejar.*
+*STATE refreshed: 2026-06-12 — Roadmap v1.3 criado (4 phases, 13 requirements). Phase 19 é o próximo passo.*

@@ -2,7 +2,7 @@
 
 **Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
 **Opened:** 2026-06-12
-**Status:** Defining requirements
+**Status:** Roadmap ready
 
 > Origem: comentários UAT 8, 9, 11 e parte do 10 (montagem de sistemas compostos), movidos da v1.2 por serem evolução estrutural (~40% do esforço e ~todo o risco). Pesquisa de suporte em `.planning/research/` (STACK/FEATURES/ARCHITECTURE/PITFALLS, 2026-06-10, HIGH confidence) — reusada integralmente. **Escopo travado:** apenas o domínio de sistemas compostos; PDF vetorial (999.1) e Preços/Margem ficam como marcos próprios. **Diretrizes:** Fita Padrão intocada · arquitetura aditiva e conservadora · driver assistido mas auditável · validações não-bloqueantes · PDF v3 como camada nova sem arriscar v2 · sem ampliar escopo além da pesquisa.
 
@@ -74,16 +74,16 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIST-05 | TBD | Pending |
-| SIST-01 | TBD | Pending |
-| SIST-02 | TBD | Pending |
-| SIST-03 | TBD | Pending |
-| DRV-01 | TBD | Pending |
-| DRV-02 | TBD | Pending |
-| COMP-01 | TBD | Pending |
-| COMP-02 | TBD | Pending |
-| COMP-03 | TBD | Pending |
-| VAL-01 | TBD | Pending |
-| CAT-03 | TBD | Pending |
-| DUP-01 | TBD | Pending |
-| PDF-03 | TBD | Pending |
+| CAT-03 | Phase 19 | Pending |
+| SIST-05 | Phase 20 | Pending |
+| SIST-01 | Phase 20 | Pending |
+| SIST-02 | Phase 20 | Pending |
+| COMP-01 | Phase 20 | Pending |
+| COMP-02 | Phase 20 | Pending |
+| COMP-03 | Phase 20 | Pending |
+| DRV-01 | Phase 20 | Pending |
+| DRV-02 | Phase 20 | Pending |
+| SIST-03 | Phase 21 | Pending |
+| VAL-01 | Phase 21 | Pending |
+| DUP-01 | Phase 21 | Pending |
+| PDF-03 | Phase 22 | Pending |
