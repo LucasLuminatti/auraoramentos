@@ -488,3 +488,40 @@ export function calcularTotalGeral(ambientes: Ambiente[]): number {
 export function formatarMoeda(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+
+// ─── Clonagem de sistemas e ambientes (Phase 18 — RES-04 / UX-04) ───
+// Regenera TODOS os UUIDs da árvore para evitar colisão de key em re-render e snapshot/PDF.
+
+/** Duplica um sistema dentro do MESMO ambiente (RES-04). Novos UUIDs + sufixo " (cópia)" no local. */
+export function clonarSistema(sis: SistemaIluminacao): SistemaIluminacao {
+  return {
+    ...sis,
+    id: crypto.randomUUID(),
+    local: sis.local ? `${sis.local} (cópia)` : '(cópia)',
+    fita: { ...sis.fita, id: crypto.randomUUID() },
+    driver: { ...sis.driver, id: crypto.randomUUID() },
+    perfil: sis.perfil ? { ...sis.perfil, id: crypto.randomUUID() } : null,
+  };
+}
+
+/** Duplica um sistema para dentro de um ambiente clonado (UX-04). Novos UUIDs, local PRESERVADO. */
+export function clonarSistemaParaAmbiente(sis: SistemaIluminacao): SistemaIluminacao {
+  return {
+    ...sis,
+    id: crypto.randomUUID(),
+    fita: { ...sis.fita, id: crypto.randomUUID() },
+    driver: { ...sis.driver, id: crypto.randomUUID() },
+    perfil: sis.perfil ? { ...sis.perfil, id: crypto.randomUUID() } : null,
+  };
+}
+
+/** Duplica um ambiente inteiro (UX-04). Novos UUIDs em toda a árvore + sufixo " (cópia)" no nome. */
+export function clonarAmbiente(amb: Ambiente): Ambiente {
+  return {
+    ...amb,
+    id: crypto.randomUUID(),
+    nome: `${amb.nome} (cópia)`,
+    luminarias: amb.luminarias.map((l) => ({ ...l, id: crypto.randomUUID() })),
+    sistemas: amb.sistemas.map((sis) => clonarSistemaParaAmbiente(sis)),
+  };
+}
