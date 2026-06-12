@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Trash2, Plus, Pencil, Check, ArrowDown, Link, Unlink } from "lucide-react";
+import { ChevronDown, Trash2, Plus, Pencil, Check, ArrowDown, Link, Unlink, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +13,7 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, aplicarSufixoMetragem } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, aplicarSufixoMetragem, clonarSistema } from "@/types/orcamento";
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -43,6 +43,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(ambiente.nome);
+  const [activeTab, setActiveTab] = useState<'luminarias' | 'sistemas'>('luminarias');
 
   const uid = () => crypto.randomUUID();
   const { validacoes } = useValidarSistemas(ambiente.sistemas);
@@ -78,6 +79,13 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
   };
   const removeSistema = (index: number) => {
     onChange({ ...ambiente, sistemas: ambiente.sistemas.filter((_, i) => i !== index) });
+  };
+
+  const duplicarSistema = (index: number) => {
+    const clone = clonarSistema(ambiente.sistemas[index]);
+    const arr = [...ambiente.sistemas];
+    arr.splice(index + 1, 0, clone);
+    onChange({ ...ambiente, sistemas: arr });
   };
 
   const handleSelectProdutoLuminaria = (produto: Produto, index: number) => {
@@ -342,7 +350,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
 
       <CollapsibleContent>
         <div className="border-t p-4">
-          <Tabs defaultValue="luminarias">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'luminarias' | 'sistemas')}>
             <TabsList className="w-full">
               <TabsTrigger value="luminarias" className="flex-1">Luminárias ({ambiente.luminarias.length})</TabsTrigger>
               <TabsTrigger value="sistemas" className="flex-1">Sistemas de Iluminação ({ambiente.sistemas.length})</TabsTrigger>
@@ -350,6 +358,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
 
             {/* ─── Tab Luminárias ─── */}
             <TabsContent value="luminarias" className="space-y-3 mt-4">
+              <p className="text-xs text-muted-foreground mb-3">Spots, pendentes, plafons, trilhos e luminárias individuais.</p>
               {(() => {
                 const r = analisarMagneto48V(ambiente);
                 if (!r) return null;
@@ -363,7 +372,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
               {ambiente.luminarias.map((item, i) => (
                 <div key={item.id} className="flex items-start gap-2 rounded-lg border p-3 bg-muted/30">
                   <div className="flex-1 space-y-2">
-                    <ProdutoAutocomplete value={item.codigo} onSelect={(p) => handleSelectProdutoLuminaria(p, i)} placeholder="Código do item" filtro="luminaria" />
+                    <ProdutoAutocomplete value={item.codigo} onSelect={(p) => handleSelectProdutoLuminaria(p, i)} placeholder="Código do item" filtro="luminaria" onRedirectToSistemas={() => setActiveTab('sistemas')} />
                     <Input value={item.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-1">
@@ -396,6 +405,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
 
             {/* ─── Tab Sistemas de Iluminação ─── */}
             <TabsContent value="sistemas" className="space-y-4 mt-4">
+              <p className="text-xs text-muted-foreground mb-3">Fitas LED, perfis, drivers e componentes que formam um sistema.</p>
               {ambiente.sistemas.map((sis, si) => {
                 const demandaFita = calcularDemandaFita(sis);
                 const consumoW = calcularConsumoW(sis);
@@ -424,6 +434,10 @@ const AmbienteCard = ({ ambiente, onChange, onRemove }: AmbienteCardProps) => {
                       </div>
                       <div className="flex items-center gap-2">
                         {subtotal > 0 && <Badge variant="outline" className="text-xs">Subtotal (s/ fita): {formatarMoeda(subtotal)}</Badge>}
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Duplicar sistema" onClick={() => duplicarSistema(si)}>
+                          <span className="sr-only">Duplicar sistema</span>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeSistema(si)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
