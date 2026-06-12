@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: executing
-last_updated: "2026-06-12T17:58:03.269Z"
+status: verifying
+last_updated: "2026-06-12T19:37:09.585Z"
 last_activity: 2026-06-12
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 100
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-12 — Phase 19 Plan 02 concluído: `ProdutoFiltro` + query builder estendidos com `'conector'`/`'kit_fixacao'`; migration SQL CAT-03 escrita (não aplicada); auditoria DB deferida ao Plan 03 [BLOCKING].
+**Last updated:** 2026-06-12 — Phase 19 Plan 03 concluído: tabela `produto_composicao` aplicada ao vivo (service role + migration repair), CAT-03 expandido para todas as famílias de conectores magneto, D-01 documentado em PROJECT.md Key Decisions com 5 calc sites confirmados intocados.
 
 ## Current Position
 
-Phase: 19 (funda-o-compostos) — EXECUTING
-Plan: 3 of 3
-Status: Plan 02 complete — executing Plan 03
+Phase: 19 (funda-o-compostos) — COMPLETE (3/3 plans)
+Plan: 3 of 3 — DONE
+Status: Phase 19 complete — ready for Phase 20 (Fluxos Magnéticos)
 Last activity: 2026-06-12
 
 ## Project Reference
@@ -38,7 +38,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 19. Fundação Compostos | Data model aditivo + `produto_composicao` table + CAT-03 catalog fix | CAT-03 | Not started |
+| 19. Fundação Compostos | Data model aditivo + `produto_composicao` table + CAT-03 catalog fix | CAT-03 | Complete (3/3 plans) |
 | 20. Fluxos Magnéticos | Seletor de tipo + MAGNETO 48V + TINY 24V + checklist + voltage lock + driver auto | SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02 | Not started |
 | 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | Not started |
 | 22. PDF v3 — Sistemas Compostos | Seção "Sistemas Compostos" no PDF v3 sem arriscar v2 | PDF-03 | Not started |
@@ -74,8 +74,9 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **ItemComposicao forward-complete com comprimento?/potenciaW? (Phase 19 / D-02)** — fundação paga custo de modelagem uma vez; Phase 20/21 não reabrem o tipo nem migram snapshots
 - **REGRAS_COMPOSICAO no código, não na tabela (Phase 19 / D-07)** — 3 famílias fixas (magneto_48v/tiny_magneto/embutir); produto_composicao reservada para sugestões SKU↔SKU; validador Phase 20 desacoplado de dados seedados
 - **calcularSubtotalComposicao com guard ?.length (Phase 19)** — backward-compat provada por teste unitário com snapshot literal sem chave composicao
-- **ProdutoFiltro estendida com 'conector'/'kit_fixacao' (Phase 19 / Plan 02)** — query builder roteia via .eq('tipo_produto', filtro); filtro='luminaria' OR preservado para compat; migration CAT-03 escrita mas deferida ao Plan 03 [BLOCKING]
-- **Auditoria DB CAT-03 deferida ao Plan 03 [BLOCKING] (Phase 19 / Plan 02)** — lista-semente LM2338/LM3168/LM3169 → conector; LM2987 → kit_fixacao; deve ser confirmada/expandida antes do apply via service role
+- **ProdutoFiltro estendida com 'conector'/'kit_fixacao' (Phase 19 / Plan 02)** — query builder roteia via .eq('tipo_produto', filtro); filtro='luminaria' OR preservado para compat
+- **CAT-03 aplicado ao vivo (Phase 19 / Plan 03)** — lista expandida após auditoria: LM2337-LM2342 (magneto_48v) + LM3166-LM3169 (tiny_magneto) → 'conector'; LM2987 → 'kit_fixacao'; migration repair reconciliada
+- **D-01 documentado em PROJECT.md (Phase 19 / Plan 03)** — compostos em luminarias[].composicao? (não sistemas[]); 5 calc sites confirmados intocados via git diff
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -110,7 +111,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Executar Phase 19 Plan 03 (`19-03-PLAN.md`). Task [BLOCKING] autonomous:false — Lenny aplica as 2 migrations (produto_composicao + CAT-03) via service role + migration repair (db push inseguro neste projeto). Antes de aplicar: confirmar/expandir lista de SKUs CAT-03 via query de auditoria (ver 19-02-SUMMARY.md).
+Phase 19 completa. Próximo: Phase 20 — Fluxos Magnéticos (seletor de tipo de sistema, MAGNETO 48V, TINY 24V, checklist, voltage lock, driver auto).
 
 ---
-*STATE refreshed: 2026-06-12 — Plan 19-02 concluído (CAT-03 fix: ProdutoFiltro + migration SQL). Próximo: Plan 19-03.*
+*STATE refreshed: 2026-06-12 — Phase 19 completa (3/3 plans). produto_composicao ao vivo, CAT-03 expandido, D-01 documentado. Próximo: Phase 20 Fluxos Magnéticos.*

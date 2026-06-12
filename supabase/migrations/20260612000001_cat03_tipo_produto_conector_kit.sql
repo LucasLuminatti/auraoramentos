@@ -6,24 +6,24 @@
 -- Aditiva, idempotente (guarda IS DISTINCT FROM), transacional. Mira a TABELA product_variants (não a view produtos).
 -- NÃO toca snapshots em orcamentos.ambientes (jsonb autocontido — padrão Phase 14 CAT-01).
 --
--- AUDITORIA DB (resultado registrado no 19-02-SUMMARY.md):
---   Auditoria ao vivo não pôde ser executada neste executor (sem credencial de service role em runtime).
---   Lista-semente usada: LM2338, LM3168, LM3169 → 'conector'; LM2987 → 'kit_fixacao'.
---   A lista DEVE ser confirmada e expandida na task [BLOCKING] do Plan 03 antes de aplicar:
---     SELECT codigo, descricao, tipo_produto, sistema
---     FROM public.product_variants
---     WHERE codigo IN ('LM2338','LM3168','LM3169','LM2987')
---        OR descricao ILIKE '%CONECTOR%MAGNETIC%'
---        OR descricao ILIKE '%CONECTOR%TINY%'
---        OR descricao ILIKE '%KIT%FIXA%'
---     ORDER BY codigo;
---   SKUs adicionais da mesma família revelados pela query acima devem ser anexados às listas abaixo
---   antes de executar (caso existam variantes de cor, versão embutida, etc.).
+-- AUDITORIA DB (executada ao vivo via service role na task [BLOCKING] do Plan 03, 2026-06-12):
+--   Constraint real confirmado: check_tipo_produto permite
+--     ('fita','driver','perfil','spot','lampada','acessorio','conector','suporte') + NULL.
+--     'kit_fixacao' NÃO existia → adicionado pelo ALTER abaixo (9 valores).
+--   product_variants.codigo tem UNIQUE (produtos_codigo_key) → FK da produto_composicao válido.
+--   A auditoria revelou conectores ADICIONAIS das famílias magneto_48v/tiny_magneto com tipo_produto=NULL
+--   (mesma família dos sistemas compostos), então a lista de 'conector' foi EXPANDIDA da semente
+--   (LM2338/LM3168/LM3169) para todos os conectores de energia/driver/joelho dessas famílias:
+--     magneto_48v:  LM2337, LM2338, LM2339, LM2340, LM2341, LM2342  (CONECTOR DE ENERGIA / JOELHO - MAX 48V)
+--     tiny_magneto: LM3166, LM3167, LM3168, LM3169                  (CONECTOR DE ENERGIA / DRIVER - MAX 24V)
+--   'kit_fixacao' mantido CIRÚRGICO em LM2987 (molas de fixação do trilho de embutir magnético).
+--   Os demais "KIT FIXAÇÃO" do catálogo são acessórios de PERFIL (outro domínio) e NÃO entram aqui.
 --
--- ROLLBACK:
+-- ROLLBACK (nota: LM3168/LM3169 já eram 'conector' antes da fase — não reverter esses para NULL):
 --   BEGIN;
 --   UPDATE public.product_variants SET tipo_produto = NULL
---     WHERE codigo IN ('LM2338', 'LM3168', 'LM3169') AND tipo_produto = 'conector';
+--     WHERE codigo IN ('LM2337','LM2338','LM2339','LM2340','LM2341','LM2342','LM3166','LM3167')
+--       AND tipo_produto = 'conector';
 --   UPDATE public.product_variants SET tipo_produto = NULL
 --     WHERE codigo IN ('LM2987') AND tipo_produto = 'kit_fixacao';
 --   COMMIT;
@@ -42,14 +42,13 @@ ALTER TABLE public.product_variants ADD CONSTRAINT check_tipo_produto
   ));
 
 -- CONECTORES → 'conector'
--- Sementes: LM2338 (CONECTOR MAGNETO 48V), LM3168/LM3169 (CONECTOR TINY 24V)
--- Expandir com SKUs adicionais da auditoria Plan 03 se necessário.
+-- Lista auditada (Plan 03): conectores das famílias magneto_48v (48V) e tiny_magneto (24V).
+-- LM3168/LM3169 já estavam 'conector'; demais estavam NULL. Guarda IS DISTINCT FROM torna idempotente.
 UPDATE public.product_variants
   SET tipo_produto = 'conector'
   WHERE codigo IN (
-    'LM2338',
-    'LM3168',
-    'LM3169'
+    'LM2337', 'LM2338', 'LM2339', 'LM2340', 'LM2341', 'LM2342',
+    'LM3166', 'LM3167', 'LM3168', 'LM3169'
   )
   AND tipo_produto IS DISTINCT FROM 'conector';
 
