@@ -40,9 +40,9 @@
 
 ### UX — Melhorias de raiz (propostas, não citadas literalmente; incrementais)
 
-- [ ] **UX-01**: Quando o colaborador busca na Luminária um código que é perfil/fita/driver (ou vice-versa), o sistema reconhece e direciona ("LM1370 é um perfil — adicione em Sistemas de Iluminação") em vez de "Nenhum produto encontrado". _(ataca a raiz do LM1370/perfis somem)_
+- [x] **UX-01**: Quando o colaborador busca na Luminária um código que é perfil/fita/driver (ou vice-versa), o sistema reconhece e direciona ("LM1370 é um perfil — adicione em Sistemas de Iluminação") em vez de "Nenhum produto encontrado". _(ataca a raiz do LM1370/perfis somem)_
 - [ ] **UX-02**: Ao escolher a fita, o sistema sugere automaticamente um driver compatível (voltagem + potência) como default. _(estende TENS-01 de "avisar" para "já preencher certo")_
-- [ ] **UX-03**: Microcopy/rótulos inline explicando o que entra em "Luminárias" vs "Sistemas de Iluminação" e o que é fita/perfil/driver. _(reduz treinamento)_
+- [x] **UX-03**: Microcopy/rótulos inline explicando o que entra em "Luminárias" vs "Sistemas de Iluminação" e o que é fita/perfil/driver. _(reduz treinamento)_
 - [x] **UX-04**: Colaborador duplica um ambiente inteiro em um clique (além de duplicar um sistema). _(reduz retrabalho em quartos/sancas iguais)_
 - [x] **UX-05**: A revisão destaca visualmente itens incompletos/suspeitos (fita 0m, sistema sem driver, voltagem divergente, peça sem lâmpada) num checklist antes de gerar o PDF. _(generaliza RES-05; camada de segurança)_
 
@@ -127,7 +127,7 @@ Movido da v1.2 por ser **evolução estrutural** (decisão de arquitetura de mod
 | RES-03 | Phase 17 | Complete |
 | RES-04 | Phase 17 | Complete |
 | RES-05 | Phase 17 | Complete |
-| UX-01 | Phase 18 | Pending |
-| UX-03 | Phase 18 | Pending |
+| UX-01 | Phase 18 | Complete |
+| UX-03 | Phase 18 | Complete |
 | UX-04 | Phase 18 | Complete |
 | UX-05 | Phase 18 | Complete |

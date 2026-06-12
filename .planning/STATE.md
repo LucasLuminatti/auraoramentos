@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-06-12T14:03:43.795Z"
+stopped_at: Completed 18-02-PLAN.md
+last_updated: "2026-06-12T14:10:53.189Z"
 last_activity: 2026-06-12
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 16
-  completed_plans: 13
-  percent: 81
+  completed_plans: 14
+  percent: 88
 ---
 
 # STATE: AURA
@@ -30,10 +30,10 @@ progress:
 ## Current Position
 
 Phase: 18 (ux-transversal) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-12
-Stopped at: Completed 18-01-PLAN.md
+Stopped at: Completed 18-02-PLAN.md
 
 ```
 Progress: [██████████] 100% (12/12 plans)
@@ -106,6 +106,9 @@ Progress: [██████████] 100% (12/12 plans)
 - **RES-01/02 display-only (17-02):** chips de localBreakdown expandem a célula Descrição em vez de adicionar coluna — preserva layout mobile sem tocar colunas Demanda/Rolos/Preço/Subtotal
 - **RES-03 Collapsible (17-02):** bloco de drivers global mantido mas secundário via `defaultOpen={false}` + badge "interno" — insight de otimização preservado sem competir com drivers por ambiente
 - **17-03 thumb inline (17-03):** chips de LOCAL inline no div de chips existente — sem nova coluna, layout PDF v2 aprovado preservado
+- **18-02 fallback query gated:** .in(tipo_produto, [perfil,fita,driver]) nunca 'luminaria' (não é valor CHECK válido); só dispara após primary retornar 0 resultados + filtro === luminaria + query.length >= 2
+- **18-02 redirect via prop callback:** onRedirectToSistemas wiring sem contexto global — encapsulamento preservado no AmbienteCard
+- **18-02 Tabs controlado:** AmbienteCard migrado de defaultValue para value+onValueChange para permitir setActiveTab programático via redirect
 
 ### Todos
 
@@ -117,7 +120,7 @@ Progress: [██████████] 100% (12/12 plans)
 
 ## Next Action
 
-Phase 17 completa. Próximo: Phase 18 (UX Transversal — UX-01, UX-03, UX-04, UX-05).
+Phase 18, Plan 2 completo (UX-01 redirect, UX-03 microcopy, RES-04 duplicar sistema). Próximo: 18-03 (Wave 2 continua — UX-04).
 
 ---
-*STATE refreshed: 2026-06-11 — 17-03 complete (RES-01/02). Phase 17 fully delivered.*
+*STATE refreshed: 2026-06-12 — 18-02 complete (UX-01, UX-03, RES-04). Checkpoint humano aprovado.*

@@ -95,7 +95,7 @@
   4. Antes de gerar o PDF, o Step 3 exibe checklist visual destacando itens suspeitos: fita com 0m, sistema sem driver, voltagem divergente, peça sem lâmpada — cada item com link para corrigir
 **Plans**: 4 plans
 - [x] 18-01-PLAN.md — Helpers de clonagem (novos UUIDs) + detector unificado de checklist em orcamento.ts + testes (RES-04/UX-04/UX-05, fundação)
-- [ ] 18-02-PLAN.md — Redirect na busca de Luminária + microcopy inline + duplicar sistema (UX-01/UX-03/RES-04)
+- [x] 18-02-PLAN.md — Redirect na busca de Luminária + microcopy inline + duplicar sistema (UX-01/UX-03/RES-04)
 - [ ] 18-03-PLAN.md — Duplicar ambiente inteiro + advisory refatorado para detector compartilhado (UX-04)
 - [ ] 18-04-PLAN.md — Checklist pré-PDF no Step 3 + gate do botão Gerar PDF (UX-05)
 **UI hint**: yes
@@ -108,7 +108,7 @@
 | 15. Tensão & Validação | 2/2 | Complete    | 2026-06-11 |
 | 16. Cálculo & Metragem | 3/3 | Complete    | 2026-06-11 |
 | 17. Resumo & Apresentação | 4/4 | Complete    | 2026-06-11 |
-| 18. UX Transversal | 1/4 | In Progress|  |
+| 18. UX Transversal | 2/4 | In Progress|  |
 
 ## Coverage Summary
 
@@ -142,7 +142,7 @@
 
 **Requirements:** TBD — candidatos: jsPDF `.html()`, `react-pdf`/`@react-pdf/renderer`, ou geração server-side.
 **Restrição:** não alterar a aparência aprovada; validar visualmente contra o PDF atual antes de finalizar.
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
