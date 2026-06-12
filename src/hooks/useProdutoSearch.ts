@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Produto } from "@/types/orcamento";
 
-export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'luminaria' | 'todos';
+export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'conector' | 'kit_fixacao' | 'luminaria' | 'todos';
 
 export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos', filtroVoltagem?: number) {
   const [results, setResults] = useState<Produto[]>([]);
@@ -25,7 +25,7 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
             "tipo_produto, subtipo"
           );
 
-        if (filtro === 'fita' || filtro === 'driver' || filtro === 'perfil') {
+        if (filtro === 'fita' || filtro === 'driver' || filtro === 'perfil' || filtro === 'conector' || filtro === 'kit_fixacao') {
           queryBuilder = queryBuilder.eq('tipo_produto', filtro);
         } else if (filtro === 'luminaria') {
           queryBuilder = queryBuilder.or('tipo_produto.is.null,tipo_produto.in.(spot,lampada,acessorio,conector,suporte)');
