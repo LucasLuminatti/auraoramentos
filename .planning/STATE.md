@@ -1,29 +1,28 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.3
-milestone_name: Sistemas Compostos
-status: phase_planned
-stopped_at: Phase 19 planned (3 plans)
-last_updated: "2026-06-12T15:30:00.000Z"
+milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
+status: executing
+last_updated: "2026-06-12T17:53:53.214Z"
 last_activity: 2026-06-12
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 33
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-12 — Phase 19 (Fundação Compostos) planejada: 3 plans em 2 waves. Pronto para executar.
+**Last updated:** 2026-06-12 — Phase 19 Plan 01 concluído: `ItemComposicao`, `composicao?`, `REGRAS_COMPOSICAO`, `calcularSubtotalComposicao`, `calcularTotalAmbienteSemFita` extendido. 137 testes verdes, 4 calc sites intactos.
 
 ## Current Position
 
-Phase: 19 — Fundação Compostos (Planned)
-Plan: 3 plans (Wave 1: 01+02 paralelos; Wave 2: 03)
-Status: Planned — aguardando `/gsd-execute-phase 19`
-Last activity: 2026-06-12 — Phase 19 planejada (3 plans, 2 waves)
+Phase: 19 (funda-o-compostos) — EXECUTING
+Plan: 2 of 3
+Status: Plan 01 complete — executing Plan 02
+Last activity: 2026-06-12 — Plan 01 complete (data model TypeScript)
 
 ## Project Reference
 
@@ -32,7 +31,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
 - **Current Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-- **Current Focus:** Phase 19 — Fundação Compostos (data model + CAT-03)
+- **Current Focus:** Phase 19 — funda-o-compostos
 - **Mode:** yolo
 
 ## Roadmap Summary (v1.3)
@@ -72,6 +71,9 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Divergência de voltagem é advisory, nunca bloqueio (v1.2)** — validação só por-sistema
 - **Clones com `crypto.randomUUID()` em toda a árvore (v1.2)** — cálculo agrupa por código, não por id
 - **Compostos em `luminarias[].composicao?`, não em `sistemas[]` (v1.3 — decisão aprovada)** — opção mais conservadora; evita guards nas funções de cálculo de fita; snapshot-compat via campo undefined; `sistemas[]` permanece exclusivo para Fita Padrão
+- **ItemComposicao forward-complete com comprimento?/potenciaW? (Phase 19 / D-02)** — fundação paga custo de modelagem uma vez; Phase 20/21 não reabrem o tipo nem migram snapshots
+- **REGRAS_COMPOSICAO no código, não na tabela (Phase 19 / D-07)** — 3 famílias fixas (magneto_48v/tiny_magneto/embutir); produto_composicao reservada para sugestões SKU↔SKU; validador Phase 20 desacoplado de dados seedados
+- **calcularSubtotalComposicao com guard ?.length (Phase 19)** — backward-compat provada por teste unitário com snapshot literal sem chave composicao
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -106,7 +108,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 19 planejada (3 plans). Executar com `/gsd-execute-phase 19`. NOTA: Plan 03 tem task [BLOCKING] autonomous:false — Lenny aplica as 2 migrations via service role + migration repair (db push inseguro neste projeto).
+Executar Phase 19 Plan 02 (`19-02-PLAN.md`). NOTA: Plan 03 tem task [BLOCKING] autonomous:false — Lenny aplica as 2 migrations via service role + migration repair (db push inseguro neste projeto).
 
 ---
-*STATE refreshed: 2026-06-12 — Phase 19 planejada (3 plans, 2 waves). Próximo: executar.*
+*STATE refreshed: 2026-06-12 — Plan 19-01 concluído (data model TypeScript). Próximo: Plan 19-02.*
