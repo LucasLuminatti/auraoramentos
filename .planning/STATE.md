@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
-status: executing
-stopped_at: Completed 18-03-PLAN.md
-last_updated: "2026-06-12T14:31:49.119Z"
+status: milestone_complete
+stopped_at: v1.2 archived
+last_updated: "2026-06-12T14:59:32.179Z"
 last_activity: 2026-06-12
 progress:
-  total_phases: 7
+  total_phases: 5
   completed_phases: 5
   total_plans: 16
   completed_plans: 16
@@ -16,100 +16,58 @@ progress:
 
 # STATE: AURA
 
-**Last updated:** 2026-06-11 — Phase 17 completa (plans 01–04). PDF v2 Resumo de Fitas com foto (thumb) + LOCAL breakdown chips. Todos os 12 plans do v1.2 entregues.
+**Last updated:** 2026-06-12 — Milestone v1.2 fechado e arquivado (Phases 14-18, 18/18 requirements). Audit `tech_debt` com débito aceito. Próximo: planejar v1.3.
 
 ## Project Reference
 
+See: `.planning/PROJECT.md` (updated 2026-06-12)
+
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
-- **Current Milestone:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (iniciado 2026-06-10)
+- **Current Milestone:** nenhum ativo — v1.2 shipped
+- **Current Focus:** Planejar próximo marco (v1.3 candidato — Sistemas Compostos) via `/gsd-new-milestone`
 - **Mode:** yolo
-- **Granularity:** coarse
-- **Current Focus:** Phase 18 — ux-transversal
-
-## Current Position
-
-Phase: 999.1
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-12
-Stopped at: Completed 18-03-PLAN.md
-
-```
-Progress: [██████████] 100% (12/12 plans)
-```
-
-## Roadmap v1.2
-
-| Phase | Tema | Reqs | Status |
-|-------|------|------|--------|
-| 14 | Catálogo & Dados | CAT-01, CAT-02 | Not started |
-| 15 | Tensão & Validação | TENS-01, TENS-02, SIST-04, UX-02 | Not started |
-| 16 | Cálculo & Metragem | CALC-01, CALC-02, CALC-03 | Not started |
-| 17 | Resumo & Apresentação | RES-01..05 | Not started |
-| 18 | UX Transversal | UX-01, UX-03, UX-04, UX-05 | Not started |
-
-## Build Order & Key Constraints
-
-- **Phase 14 first (hard):** CAT-01 é SQL puro aditivo; corrige `tipo_produto` errado (WALL WASHER → `'perfil'`, LM3475, LM3291, CANTONEIRA) que bloqueia os seletores de perfil/driver usados pelas Phases 15–16.
-- **Phase 16 atomic calc patch:** CALC-01/02/03 exigem patch simultâneo dos 5 sites de cálculo (`calcularDemandaFita`, `calcularConsumoW`, `calcularQtdDrivers`, `calcularSubtotalSistemaSemFita`, `isSistemaVazio` em pdfTemplates/v2.ts) — risco de fita com wm=0 sumindo do PDF silenciosamente. Não dividir.
-- **Phase 16 migration antes de UI:** CALC-03 exige migration de sync `passadas_padrao` (`regras_compatibilidade_perfil` → `produtos`) ANTES do unlock da UI, senão perfil 50mm fica com 1 passada em vez de 3.
-- **Phase 15 grouping key fix:** TENS-02 exige mudança do grouping key de `calcularDriversPorProjeto` para `(codigo + voltagem)` ANTES de desbloquear tensões diferentes por ambiente — evita subtotal fisicamente nonsensical.
-- **Schema sempre aditivo** — não quebrar wizard, orçamentos antigos, PDF v1/v2.
-- **UX-05 (checklist pré-PDF)** é flag estrutural: se implementação exigir mudança no Step 3 além de overlay/panel, registrar decisão antes de prosseguir.
 
 ## Latest Milestone Shipped
 
-**v1.1 — Polimento UAT + Multi-tenancy + Automação** (2026-05-11 → 2026-05-15, 5 dias)
+**v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação** (2026-06-10 → 2026-06-12, 3 dias)
 
-- 7 phases, 29 plans, 96 commits
-- 17/18 DELIVERED + 1 DELIVERED with deviation (AUTO-02 — multi-admin via `has_role(admin)`) = 18/18 covered
-- 11 migrations aditivas (zero destrutivas)
-- 1 nova edge function: `aniversario-clientes` (Deno + Resend, cron-triggered)
-- Extensions habilitadas: pg_cron 1.6.4 + pg_net 0.20.0
-- Smoke prod 4/4 cenários integration PASS (Phase 13)
-- BUG-13-01 capturado e fixed inline (`b3ae4db`) durante smoke
-- Archive: `.planning/milestones/v1.1-ROADMAP.md` + `v1.1-REQUIREMENTS.md` + `MILESTONES.md`
+- 5 phases (14-18), 16 plans, 89 commits
+- 18/18 requirements DELIVERED (100%) em 6 categorias (CAT, TENS/SIST, UX, CALC, RES)
+- 2 migrations aditivas: `tipo_produto_correcao_catalogos`, `sync_passadas_padrao`
+- 0 edge functions novas (PDF/cálculo client-side)
+- Audit `tech_debt`: 18/18 satisfeitos, build verde, 128 testes verdes, integração cross-phase limpa, 0 blockers
+- Validação: e2e/catalogo.spec.ts 3/3 PROD + Playwright E2E Phase 18 (0 erros) + 128 unit tests
+- Escopo movido p/ v1.3: montagem de sistemas compostos MAGNETO/TINY/MODULAR (SIST-01/02/03)
+- Archive: `.planning/milestones/v1.2-ROADMAP.md` + `v1.2-REQUIREMENTS.md` + `v1.2-MILESTONE-AUDIT.md` + `MILESTONES.md`
 
-**Previous milestone:** v1.0 — Melhorias v1 (2026-04-23 → 2026-05-07, 15 dias, 28 plans, 163 commits, 40/42 entregues + 1 obsoleto + 1 deferido).
+**Previous:** v1.1 (2026-05-11 → 2026-05-15, 7 phases, 29 plans) · v1.0 (2026-04-23 → 2026-05-07, 6 phases, 28 plans).
 
 ## Accumulated Context
 
-### Decisions carryover (v1.0 → v1.1 → v1.2)
+### Decisions carryover (perpetual)
 
-- **Schema sempre aditivo (perpetual)** — confirmado v1.0 (9 migrations) + v1.1 (11 migrations, zero regressão)
-- **Drive RLS via `user_id` direto (D-02 errata)** — replicado em `arquitetos` + `clientes` na Phase 9
-- **PDF v1/v2 router (`pdf_template_version`)** — ajustes ficam no template v2 apenas; v1 não pode regredir
+- **Schema sempre aditivo** — confirmado v1.0 (9) + v1.1 (11) + v1.2 (2 migrations), zero regressão
+- **Drive RLS via `user_id` direto (D-02 errata)** — replicado em `arquitetos` + `clientes` (Phase 9)
+- **PDF v1/v2 router (`pdf_template_version`)** — ajustes só no template v2; v1 não regride
 - **ImportMaster XLSX (2.088 SKUs oficiais)** é fonte da verdade pra descrição rica
 - **Multi-admin dinâmico via `has_role(admin)` (D-22)** — RPC `buscar_admins_emails()` SECURITY DEFINER
-- **Vault subquery em RUNTIME (Phase 12-03)** — cron lê `decrypted_secret` a cada disparo
+- **Recategorizar `tipo_produto` via migration aditiva (v1.2)** — snapshot jsonb autocontido; não afeta orçamentos salvos
+- **Divergência de voltagem é advisory, nunca bloqueio (v1.2)** — validação só por-sistema
+- **Clones com `crypto.randomUUID()` em toda a árvore (v1.2)** — cálculo agrupa por código, não por id
 
-### v1.2 Technical Notes (da pesquisa PITFALLS.md)
+### Open tech debt (v1.2 — aceito, rastreado no audit)
 
-- **Snapshot backward-compat (C-1):** recategorizar `tipo_produto` não afeta snapshots salvos (jsonb autocontido) — só novas buscas. OK.
-- **isSistemaVazio pitfall (C-2):** patch obrigatório em `isSistemaVazio` ao tocar tipos de sistema — fita com wm=0 some do PDF silenciosamente.
-- **metragemManual=null pitfall (C-3):** guard no Step 2 advancement é a fix correta para CALC-01; não alterar defaults de `addSistema()`.
-- **Voltage cross-ambiente pitfall (C-4):** grouping key deve mudar para `(codigo+voltagem)` antes de desbloquear tensões por ambiente (TENS-02).
-- **passadas_padrao sync pitfall (C-5):** migration de sync `regras_compatibilidade_perfil` → `produtos` antes do unlock UI (CALC-03).
-- **Step 3 JSX fita dedup pitfall (M-1):** RES-02 fix não pode tocar `rowFita` em pdfTemplates/v2.ts — são code paths separados.
-- **LOCAL no fita summary pitfall (N-1):** RES-01 precisa de decisão design (annotation vs accounting separado) antes de codar.
+- **WR-01:** passadas travadas em [1] para 160 produtos de famílias sem regra (`light_30/light_12/light_15`); fix 1 linha `produto.passadas ?? 3` em AmbienteCard.tsx:203
+- Advisory TINY 24V fora do checklist pré-PDF / não ressurge em rascunho (LOW)
+- Tag `<\strong>` cosmética em Step3Revisao.tsx ~819
+- 3 warnings de code review Phase 18 (advisory loop, clone herda fita 0m, fallback sem flag cancelled) + IN-02 dead code
+- 11 itens de UAT visual pendentes de confirmação manual em prod (Phases 15/16/17 — Marco 1)
 
-### v1.2 Execution Directives (Lenny — aprovação do roadmap 2026-06-10)
+### Follow-ups técnicos deferidos (v1.1)
 
-- **Filosofia (todas as fases):** não só corrigir o sintoma reportado — atacar a causa-raiz e propor melhorias que deixem o sistema mais intuitivo, didático e difícil de configurar errado.
-- **Sinalizar antes de absorver:** qualquer item que comece a virar mudança estrutural relevante deve ser sinalizado e avaliado com o Lenny, não absorvido silenciosamente na v1.2.
-- **RES-01 (decisão travada):** apenas **anotação visual do LOCAL** no resumo. NÃO mexer em cálculos nem em subtotais por LOCAL nesta milestone (não tocar `calcularRolosPorGrupo`).
-- **UX-05 (decisão travada):** checklist/painel de validação antes do PDF **dentro do fluxo atual** (overlay/panel no Step 3). Se exigir reestruturar os steps ou mudar significativamente a navegação → **consultar o Lenny antes**.
-
-### Decisions (v1.2)
-
-- **RES-01/02 display-only (17-02):** chips de localBreakdown expandem a célula Descrição em vez de adicionar coluna — preserva layout mobile sem tocar colunas Demanda/Rolos/Preço/Subtotal
-- **RES-03 Collapsible (17-02):** bloco de drivers global mantido mas secundário via `defaultOpen={false}` + badge "interno" — insight de otimização preservado sem competir com drivers por ambiente
-- **17-03 thumb inline (17-03):** chips de LOCAL inline no div de chips existente — sem nova coluna, layout PDF v2 aprovado preservado
-- **18-02 fallback query gated:** .in(tipo_produto, [perfil,fita,driver]) nunca 'luminaria' (não é valor CHECK válido); só dispara após primary retornar 0 resultados + filtro === luminaria + query.length >= 2
-- **18-02 redirect via prop callback:** onRedirectToSistemas wiring sem contexto global — encapsulamento preservado no AmbienteCard
-- **18-02 Tabs controlado:** AmbienteCard migrado de defaultValue para value+onValueChange para permitir setActiveTab programático via redirect
-- **18-04 UX-05 painel inline (não modal):** Card inline no topo do Step 3 — sempre visível sem interação extra; gate temErroBloqueante aditivo preserva hasUnresolved; corrigir via onPrev() sem estado global
+- SPF/DKIM/DMARC do domínio `orcamentosaura.com.br` (email Junk no Outlook)
+- WR-02 pg_net monitoring pro cron aniversário · dedup `toList` aniversário · bucket singular `produto-imagens` cleanup + `has_role(admin)` gate explícito
 
 ### Todos
 
@@ -121,7 +79,7 @@ Progress: [██████████] 100% (12/12 plans)
 
 ## Next Action
 
-Phase 18 completa (4/4 plans: 18-01 domain helpers, 18-02 redirect+microcopy+duplicar, 18-03 UX-04, 18-04 UX-05 checklist pré-PDF). Todos os requisitos UX-01, UX-03, UX-04, UX-05 entregues. Milestone v1.2 pronta para fechamento.
+Milestone v1.2 fechado. Iniciar próximo marco com `/gsd-new-milestone` (candidato: v1.3 — Sistemas Compostos MAGNETO/TINY/MODULAR, já registrado no Backlog do ROADMAP). Alternativamente, endereçar tech debt do v1.2 (mín. WR-01) antes via `/gsd-quick` ou `/gsd-plan-milestone-gaps`.
 
 ---
-*STATE refreshed: 2026-06-12 — 18-04 complete (UX-05 painel pré-PDF + gate temErroBloqueante). Checkpoint humano aprovado.*
+*STATE refreshed: 2026-06-12 — v1.2 milestone complete + archived. Próximo marco a planejar.*

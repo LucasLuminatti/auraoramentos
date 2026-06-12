@@ -8,26 +8,18 @@ Sistema web de criação de orçamentos de iluminação da Luminatti, em produç
 
 Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com dados organizados por arquiteto e filtráveis — e o admin consegue controlar preços, pedidos e margens sem planilha paralela.
 
-## Current Milestone: v1.2 — Correções UAT do Wizard de Sistemas de Iluminação
-
-**Goal:** Corrigir o subsistema fita/perfil/driver/módulos/magneto do wizard com base nos 19 feedbacks dos funcionários (UAT 2026-06-10, com prints) — sem quebrar o caminho de luminária comum (validado) nem orçamentos antigos (PDF v1/v2).
-
-**Target features (5 áreas):**
-- **Catálogo & Busca (dados):** perfis/drivers que somem na busca por `tipo_produto` errado (LM3475, LM3291, WALL WASHER, família CANTONEIRA incompleta); dica MAGNETO trocada com TINY.
-- **Sistemas compostos (modular/magneto/tiny):** fluxo de montagem (módulos + fita + driver + componentes) em vez de entrar como luminária avulsa; avisos com oferta de driver obrigatório.
-- **Tensão/Voltagem (redução de erro):** inferir/validar voltagem do driver vs fita; permitir tensão diferente por ambiente.
-- **Cálculo/Contabilização:** fita sem perfil contabilizar metragem; metragem do perfil automática na descrição; passadas não travadas (+ regra perfil 50mm = até 3).
-- **Apresentação/UX do resumo:** LOCAL no resumo global; resolver duplicação fita (ambiente + resumo); drivers por ambiente; duplicar/reusar sistema entre ambientes; avisar ao avançar sem lâmpada.
-
-**Origem:** documento "COMENTÁRIOS - SITE ORÇAMENTO" (19 pontos com prints), coletado de funcionários da Aura em 2026-06-10.
-
-Roadmap começa no **phase 14** (continua numeração do v1.1).
-
 ## Current State
 
-**Latest milestone shipped:** v1.1 — Polimento UAT + Multi-tenancy + Automação (2026-05-11 → 2026-05-15, 5 dias)
+**Latest milestone shipped:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (2026-06-10 → 2026-06-12, 3 dias)
 
-Em prod hoje (v1.0 + v1.1):
+Novo em prod com v1.2 (subsistema fita/perfil/driver/magneto do wizard):
+- **Catálogo corrigido** — 401 perfis + 18 fitas que sumiam dos seletores por `tipo_produto` null/errado ganharam o valor correto em PROD (migration aditiva); dica MAGNETO 48V validada (já estava correta no dado)
+- **Validação de tensão** — voltagem do driver inferida da fita, pré-filtro do seletor + aviso de divergência não-bloqueante (toast + badge), grouping global por (código+voltagem), advisory TINY 24V, driver compatível sugerido como default ao escolher a fita
+- **Cálculo/metragem** — gate impede fita sem perfil avançar com 0m silencioso (R$0), metragem do perfil refletida automaticamente na descrição, passadas editáveis por família + migration de sync `passadas_padrao`
+- **Resumo coerente** — chips de LOCAL por fita ("Ambiente — Local · Xm") na tela e no PDF v2 (com foto da fita), fita sem duplicação confusa ("incluída no Resumo de Fitas"), drivers por ambiente (bloco global rebaixado a Collapsible interno), advisory ao avançar sem lâmpada esperada
+- **UX transversal** — redirect ao buscar código de categoria errada em Luminárias, microcopy inline nas abas, Duplicar sistema + Duplicar ambiente (novos UUIDs), checklist "Verificação pré-PDF" no Step 3 com gate no botão Gerar PDF
+
+Em prod de v1.0 + v1.1:
 - **Wizard 3 passos editável** (Step1 dados → Step2 ambientes → Step3 revisão com edição preço/qtd + status pós-PDF → PDF v2)
 - **Admin reorganizado** em 5 sub-tabs: Início (dashboard com card único Orçamentos em Aberto) / Cadastros (Produtos/Arquitetos/Clientes/Colaboradores) / Pedidos / Preços / Exceções
 - **Arquiteto como entidade** com FK em clientes/produtos + CRUD admin (expandido com nascimento/endereço/banco) + filtros em 3 listas
@@ -42,13 +34,14 @@ Em prod hoje (v1.0 + v1.1):
 - **Automação Aniversário D-5** (Phase 12) — cron diário `0 9 * * *` UTC chama edge fn `aniversario-clientes` (Deno + Resend) → email pra colab dono + admins via `has_role(admin)` dinâmico. Log auditável em `aniversario_envios` (RLS admin-only, UNIQUE idempotência). Vault `service_role_key` autentica cron via runtime subquery.
 
 Schema:
-- 20 migrations aditivas aplicadas (zero destrutivas; v1.0 = 9 + v1.1 = 11)
+- 22 migrations aditivas aplicadas (zero destrutivas; v1.0 = 9 + v1.1 = 11 + v1.2 = 2: `tipo_produto_correcao_catalogos`, `sync_passadas_padrao`)
 - 5 edge functions deployed: `create-colaborador`, `import-produtos`, `request-access`, `review-access`, `aniversario-clientes`
 - Extensions: pg_cron 1.6.4 + pg_net 0.20.0 (habilitadas em Phase 12)
 
 Validação prod:
 - v1.0 smoke 8/8 itens passed (2026-05-07, Playwright + 2 contas reais)
 - v1.1 smoke 4/4 cenários integration PASS (2026-05-15, Phase 13) + 1 bug crítico BUG-13-01 fixed inline
+- v1.2: e2e/catalogo.spec.ts 3/3 contra PROD + Playwright E2E Phase 18 (0 erros console) + 128 unit tests verdes + build verde
 
 ## Validated Requirements (v1.0)
 
@@ -64,6 +57,12 @@ Migradas pra `.planning/milestones/v1.1-REQUIREMENTS.md`. Resumo: 17 entregues +
 
 **Follow-ups deferidos pra v1.2+:** WR-02 pg_net monitoring, SPF/DKIM domínio (email Junk Outlook), dedup `toList` aniversário, IMP-02 preço CSV (carryover v1.0), refatoração fórmulas, margem, docs+testes, bucket `produto-imagens` singular cleanup.
 
+## Validated Requirements (v1.2)
+
+Migradas pra `.planning/milestones/v1.2-REQUIREMENTS.md`. Resumo: **18/18 entregues (100%)** em 6 categorias — CAT-01/02 (catálogo), TENS-01/02 + SIST-04 + UX-02 (tensão/advisory), CALC-01/02/03 (cálculo/metragem), RES-01..05 (resumo), UX-01/03/04/05 (UX de raiz). Origem: UAT dos funcionários (19 comentários com prints, 2026-06-10); 16 corrigidos na v1.2, 3 de montagem de sistemas compostos (MAGNETO/TINY/MODULAR) movidos para **v1.3**.
+
+**Auditoria de fechamento:** `tech_debt` (sem blockers; 18/18 satisfeitos, build verde, 128 testes verdes, integração cross-phase limpa). Débito aceito e rastreado: **WR-01** (passadas travadas em [1] para 160 produtos de famílias sem regra — `light_30/light_12/light_15`; fix de 1 linha `produto.passadas ?? 3`), advisory TINY 24V fora do checklist pré-PDF (LOW), tag `<\strong>` cosmética em Step3Revisao, 3 warnings de code review na Phase 18, e 11 itens de UAT visual pendentes de confirmação manual em prod (Marco 1). Detalhe em `.planning/milestones/v1.2-MILESTONE-AUDIT.md`.
+
 ## Out of Scope (perpetual)
 
 | Feature | Reason |
@@ -77,12 +76,17 @@ Migradas pra `.planning/milestones/v1.1-REQUIREMENTS.md`. Resumo: 17 entregues +
 | Redesign geral de UI | Ajustes pontuais sim (PDF, admin), redesign não |
 | Testes automatizados (Vitest/Playwright) | Marco de qualidade próprio |
 
-## Next Milestone Goals (post-v1.1)
+## Next Milestone Goals (post-v1.2)
 
-Candidatos provisórios derivados de v1.0 ainda na fila pra v1.2+:
+**v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)** é o candidato principal (já registrado no backlog/roadmap):
+- **SIST-01/02/03** — montagem de sistema MAGNETO 48V, TINY MAGNETO 24V e SYSTEM MOLD (módulos + driver dimensionado + componentes obrigatórios) em vez de luminária avulsa
+- **Decisão de arquitetura pendente:** compostos em `sistemas[]` (discriminated union) vs `luminarias[].composicao?` (pesquisa recomenda o 2º, mais conservador) — resolver no início da v1.3
+- **PDF v3** com seção rica de compostos
+
+Outros candidatos na fila (carryover):
+- **PDF vetorial** (Backlog 999.1, prioridade alta) — substituir rasterização html2canvas
 - **Preços via CSV** (IMP-02 deferido) + tabela de custos pra desbloquear margem
-- **Margem no pedido** — exibir margem por orçamento, agregada por arquiteto/colaborador/período
-- **Documentação + testes das fórmulas de cálculo** (fita/driver/perfil/agrupamento de rolos) antes de qualquer refactor
+- **Margem no pedido** + **documentação/testes das fórmulas de cálculo** (Marco 3)
 
 ## Constraints (perpetual)
 
@@ -115,6 +119,13 @@ Candidatos provisórios derivados de v1.0 ainda na fila pra v1.2+:
 | UNIQUE(cliente_id, ano_referencia) = idempotência atomic | Edge fn trata PG 23505 como "já enviado"; row única por (cliente, ano) preserva auditoria | ✓ Validated v1.1 (Phase 12) |
 | Vault subquery em RUNTIME pro cron | Cron lê `decrypted_secret` a cada disparo; rotação propaga sem redeploy | ✓ Validated v1.1 (Phase 12) |
 | Builder `construirDescricaoRica` com fallback ao snapshot puro | ImportMaster é fonte da verdade; snapshots antigos sem campos rich continuam renderizando | ✓ Validated v1.1 (Phase 10 WIZ-05) |
+| Recategorizar `tipo_produto` via migration aditiva (não tocar snapshots) | Snapshot jsonb é autocontido; recategorização só afeta novas buscas, não orçamentos salvos | ✓ Validated v1.2 (Phase 14, CAT-01) |
+| Divergência de voltagem é advisory, nunca bloqueio | Bloqueio entre ambientes era o bug (UAT#6); validação só por-sistema (fita vs driver do mesmo sistema) + toast | ✓ Validated v1.2 (Phase 15, TENS-01/02) |
+| Advisory composto puro na v1.2; montagem → v1.3 | TINY/MAGNETO montagem é evolução estrutural (~40% esforço/todo risco); v1.2 só avisa, não monta (D-06) | ✓ Validated v1.2 (Phase 15, SIST-04) |
+| Gate de metragem no avanço Step 2→3 (não default em addSistema) | Guard no advancement é a fix correta para CALC-01; não fabricar dado silencioso | ✓ Validated v1.2 (Phase 16, CALC-01) |
+| RES-01 display-only (chips de LOCAL, sem tocar cálculo) | Decisão travada do Lenny: anotação visual, não accounting por LOCAL; preserva `calcularRolosPorGrupo` e layout | ✓ Validated v1.2 (Phase 17) |
+| Clones com `crypto.randomUUID()` em toda a árvore | Duplicar sistema/ambiente sem colisão de key; cálculo agrupa por código (não id), clones somam corretamente | ✓ Validated v1.2 (Phase 18, RES-04/UX-04) |
+| Checklist pré-PDF como painel inline no Step 3 (não modal/reestruturação) | Decisão travada do Lenny: dentro do fluxo atual; gate `temErroBloqueante` aditivo preserva `hasUnresolved` | ✓ Validated v1.2 (Phase 18, UX-05) |
 
 ## Evolution
 
@@ -134,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Current State + Validated Requirements + Key Decisions
 
 ---
-*Last updated: 2026-05-15 — milestone v1.1 shipped (17 DELIVERED + 1 DELIVERED with deviation = 18/18 covered). Archive completo em `.planning/milestones/v1.1-*.md` + `MILESTONES.md`. Próximo marco TBD.*
+*Last updated: 2026-06-12 — milestone v1.2 shipped (18/18 requirements, audit status `tech_debt` com débito aceito e rastreado). Archive completo em `.planning/milestones/v1.2-*.md` + `MILESTONES.md`. Próximo marco candidato: v1.3 — Sistemas Compostos (MAGNETO/TINY/MODULAR).*
