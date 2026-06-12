@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
 status: executing
-last_updated: "2026-06-12T17:53:53.214Z"
+last_updated: "2026-06-12T17:58:03.269Z"
 last_activity: 2026-06-12
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-12 — Phase 19 Plan 01 concluído: `ItemComposicao`, `composicao?`, `REGRAS_COMPOSICAO`, `calcularSubtotalComposicao`, `calcularTotalAmbienteSemFita` extendido. 137 testes verdes, 4 calc sites intactos.
+**Last updated:** 2026-06-12 — Phase 19 Plan 02 concluído: `ProdutoFiltro` + query builder estendidos com `'conector'`/`'kit_fixacao'`; migration SQL CAT-03 escrita (não aplicada); auditoria DB deferida ao Plan 03 [BLOCKING].
 
 ## Current Position
 
 Phase: 19 (funda-o-compostos) — EXECUTING
-Plan: 2 of 3
-Status: Plan 01 complete — executing Plan 02
-Last activity: 2026-06-12 — Plan 01 complete (data model TypeScript)
+Plan: 3 of 3
+Status: Plan 02 complete — executing Plan 03
+Last activity: 2026-06-12
 
 ## Project Reference
 
@@ -74,6 +74,8 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **ItemComposicao forward-complete com comprimento?/potenciaW? (Phase 19 / D-02)** — fundação paga custo de modelagem uma vez; Phase 20/21 não reabrem o tipo nem migram snapshots
 - **REGRAS_COMPOSICAO no código, não na tabela (Phase 19 / D-07)** — 3 famílias fixas (magneto_48v/tiny_magneto/embutir); produto_composicao reservada para sugestões SKU↔SKU; validador Phase 20 desacoplado de dados seedados
 - **calcularSubtotalComposicao com guard ?.length (Phase 19)** — backward-compat provada por teste unitário com snapshot literal sem chave composicao
+- **ProdutoFiltro estendida com 'conector'/'kit_fixacao' (Phase 19 / Plan 02)** — query builder roteia via .eq('tipo_produto', filtro); filtro='luminaria' OR preservado para compat; migration CAT-03 escrita mas deferida ao Plan 03 [BLOCKING]
+- **Auditoria DB CAT-03 deferida ao Plan 03 [BLOCKING] (Phase 19 / Plan 02)** — lista-semente LM2338/LM3168/LM3169 → conector; LM2987 → kit_fixacao; deve ser confirmada/expandida antes do apply via service role
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -108,7 +110,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Executar Phase 19 Plan 02 (`19-02-PLAN.md`). NOTA: Plan 03 tem task [BLOCKING] autonomous:false — Lenny aplica as 2 migrations via service role + migration repair (db push inseguro neste projeto).
+Executar Phase 19 Plan 03 (`19-03-PLAN.md`). Task [BLOCKING] autonomous:false — Lenny aplica as 2 migrations (produto_composicao + CAT-03) via service role + migration repair (db push inseguro neste projeto). Antes de aplicar: confirmar/expandir lista de SKUs CAT-03 via query de auditoria (ver 19-02-SUMMARY.md).
 
 ---
-*STATE refreshed: 2026-06-12 — Plan 19-01 concluído (data model TypeScript). Próximo: Plan 19-02.*
+*STATE refreshed: 2026-06-12 — Plan 19-02 concluído (CAT-03 fix: ProdutoFiltro + migration SQL). Próximo: Plan 19-03.*

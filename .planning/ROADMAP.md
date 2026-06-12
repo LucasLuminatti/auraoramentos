@@ -35,7 +35,7 @@
   4. A decision de arquitetura (compostos em `luminarias[].composicao`, não em `sistemas[]`) está documentada no PROJECT.md e os 5 calculation sites (`calcularDemandaFita`, `calcularConsumoW`, `calcularQtdDrivers`, `calcularSubtotalSistemaSemFita`, `isSistemaVazio` no v2.ts) não foram alterados — Fita Padrão funciona exatamente como antes
 **Plans**: 3 plans
 - [x] 19-01-PLAN.md — Modelo de dados aditivo (ItemComposicao + composicao? em ItemLuminaria) + calcularSubtotalComposicao + REGRAS_COMPOSICAO + testes de backward-compat
-- [ ] 19-02-PLAN.md — CAT-03: filtros 'conector'/'kit_fixacao' em useProdutoSearch + migration de UPDATE de tipo_produto (escrita)
+- [x] 19-02-PLAN.md — CAT-03: filtros 'conector'/'kit_fixacao' em useProdutoSearch + migration de UPDATE de tipo_produto (escrita)
 - [ ] 19-03-PLAN.md — Tabela produto_composicao (vazia + RLS) + [BLOCKING] apply das 2 migrations via service role + doc D-01 no PROJECT.md
 **UI hint**: yes
 
@@ -108,7 +108,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 16. Cálculo & Metragem | v1.2 | 3/3 | Complete | 2026-06-11 |
 | 17. Resumo & Apresentação | v1.2 | 4/4 | Complete | 2026-06-11 |
 | 18. UX Transversal | v1.2 | 4/4 | Complete | 2026-06-12 |
-| 19. Fundação Compostos | v1.3 | 1/3 | In Progress|  |
+| 19. Fundação Compostos | v1.3 | 2/3 | In Progress|  |
 | 20. Fluxos Magnéticos | v1.3 | 0/? | Not started | - |
 | 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 0/? | Not started | - |
 | 22. PDF v3 — Sistemas Compostos | v1.3 | 0/? | Not started | - |

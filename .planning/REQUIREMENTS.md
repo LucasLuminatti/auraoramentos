@@ -34,7 +34,7 @@
 
 ### CAT — Catálogo & busca
 
-- [ ] **CAT-03**: Conectores e kits de fixação aparecem na busca de componentes do sistema — garantir/corrigir o `tipo_produto` (`conector`, `kit_fixacao`) no catálogo + o filtro de `useProdutoSearch` (data + query).
+- [x] **CAT-03**: Conectores e kits de fixação aparecem na busca de componentes do sistema — garantir/corrigir o `tipo_produto` (`conector`, `kit_fixacao`) no catálogo + o filtro de `useProdutoSearch` (data + query).
 
 ### DUP — Reuso entre ambientes
 
@@ -74,7 +74,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAT-03 | Phase 19 | Pending |
+| CAT-03 | Phase 19 | Complete |
 | SIST-05 | Phase 20 | Pending |
 | SIST-01 | Phase 20 | Pending |
 | SIST-02 | Phase 20 | Pending |
