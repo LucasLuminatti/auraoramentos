@@ -20,12 +20,12 @@
 ### DRV — Dimensionamento de driver (assistido + auditável)
 
 - [x] **DRV-01**: O sistema dimensiona o driver automaticamente a partir da carga total (48V: bucket LM2343 100W / LM2344 200W com margem ×1.05; 24V: menor driver compatível) e o colaborador **pode revisar e sobrescrever** a escolha — nunca silencioso nem irreversível.
-- [ ] **DRV-02**: Um painel de recomendação exibe o SKU + quantidade de driver calculados e oferece botão **"aplicar"** que preenche os campos do driver do sistema (promove `analisarMagneto48V` de aviso → ação).
+- [x] **DRV-02**: Um painel de recomendação exibe o SKU + quantidade de driver calculados e oferece botão **"aplicar"** que preenche os campos do driver do sistema (promove `analisarMagneto48V` de aviso → ação).
 
 ### COMP — Componentes obrigatórios & voltagem
 
-- [ ] **COMP-01**: O sistema exibe um checklist dos componentes obrigatórios por família (MAGNETO 48V → conector LM2338; TINY → conector LM3168/LM3169; versão embutir → kit LM2987), marcando cada um presente/ausente conforme os SKUs no ambiente.
-- [ ] **COMP-02**: Quando um componente obrigatório está ausente, o checklist oferece um atalho **"adicionar componente"** que insere o SKU correto em um clique (pré-preenchendo descrição/preço).
+- [x] **COMP-01**: O sistema exibe um checklist dos componentes obrigatórios por família (MAGNETO 48V → conector LM2338; TINY → conector LM3168/LM3169; versão embutir → kit LM2987), marcando cada um presente/ausente conforme os SKUs no ambiente.
+- [x] **COMP-02**: Quando um componente obrigatório está ausente, o checklist oferece um atalho **"adicionar componente"** que insere o SKU correto em um clique (pré-preenchendo descrição/preço).
 - [x] **COMP-03**: Um trilho magnético 48V no sistema **trava o seletor de driver em 48V** e bloqueia a seleção de driver de voltagem incompatível (hard lock — voltagem declarada no tipo).
 
 ### VAL — Validação no fluxo
@@ -78,11 +78,11 @@
 | SIST-05 | Phase 20 | Pending |
 | SIST-01 | Phase 20 | Complete |
 | SIST-02 | Phase 20 | Complete |
-| COMP-01 | Phase 20 | Pending |
-| COMP-02 | Phase 20 | Pending |
+| COMP-01 | Phase 20 | Complete |
+| COMP-02 | Phase 20 | Complete |
 | COMP-03 | Phase 20 | Complete |
 | DRV-01 | Phase 20 | Complete |
-| DRV-02 | Phase 20 | Pending |
+| DRV-02 | Phase 20 | Complete |
 | SIST-03 | Phase 21 | Pending |
 | VAL-01 | Phase 21 | Pending |
 | DUP-01 | Phase 21 | Pending |
