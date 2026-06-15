@@ -2,27 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: completed
-last_updated: "2026-06-12T19:44:43.763Z"
-last_activity: 2026-06-12
+status: executing
+last_updated: "2026-06-15T13:22:58.610Z"
+last_activity: 2026-06-15
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 6
+  completed_plans: 4
+  percent: 67
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-12 — Phase 19 Plan 03 concluído: tabela `produto_composicao` aplicada ao vivo (service role + migration repair), CAT-03 expandido para todas as famílias de conectores magneto, D-01 documentado em PROJECT.md Key Decisions com 5 calc sites confirmados intocados.
+**Last updated:** 2026-06-15 — Phase 20 Plan 01 concluído: helpers puros `detectarTipoAncora`, `calcularCargaComposicao`, `recomendarDriver48V` exportados de orcamento.ts; `filtroSistema` adicionado a `useProdutoSearch` + `ProdutoAutocomplete`; 35 testes verdes; 5 calc sites Fita Padrão confirmados byte-idênticos.
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Phase 19 complete — ready for Phase 20 (Fluxos Magnéticos)
-Last activity: 2026-06-12
+Phase: 20 (fluxos-magn-ticos) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-15
 
 ## Project Reference
 
@@ -31,7 +31,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
 - **Current Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-- **Current Focus:** Phase 19 — funda-o-compostos
+- **Current Focus:** Phase 20 — fluxos-magn-ticos
 - **Mode:** yolo
 
 ## Roadmap Summary (v1.3)
@@ -77,6 +77,8 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **ProdutoFiltro estendida com 'conector'/'kit_fixacao' (Phase 19 / Plan 02)** — query builder roteia via .eq('tipo_produto', filtro); filtro='luminaria' OR preservado para compat
 - **CAT-03 aplicado ao vivo (Phase 19 / Plan 03)** — lista expandida após auditoria: LM2337-LM2342 (magneto_48v) + LM3166-LM3169 (tiny_magneto) → 'conector'; LM2987 → 'kit_fixacao'; migration repair reconciliada
 - **D-01 documentado em PROJECT.md (Phase 19 / Plan 03)** — compostos em luminarias[].composicao? (não sistemas[]); 5 calc sites confirmados intocados via git diff
+- **TipoAncora + RecomendacaoDriver48V exportados como discriminated unions (Phase 20 / Plan 01)** — contratos para ComposicaoCard (Plan 02); guard tests com imports ES (não require) por compatibilidade Vitest ESM
+- **filtroSistema como 4º param opcional em useProdutoSearch (Phase 20 / Plan 01)** — usa coluna `sistema` do banco (não alias `sistema_magnetico`); exclui driver/conector/kit_fixacao/perfil para retornar só módulos
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -111,7 +113,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 19 completa. Próximo: Phase 20 — Fluxos Magnéticos (seletor de tipo de sistema, MAGNETO 48V, TINY 24V, checklist, voltage lock, driver auto).
+Phase 20 Plan 01 concluído. Próximo: Phase 20 Plan 02 — ComposicaoCard (card de composição magnética com módulos, painel de driver e checklist de obrigatórios).
 
 ---
-*STATE refreshed: 2026-06-12 — Phase 19 completa (3/3 plans). produto_composicao ao vivo, CAT-03 expandido, D-01 documentado. Próximo: Phase 20 Fluxos Magnéticos.*
+*STATE refreshed: 2026-06-15 — Phase 20 Plan 01 completo (2/3 plans na fase). Helpers puros + filtroSistema entregues. Próximo: Plan 02 ComposicaoCard.*

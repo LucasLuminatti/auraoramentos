@@ -13,20 +13,20 @@
 ### SIST — Montagem de sistemas compostos
 
 - [ ] **SIST-05**: O colaborador adiciona produtos por uma **busca única (product-first)** e o sistema **detecta automaticamente** o tipo de fluxo a partir do produto âncora (luminária avulsa / fita / MAGNETO 48V / TINY 24V / modular) — **sem seleção manual de tipo**. Fita continua em `sistemas[]` (card/cálculo idênticos); avulsa em `luminarias[]`; compostos em `luminarias[].composicao[]`. (Phase 20 — seletor de tipo removido por design na decisão product-first de 2026-06-15.)
-- [ ] **SIST-01**: Colaborador monta um sistema **MAGNETO 48V** (trilho MAGNETO 22 + N módulos com SKU+qtd) e o sistema deriva a carga total automaticamente, sem contagem manual.
-- [ ] **SIST-02**: Colaborador monta um sistema **TINY MAGNETO 24V** (trilho + N módulos), com a carga total derivada.
+- [x] **SIST-01**: Colaborador monta um sistema **MAGNETO 48V** (trilho MAGNETO 22 + N módulos com SKU+qtd) e o sistema deriva a carga total automaticamente, sem contagem manual.
+- [x] **SIST-02**: Colaborador monta um sistema **TINY MAGNETO 24V** (trilho + N módulos), com a carga total derivada.
 - [ ] **SIST-03**: Colaborador monta um sistema **modular SYSTEM MOLD** (perfil modular + módulos difusos), com a demanda de fita derivada automaticamente de `Σ(comprimento × qtd)` dos módulos.
 
 ### DRV — Dimensionamento de driver (assistido + auditável)
 
-- [ ] **DRV-01**: O sistema dimensiona o driver automaticamente a partir da carga total (48V: bucket LM2343 100W / LM2344 200W com margem ×1.05; 24V: menor driver compatível) e o colaborador **pode revisar e sobrescrever** a escolha — nunca silencioso nem irreversível.
+- [x] **DRV-01**: O sistema dimensiona o driver automaticamente a partir da carga total (48V: bucket LM2343 100W / LM2344 200W com margem ×1.05; 24V: menor driver compatível) e o colaborador **pode revisar e sobrescrever** a escolha — nunca silencioso nem irreversível.
 - [ ] **DRV-02**: Um painel de recomendação exibe o SKU + quantidade de driver calculados e oferece botão **"aplicar"** que preenche os campos do driver do sistema (promove `analisarMagneto48V` de aviso → ação).
 
 ### COMP — Componentes obrigatórios & voltagem
 
 - [ ] **COMP-01**: O sistema exibe um checklist dos componentes obrigatórios por família (MAGNETO 48V → conector LM2338; TINY → conector LM3168/LM3169; versão embutir → kit LM2987), marcando cada um presente/ausente conforme os SKUs no ambiente.
 - [ ] **COMP-02**: Quando um componente obrigatório está ausente, o checklist oferece um atalho **"adicionar componente"** que insere o SKU correto em um clique (pré-preenchendo descrição/preço).
-- [ ] **COMP-03**: Um trilho magnético 48V no sistema **trava o seletor de driver em 48V** e bloqueia a seleção de driver de voltagem incompatível (hard lock — voltagem declarada no tipo).
+- [x] **COMP-03**: Um trilho magnético 48V no sistema **trava o seletor de driver em 48V** e bloqueia a seleção de driver de voltagem incompatível (hard lock — voltagem declarada no tipo).
 
 ### VAL — Validação no fluxo
 
@@ -76,12 +76,12 @@
 |-------------|-------|--------|
 | CAT-03 | Phase 19 | Complete |
 | SIST-05 | Phase 20 | Pending |
-| SIST-01 | Phase 20 | Pending |
-| SIST-02 | Phase 20 | Pending |
+| SIST-01 | Phase 20 | Complete |
+| SIST-02 | Phase 20 | Complete |
 | COMP-01 | Phase 20 | Pending |
 | COMP-02 | Phase 20 | Pending |
-| COMP-03 | Phase 20 | Pending |
-| DRV-01 | Phase 20 | Pending |
+| COMP-03 | Phase 20 | Complete |
+| DRV-01 | Phase 20 | Complete |
 | DRV-02 | Phase 20 | Pending |
 | SIST-03 | Phase 21 | Pending |
 | VAL-01 | Phase 21 | Pending |
