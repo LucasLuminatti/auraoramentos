@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calcularDriversPorProjeto, calcularRolosPorGrupo } from '@/types/orcamento';
-import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver, LocalBreakdown } from '@/types/orcamento';
+import { calcularDriversPorProjeto, calcularRolosPorGrupo, detectarTipoAncora, calcularCargaComposicao, recomendarDriver48V, calcularDemandaFita, calcularConsumoW, calcularSubtotalSistemaSemFita } from '@/types/orcamento';
+import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver, LocalBreakdown, Produto, ItemComposicao } from '@/types/orcamento';
 
 // ─── Helpers mínimos para montar fixtures ───
 
@@ -286,5 +286,208 @@ describe('calcularDriversPorProjeto — grouping por (codigo + voltagem)', () =>
     const resultado = calcularDriversPorProjeto(ambientes);
 
     expect(resultado).toHaveLength(0);
+  });
+});
+
+// ─── Helpers para testes Phase 20 ───
+
+function makeProduto(overrides: Partial<Produto>): Produto {
+  return {
+    id: 'prod-01',
+    codigo: 'LM0001',
+    descricao: 'Produto Teste',
+    preco_tabela: 100,
+    preco_minimo: 80,
+    ...overrides,
+  };
+}
+
+function makeItemComposicao(overrides: Partial<ItemComposicao>): ItemComposicao {
+  return {
+    id: 'item-01',
+    codigo: 'LM0001',
+    descricao: 'Item Teste',
+    quantidade: 1,
+    precoUnitario: 100,
+    precoMinimo: 80,
+    papel: 'modulo',
+    obrigatorio: false,
+    ...overrides,
+  };
+}
+
+// ─── Testes: detectarTipoAncora (Phase 20 / D-02) ───
+
+describe('detectarTipoAncora — roteamento product-first (Phase 20 / D-02)', () => {
+  it('fita antes do fallback — tipo_produto=fita retorna "fita" mesmo com sistema_magnetico null (Pitfall 1)', () => {
+    const produto = makeProduto({ tipo_produto: 'fita', sistema_magnetico: null });
+    expect(detectarTipoAncora(produto)).toBe('fita');
+  });
+
+  it('fita com sistema_magnetico presente ainda retorna "fita" (prioridade tipo_produto)', () => {
+    const produto = makeProduto({ tipo_produto: 'fita', sistema_magnetico: 'magneto_48v' });
+    expect(detectarTipoAncora(produto)).toBe('fita');
+  });
+
+  it('sistema_magnetico=magneto_48v → retorna "magneto_48v"', () => {
+    const produto = makeProduto({ tipo_produto: 'spot', sistema_magnetico: 'magneto_48v' });
+    expect(detectarTipoAncora(produto)).toBe('magneto_48v');
+  });
+
+  it('sistema_magnetico=tiny_magneto → retorna "tiny_magneto"', () => {
+    const produto = makeProduto({ tipo_produto: null, sistema_magnetico: 'tiny_magneto' });
+    expect(detectarTipoAncora(produto)).toBe('tiny_magneto');
+  });
+
+  it('sistema_magnetico=s_mode → retorna "modular"', () => {
+    const produto = makeProduto({ tipo_produto: null, sistema_magnetico: 's_mode' });
+    expect(detectarTipoAncora(produto)).toBe('modular');
+  });
+
+  it('produto sem sistema_magnetico e tipo_produto=spot → fallback "luminaria"', () => {
+    const produto = makeProduto({ tipo_produto: 'spot', sistema_magnetico: null });
+    expect(detectarTipoAncora(produto)).toBe('luminaria');
+  });
+
+  it('produto com sistema_magnetico=null e tipo_produto=null → fallback "luminaria"', () => {
+    const produto = makeProduto({ tipo_produto: null, sistema_magnetico: null });
+    expect(detectarTipoAncora(produto)).toBe('luminaria');
+  });
+});
+
+// ─── Testes: calcularCargaComposicao (Phase 20 / D-06) ───
+
+describe('calcularCargaComposicao — carga derivada dos módulos (Phase 20 / D-06)', () => {
+  it('composicao vazia → 0', () => {
+    expect(calcularCargaComposicao([])).toBe(0);
+  });
+
+  it('composicao undefined → 0', () => {
+    expect(calcularCargaComposicao(undefined)).toBe(0);
+  });
+
+  it('módulo com potenciaW=undefined conta como 0', () => {
+    const composicao = [makeItemComposicao({ papel: 'modulo', potenciaW: undefined, quantidade: 3 })];
+    expect(calcularCargaComposicao(composicao)).toBe(0);
+  });
+
+  it('soma potenciaW × quantidade só dos papel="modulo"', () => {
+    const composicao = [
+      makeItemComposicao({ id: '1', papel: 'modulo', potenciaW: 10, quantidade: 3 }),
+      makeItemComposicao({ id: '2', papel: 'modulo', potenciaW: 5, quantidade: 2 }),
+    ];
+    expect(calcularCargaComposicao(composicao)).toBe(40); // 10×3 + 5×2
+  });
+
+  it('ignora itens papel=driver_recomendado na soma', () => {
+    const composicao = [
+      makeItemComposicao({ id: '1', papel: 'modulo', potenciaW: 20, quantidade: 2 }),
+      makeItemComposicao({ id: '2', papel: 'driver_recomendado', potenciaW: 100, quantidade: 1 }),
+    ];
+    expect(calcularCargaComposicao(composicao)).toBe(40); // só módulos: 20×2
+  });
+
+  it('ignora itens papel=conector_energia e kit_fixacao', () => {
+    const composicao = [
+      makeItemComposicao({ id: '1', papel: 'modulo', potenciaW: 15, quantidade: 2 }),
+      makeItemComposicao({ id: '2', papel: 'conector_energia', potenciaW: 5, quantidade: 1 }),
+      makeItemComposicao({ id: '3', papel: 'kit_fixacao', potenciaW: 0, quantidade: 1 }),
+    ];
+    expect(calcularCargaComposicao(composicao)).toBe(30); // só módulos: 15×2
+  });
+});
+
+// ─── Testes: recomendarDriver48V (Phase 20 / D-07/D-08) ───
+
+describe('recomendarDriver48V — buckets 48V com margem ×1.05 (Phase 20 / D-07/D-08)', () => {
+  it('carga 0 → estado sem_carga', () => {
+    const resultado = recomendarDriver48V(0);
+    expect(resultado.estado).toBe('sem_carga');
+  });
+
+  it('carga negativa → estado sem_carga', () => {
+    const resultado = recomendarDriver48V(-10);
+    expect(resultado.estado).toBe('sem_carga');
+  });
+
+  it('carga 90W → bucket LM2343 (90×1.05=94.5 ≤ 100)', () => {
+    const resultado = recomendarDriver48V(90);
+    expect(resultado.estado).toBe('recomendado');
+    if (resultado.estado === 'recomendado') {
+      expect(resultado.sku).toBe('LM2343');
+      expect(resultado.potenciaW).toBe(100);
+    }
+  });
+
+  it('carga 95.24W → bucket LM2343 (95.24×1.05≈100 ≤ 100, fronteira)', () => {
+    // 95.24 × 1.05 = 99.999... <= 100
+    const resultado = recomendarDriver48V(95.24);
+    expect(resultado.estado).toBe('recomendado');
+    if (resultado.estado === 'recomendado') {
+      expect(resultado.sku).toBe('LM2343');
+    }
+  });
+
+  it('carga 150W → bucket LM2344 (150×1.05=157.5 ≤ 200)', () => {
+    const resultado = recomendarDriver48V(150);
+    expect(resultado.estado).toBe('recomendado');
+    if (resultado.estado === 'recomendado') {
+      expect(resultado.sku).toBe('LM2344');
+      expect(resultado.potenciaW).toBe(200);
+    }
+  });
+
+  it('carga 100W → bucket LM2344 (100×1.05=105 > 100, mas ≤ 200)', () => {
+    const resultado = recomendarDriver48V(100);
+    expect(resultado.estado).toBe('recomendado');
+    if (resultado.estado === 'recomendado') {
+      expect(resultado.sku).toBe('LM2344');
+    }
+  });
+
+  it('carga 250W → estado excede_200w (250×1.05=262.5 > 200) — D-08: não auto-divide', () => {
+    const resultado = recomendarDriver48V(250);
+    expect(resultado.estado).toBe('excede_200w');
+  });
+
+  it('potenciaSeguraW exposta e correto quando recomendado', () => {
+    const resultado = recomendarDriver48V(90);
+    if (resultado.estado === 'recomendado') {
+      expect(resultado.potenciaSeguraW).toBeCloseTo(94.5, 1);
+    }
+  });
+});
+
+// ─── Guard: 5 calc sites de Fita Padrão byte-idênticos ───
+
+describe('Guard: 5 calc sites de Fita Padrão — assinaturas inalteradas (Phase 20)', () => {
+  it('calcularDemandaFita existe e aceita SistemaIluminacao', () => {
+    const fita = makeFita(10);
+    const driver = makeDriver('DR001', 24);
+    const sistema: SistemaIluminacao = {
+      id: 'sis-01', perfil: null, fita, driver, metragemManual: 5, passadasManual: 1,
+    };
+    expect(typeof calcularDemandaFita).toBe('function');
+    expect(calcularDemandaFita(sistema)).toBe(5);
+  });
+
+  it('calcularConsumoW existe e aceita SistemaIluminacao', () => {
+    const fita = makeFita(10);
+    const driver = makeDriver('DR001', 24);
+    const sistema: SistemaIluminacao = {
+      id: 'sis-01', perfil: null, fita, driver, metragemManual: 5, passadasManual: 1,
+    };
+    expect(typeof calcularConsumoW).toBe('function');
+    expect(calcularConsumoW(sistema)).toBe(50); // 5m × 10W/m
+  });
+
+  it('calcularSubtotalSistemaSemFita existe e retorna número', () => {
+    const fita = makeFita(10);
+    const driver = makeDriver('DR001', 24);
+    const sistema: SistemaIluminacao = {
+      id: 'sis-01', perfil: null, fita, driver, metragemManual: 5, passadasManual: 1,
+    };
+    expect(typeof calcularSubtotalSistemaSemFita).toBe('function');
+    expect(typeof calcularSubtotalSistemaSemFita(sistema)).toBe('number');
   });
 });

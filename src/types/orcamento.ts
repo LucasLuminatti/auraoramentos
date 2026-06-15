@@ -164,6 +164,44 @@ export const REGRAS_COMPOSICAO: Record<string, {
   },
 };
 
+// ─── Helpers product-first Phase 20 ───
+
+export type TipoAncora = 'luminaria' | 'fita' | 'magneto_48v' | 'tiny_magneto' | 'modular';
+
+/** Roteamento product-first (Phase 20 / D-02). Detecta o fluxo a partir do produto âncora.
+ *  Prioridade: 'fita' ANTES do fallback (fita tem sistema_magnetico null — Pitfall 1). */
+export function detectarTipoAncora(produto: Produto): TipoAncora {
+  if (produto.tipo_produto === 'fita') return 'fita';
+  if (produto.sistema_magnetico === 'magneto_48v') return 'magneto_48v';
+  if (produto.sistema_magnetico === 'tiny_magneto') return 'tiny_magneto';
+  if (produto.sistema_magnetico === 's_mode') return 'modular';
+  return 'luminaria'; // fallback gracioso D-03 — nunca interrompe
+}
+
+/** Carga total (W) de uma composição = Σ(potenciaW × quantidade) dos módulos (Phase 20 / D-06).
+ *  Apenas papel==='modulo'; potenciaW ausente conta como 0. */
+export function calcularCargaComposicao(composicao: ItemComposicao[] | undefined): number {
+  if (!composicao?.length) return 0;
+  return composicao
+    .filter(c => c.papel === 'modulo')
+    .reduce((s, c) => s + (c.potenciaW ?? 0) * c.quantidade, 0);
+}
+
+export type RecomendacaoDriver48V =
+  | { estado: 'sem_carga' }
+  | { estado: 'recomendado'; sku: 'LM2343' | 'LM2344'; potenciaW: 100 | 200; potenciaSeguraW: number }
+  | { estado: 'excede_200w'; potenciaSeguraW: number };
+
+/** Bucket de driver 48V (Phase 20 / D-07): LM2343 100W até 100W, LM2344 200W até 200W.
+ *  > 200W: D-08 — avisa para dividir em N circuitos, NÃO auto-insere. Margem ×1.05. */
+export function recomendarDriver48V(cargaTotalW: number): RecomendacaoDriver48V {
+  if (cargaTotalW <= 0) return { estado: 'sem_carga' };
+  const potenciaSeguraW = Math.round(cargaTotalW * MARGEM_SEGURANCA_DRIVER * 100) / 100;
+  if (potenciaSeguraW <= 100) return { estado: 'recomendado', sku: 'LM2343', potenciaW: 100, potenciaSeguraW };
+  if (potenciaSeguraW <= 200) return { estado: 'recomendado', sku: 'LM2344', potenciaW: 200, potenciaSeguraW };
+  return { estado: 'excede_200w', potenciaSeguraW };
+}
+
 /** Metragem total do perfil (se existir) */
 export function calcularMetragemTotal(perfil: ItemPerfil): number {
   return perfil.comprimentoPeca * perfil.quantidade;
