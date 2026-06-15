@@ -53,7 +53,7 @@
 **Plans**: 3 plans
 - [x] 20-01-PLAN.md — Camada de dados/helpers: detectarTipoAncora + calcularCargaComposicao + recomendarDriver48V (orcamento.ts) + filtroSistema em useProdutoSearch
 - [x] 20-02-PLAN.md — ComposicaoCard.tsx: trilho âncora, módulos, painel de driver (48V LM2343/LM2344 + 24V), voltage lock, checklist de obrigatórios
-- [ ] 20-03-PLAN.md — AmbienteCard reorg: busca product-first + lista unificada + roteamento + render ComposicaoCard (Fita Padrão intocado) + checkpoint visual
+- [x] 20-03-PLAN.md — AmbienteCard reorg: busca product-first + lista unificada + roteamento + render ComposicaoCard (Fita Padrão intocado) + checkpoint visual
 **UI hint**: yes
 
 ### Phase 21: SYSTEM MOLD + Validação & Reuso
@@ -112,7 +112,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 17. Resumo & Apresentação | v1.2 | 4/4 | Complete | 2026-06-11 |
 | 18. UX Transversal | v1.2 | 4/4 | Complete | 2026-06-12 |
 | 19. Fundação Compostos | v1.3 | 3/3 | Complete    | 2026-06-12 |
-| 20. Fluxos Magnéticos | v1.3 | 2/3 | In Progress|  |
+| 20. Fluxos Magnéticos | v1.3 | 3/3 | Complete   | 2026-06-15 |
 | 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 0/? | Not started | - |
 | 22. PDF v3 — Sistemas Compostos | v1.3 | 0/? | Not started | - |
 

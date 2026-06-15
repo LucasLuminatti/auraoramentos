@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: executing
-last_updated: "2026-06-15T13:37:10.502Z"
+status: verifying
+last_updated: "2026-06-15T13:47:17.416Z"
 last_activity: 2026-06-15
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_plans: 6
+  percent: 100
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-15 — Phase 20 Plan 02 concluído: `ComposicaoCard.tsx` (836 linhas) — trilho âncora, módulos, painel de driver 5 estados (48V/24V), voltage lock por construção, checklist REGRAS_COMPOSICAO. Commit: 5f0e63f. SIST-01/02, DRV-01/02, COMP-01/02/03 entregues.
+**Last updated:** 2026-06-15 — Phase 20 Plan 03 Tasks 1+2 concluídos: `AmbienteCard.tsx` reorganizado — busca product-first única (sem abas), lista unificada luminarias[]+sistemas[], roteamento `handleSelectProdutoGlobal` via `detectarTipoAncora`, `ComposicaoCard` integrado, Fita Padrão byte-idêntico, 5 calc sites intocados. Commit: 237468c. Aguardando checkpoint:human-verify (Task 3).
 
 ## Current Position
 
 Phase: 20 (fluxos-magn-ticos) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-15
 
 ## Project Reference
@@ -80,6 +80,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **TipoAncora + RecomendacaoDriver48V exportados como discriminated unions (Phase 20 / Plan 01)** — contratos para ComposicaoCard (Plan 02); guard tests com imports ES (não require) por compatibilidade Vitest ESM
 - **filtroSistema como 4º param opcional em useProdutoSearch (Phase 20 / Plan 01)** — usa coluna `sistema` do banco (não alias `sistema_magnetico`); exclui driver/conector/kit_fixacao/perfil para retornar só módulos
 - **ComposicaoCard autocontido (Phase 20 / Plan 02)** — recebe `item` + callbacks, sem conhecer ambiente pai; reconciliação pós-await via `useRef(item)`; voltage lock por construção (filtroVoltagem); checklist lê REGRAS_COMPOSICAO do código (não do banco)
+- **AmbienteCard product-first (Phase 20 / Plan 03)** — `handleSelectProdutoGlobal` roteia via `detectarTipoAncora`; fita route usa sistema pré-populado inline (Pitfall 4 — sem stale closure); `handleSelectProdutoLuminaria` preservado para edição inline de itens simples existentes; Fita Padrão byte-idêntica; lista unificada luminarias[]+sistemas[]
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -114,7 +115,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 20 Plan 02 concluído. Próximo: Phase 20 Plan 03 — AmbienteCard integration (wire ComposicaoCard into AmbienteCard, product-first busca única, lista unificada luminarias+sistemas).
+Phase 20 Plan 03 Tasks 1+2 concluídos (commit 237468c). Aguardando checkpoint:human-verify — usuário deve rodar `npm run dev`, abrir wizard Step 2, e confirmar os 9 cenários (fita, MAGNETO 48V, >200W, TINY 24V, embutir, item simples, console, regressão, orçamento antigo). Após aprovação ("approved"), fechar fase e avançar para Phase 21.
 
 ---
-*STATE refreshed: 2026-06-15 — Phase 20 Plan 02 completo (5/6 plans total, 2/3 na fase). ComposicaoCard entregue. Próximo: Plan 03 AmbienteCard wire-up.*
+*STATE refreshed: 2026-06-15 — Phase 20 Plan 03 Tasks 1+2 completos (6/6 plans total). AmbienteCard product-first entregue. Aguardando verificação visual humana (Task 3 checkpoint).*
