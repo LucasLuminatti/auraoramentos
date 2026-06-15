@@ -50,7 +50,10 @@
   4. O painel de recomendação de driver exibe o SKU correto (LM2343 100W / LM2344 200W para 48V; menor driver compatível para 24V) e o botão "aplicar" preenche os campos do driver do sistema com um clique — o colaborador pode revisar ou sobrescrever depois
   5. O checklist de componentes obrigatórios marca presença/ausência de conectores por família (MAGNETO 48V → LM2338; TINY → LM3168 ou LM3169); quando ausente, o atalho "adicionar componente" insere o SKU correto no ambiente em um clique
   6. Selecionar um trilho magnético 48V trava o seletor de driver em 48V — tentativa de adicionar driver de outra voltagem é bloqueada (hard lock)
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 20-01-PLAN.md — Camada de dados/helpers: detectarTipoAncora + calcularCargaComposicao + recomendarDriver48V (orcamento.ts) + filtroSistema em useProdutoSearch
+- [ ] 20-02-PLAN.md — ComposicaoCard.tsx: trilho âncora, módulos, painel de driver (48V LM2343/LM2344 + 24V), voltage lock, checklist de obrigatórios
+- [ ] 20-03-PLAN.md — AmbienteCard reorg: busca product-first + lista unificada + roteamento + render ComposicaoCard (Fita Padrão intocado) + checkpoint visual
 **UI hint**: yes
 
 ### Phase 21: SYSTEM MOLD + Validação & Reuso
@@ -109,7 +112,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 17. Resumo & Apresentação | v1.2 | 4/4 | Complete | 2026-06-11 |
 | 18. UX Transversal | v1.2 | 4/4 | Complete | 2026-06-12 |
 | 19. Fundação Compostos | v1.3 | 3/3 | Complete    | 2026-06-12 |
-| 20. Fluxos Magnéticos | v1.3 | 0/? | Not started | - |
+| 20. Fluxos Magnéticos | v1.3 | 0/3 | Planned | - |
 | 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 0/? | Not started | - |
 | 22. PDF v3 — Sistemas Compostos | v1.3 | 0/? | Not started | - |
 
@@ -131,4 +134,4 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 > Promovido para milestone ativo **v1.3** em 2026-06-12. Requirements: SIST-01/02/03/05, DRV-01/02, COMP-01/02/03, VAL-01, CAT-03, DUP-01, PDF-03. Ver Phase Details acima (Phases 19-22).
 
 ---
-*Last updated: 2026-06-12 — Phase 19 planejada (3 plans, 2 waves). v1.3 roadmap (Phases 19-22, 13 requirements).*
+*Last updated: 2026-06-15 — Phase 20 planejada (3 plans, 3 waves, product-first). v1.3 roadmap (Phases 19-22, 13 requirements).*
