@@ -4,7 +4,7 @@ import type { Produto } from "@/types/orcamento";
 
 export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'conector' | 'kit_fixacao' | 'luminaria' | 'todos';
 
-export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos', filtroVoltagem?: number) {
+export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos', filtroVoltagem?: number, filtroSistema?: string) {
   const [results, setResults] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(false);
   const [redirectTipo, setRedirectTipo] = useState<string | null>(null);
@@ -34,6 +34,14 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
         // Pré-filtro de voltagem do driver: 46/61 drivers têm tensao=null mas são compatíveis (D-01)
         if (filtro === 'driver' && filtroVoltagem !== undefined) {
           queryBuilder = queryBuilder.or(`tensao.eq.${filtroVoltagem},tensao.is.null`);
+        }
+
+        // Busca escopada de módulos por família (Phase 20 / D-12) — usa a coluna 'sistema'
+        // (NÃO o alias 'sistema_magnetico'). Exclui trilhos/conectores/drivers/kits para retornar só módulos.
+        if (filtroSistema) {
+          queryBuilder = queryBuilder
+            .eq('sistema', filtroSistema)
+            .not('tipo_produto', 'in', '("driver","conector","kit_fixacao","perfil")');
         }
 
         if (query.trim().length >= 2) {
@@ -67,7 +75,7 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
     }, query.trim().length < 2 ? 0 : 300);
 
     return () => clearTimeout(timer);
-  }, [query, filtro, filtroVoltagem]);
+  }, [query, filtro, filtroVoltagem, filtroSistema]);
 
   return { results, loading, redirectTipo };
 }

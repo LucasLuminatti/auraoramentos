@@ -13,13 +13,14 @@ interface ProdutoAutocompleteProps {
   className?: string;
   filtro?: ProdutoFiltro;
   filtroVoltagem?: number;
+  filtroSistema?: string;
   onRedirectToSistemas?: () => void;
 }
 
-const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className, filtro, filtroVoltagem, onRedirectToSistemas }: ProdutoAutocompleteProps) => {
+const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className, filtro, filtroVoltagem, filtroSistema, onRedirectToSistemas }: ProdutoAutocompleteProps) => {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
-  const { results, loading, redirectTipo } = useProdutoSearch(query, filtro, filtroVoltagem);
+  const { results, loading, redirectTipo } = useProdutoSearch(query, filtro, filtroVoltagem, filtroSistema);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setQuery(value); }, [value]);
