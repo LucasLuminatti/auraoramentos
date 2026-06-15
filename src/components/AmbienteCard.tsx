@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,8 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, aplicarSufixoMetragem, clonarSistema } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora } from "@/types/orcamento";
+import ComposicaoCard from "./ComposicaoCard";
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -44,7 +44,6 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCar
   const [isOpen, setIsOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(ambiente.nome);
-  const [activeTab, setActiveTab] = useState<'luminarias' | 'sistemas'>('luminarias');
 
   const uid = () => crypto.randomUUID();
   const { validacoes } = useValidarSistemas(ambiente.sistemas);
@@ -321,6 +320,136 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCar
     updateSistema(si, { ...sis, perfil: null, metragemManual: metragem || null, passadasManual: passadas });
   };
 
+  // ─── Roteamento product-first (Phase 20 / D-01/D-02/D-03) ───
+  const handleSelectProdutoGlobal = (produto: Produto) => {
+    const tipo = detectarTipoAncora(produto);
+    const imgUrl = produto.imagem_url || undefined;
+    const preco = Math.round((produto.preco_tabela || 0) * 100) / 100;
+    const precoMin = Math.round((produto.preco_minimo || 0) * 100) / 100;
+
+    if (tipo === 'fita') {
+      // Rota Fita Padrão — construir sistema pré-populado inline para evitar stale closure (Pitfall 4).
+      // Replica a lógica de addSistema() + handleSelectProdutoSistema(produto, i, 'fita')
+      // em um único onChange, sem await (sugestão de driver é disparada separadamente abaixo).
+      const novaFita: ItemFitaLED = {
+        id: uid(),
+        codigo: produto.codigo,
+        descricao: produto.descricao,
+        wm: produto.wm ?? 0,
+        voltagem: (produto.voltagem ?? 24) as 12 | 24 | 48,
+        metragemRolo: 5,
+        precoUnitario: preco,
+        precoMinimo: precoMin,
+        imagemUrl: imgUrl,
+        is_baby: produto.is_baby,
+      };
+      const novoDriver: ItemDriver = {
+        id: uid(),
+        codigo: '', descricao: '', potencia: 0,
+        voltagem: (produto.voltagem ?? 24) as 12 | 24 | 48,
+        precoUnitario: 0, precoMinimo: 0,
+      };
+      const novoSistema: SistemaIluminacao = {
+        id: uid(), perfil: null, fita: novaFita, driver: novoDriver,
+        metragemManual: null, passadasManual: 1, local: null,
+      };
+      const novosSistemas = [...ambiente.sistemas, novoSistema];
+      onChange({ ...ambiente, sistemas: novosSistemas });
+
+      // Sugestão automática de driver (mesmo padrão de handleSelectProdutoSistema fita path)
+      const fitaVolt = novaFita.voltagem;
+      if (fitaVolt) {
+        const metragemReal = calcularDemandaFita(novoSistema);
+        buscarDriverSugerido(fitaVolt, novaFita.wm, metragemReal).then((sugerido) => {
+          if (sugerido) {
+            const latest = ambienteRef.current;
+            const idx = latest.sistemas.findIndex((s) => s.id === novoSistema.id);
+            if (idx !== -1 && !latest.sistemas[idx].driver.codigo) {
+              const alvo = latest.sistemas[idx];
+              const arr = [...latest.sistemas];
+              arr[idx] = {
+                ...alvo,
+                driver: {
+                  ...alvo.driver,
+                  codigo: sugerido.codigo,
+                  descricao: sugerido.descricao,
+                  voltagem: (sugerido.voltagem ?? fitaVolt) as 12 | 24 | 48,
+                  potencia: sugerido.driver_potencia_w ?? alvo.driver.potencia,
+                  precoUnitario: Math.round((sugerido.preco_tabela || 0) * 100) / 100,
+                  precoMinimo: Math.round((sugerido.preco_minimo || 0) * 100) / 100,
+                  driver_tipo: sugerido.driver_tipo,
+                },
+              };
+              onChange({ ...latest, sistemas: arr });
+            }
+          }
+        });
+      }
+      return;
+    }
+
+    if (tipo === 'magneto_48v' || tipo === 'tiny_magneto') {
+      // Inicia composição: ItemLuminaria raiz (trilho âncora) com composicao: [] (Pattern 2).
+      // Preservar toasts existentes (REGRAS #5-#28) — mesma lógica de handleSelectProdutoLuminaria.
+      const d = (produto.descricao || '').toUpperCase();
+      if (tipo === 'magneto_48v' || /MAGNETO22/.test(d)) {
+        if (/TRILHO.*EMBUTIR/.test(d)) {
+          toast.warning(`🧲 Trilho magnético 48V de embutir: inclua o Kit de Fixação LM2987 (vendido separadamente) + Conector LM2338 + Driver 100W (LM2343) ou 200W (LM2344).`, { duration: 10000 });
+        } else if (/TRILHO/.test(d)) {
+          toast.warning(`🧲 Trilho magnético 48V: inclua o Conector Direcional LM2338 + Driver 100W (LM2343) ou 200W (LM2344).`, { duration: 10000 });
+        } else if (/MODULO|SPOT/.test(d)) {
+          toast.info(`🧲 Módulo/spot magnético 48V: certifique-se de que o trilho e o driver (100W ou 200W) estão no orçamento.`, { duration: 8000 });
+        }
+      } else if (tipo === 'tiny_magneto' || /TINY\s+MAG/.test(d)) {
+        if (/TRILHO.*EMBUTIR/.test(d)) {
+          toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
+        } else {
+          toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
+        }
+      }
+
+      const novaRaiz: ItemLuminaria = {
+        id: uid(),
+        codigo: produto.codigo, descricao: produto.descricao, quantidade: 1,
+        precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl,
+        sistema: tipo,
+        potencia_watts: produto.driver_potencia_w ?? null,
+        tensao: produto.voltagem ?? (tipo === 'magneto_48v' ? 48 : 24),
+        composicao: [], // presença ativa o ComposicaoCard
+      };
+      onChange({ ...ambiente, luminarias: [...ambiente.luminarias, novaRaiz] });
+      return;
+    }
+
+    // 'modular' (Phase 21), 'luminaria' e fallback (D-03): item simples, SEM composicao.
+    // Preservar toasts de REGRA #24 e #25 para itens simples.
+    const d = (produto.descricao || '').toUpperCase();
+    const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
+    const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
+    if (temBaseLampada && !temLedIntegrado) {
+      toast.info(`💡 Este produto não possui LED integrado — lembre-se de incluir a lâmpada separadamente no orçamento.`, { duration: 8000 });
+    }
+    if (/PINO\s+HUB/.test(d)) {
+      const temSpotHub = ambiente.luminarias.some(l => /SPOT\s+HUB/.test((l.descricao || '').toUpperCase()));
+      if (!temSpotHub) {
+        toast.warning(`🔌 Pino Hub requer um Spot Hub (de Embutir ou No Frame) como base — adicione o Spot Hub antes de instalar.`, { duration: 10000 });
+      }
+    }
+    if (/FITA\s+FLEX|NEON\s+FLEX|FLEXIVEL/.test(d)) {
+      toast.info(`✨ Fita Flexível: considere incluir as Tampas de Vedação (LM2600 — 50 un.) para preservar o IP65 após cortes.`, { duration: 10000 });
+    }
+
+    const novoItem: ItemLuminaria = {
+      id: uid(),
+      codigo: produto.codigo, descricao: produto.descricao, quantidade: 1,
+      precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl,
+      sistema: produto.sistema_magnetico ?? null,
+      potencia_watts: produto.driver_potencia_w ?? null,
+      tensao: produto.voltagem ?? null,
+    };
+    onChange({ ...ambiente, luminarias: [...ambiente.luminarias, novoItem] });
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="rounded-xl border bg-card shadow-sm">
       <CollapsibleTrigger asChild>
@@ -356,30 +485,52 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCar
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="border-t p-4">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'luminarias' | 'sistemas')}>
-            <TabsList className="w-full">
-              <TabsTrigger value="luminarias" className="flex-1">Luminárias ({ambiente.luminarias.length})</TabsTrigger>
-              <TabsTrigger value="sistemas" className="flex-1">Sistemas de Iluminação ({ambiente.sistemas.length})</TabsTrigger>
-            </TabsList>
+        <div className="border-t p-4 space-y-4">
 
-            {/* ─── Tab Luminárias ─── */}
-            <TabsContent value="luminarias" className="space-y-3 mt-4">
-              <p className="text-xs text-muted-foreground mb-3">Spots, pendentes, plafons, trilhos e luminárias individuais.</p>
-              {(() => {
-                const r = analisarMagneto48V(ambiente);
-                if (!r) return null;
+          {/* ─── Busca product-first (substitui as abas) ─── */}
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">Adicionar ao ambiente</span>
+            <ProdutoAutocomplete
+              value=""
+              onSelect={handleSelectProdutoGlobal}
+              placeholder="Buscar produto por código ou descrição..."
+              className="w-full"
+            />
+          </div>
+
+          {/* ─── Lista unificada (Pattern 10): luminarias[] + sistemas[] ─── */}
+          <div className="space-y-3">
+
+            {/* Banner legado analisarMagneto48V — fallback para luminárias antigas sem composicao */}
+            {(() => {
+              const r = analisarMagneto48V(ambiente);
+              if (!r) return null;
+              return (
+                <div className="rounded-md border border-blue-400/40 bg-blue-50 px-3 py-2 text-xs text-blue-900 space-y-1">
+                  <div>🧲 <strong>Sistema Magneto 48V:</strong> {r.qtdModulos} módulo{r.qtdModulos > 1 ? 's' : ''} somando <strong>{r.potenciaTotalW}W</strong>. Driver recomendado: <strong>{r.driverRecomendado}</strong>.</div>
+                  {r.avisos.map((a, i) => <div key={i}>⚠️ {a}</div>)}
+                </div>
+              );
+            })()}
+
+            {/* Luminarias: composicao definida → ComposicaoCard; senão → item simples */}
+            {ambiente.luminarias.map((item, i) => {
+              if (item.composicao !== undefined) {
                 return (
-                  <div className="rounded-md border border-blue-400/40 bg-blue-50 px-3 py-2 text-xs text-blue-900 space-y-1">
-                    <div>🧲 <strong>Sistema Magneto 48V:</strong> {r.qtdModulos} módulo{r.qtdModulos > 1 ? 's' : ''} somando <strong>{r.potenciaTotalW}W</strong>. Driver recomendado: <strong>{r.driverRecomendado}</strong>.</div>
-                    {r.avisos.map((a, i) => <div key={i}>⚠️ {a}</div>)}
-                  </div>
+                  <ComposicaoCard
+                    key={item.id}
+                    item={item}
+                    indice={i}
+                    onChange={(novo) => updateLuminaria(i, novo)}
+                    onRemove={() => removeLuminaria(i)}
+                  />
                 );
-              })()}
-              {ambiente.luminarias.map((item, i) => (
+              }
+              // Item simples (incluindo fallback D-03 para magneto/tiny sem composicao)
+              return (
                 <div key={item.id} className="flex items-start gap-2 rounded-lg border p-3 bg-muted/30">
                   <div className="flex-1 space-y-2">
-                    <ProdutoAutocomplete value={item.codigo} onSelect={(p) => handleSelectProdutoLuminaria(p, i)} placeholder="Código do item" filtro="luminaria" onRedirectToSistemas={() => setActiveTab('sistemas')} />
+                    <ProdutoAutocomplete value={item.codigo} onSelect={(p) => handleSelectProdutoLuminaria(p, i)} placeholder="Código do item" filtro="luminaria" />
                     <Input value={item.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-1">
@@ -399,252 +550,261 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCar
                         <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 bg-amber-50">requer driver 24V externo</Badge>
                       )}
                     </div>
+                    {/* Fallback D-03: item magnético sem composicao — ação de conversão */}
+                    {(item.sistema === 'magneto_48v' || item.sistema === 'tiny_magneto') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-xs gap-1"
+                        onClick={() => updateLuminaria(i, { ...item, composicao: [] })}
+                      >
+                        Iniciar como sistema composto
+                      </Button>
+                    )}
                   </div>
                   <Button size="icon" variant="ghost" className="text-destructive shrink-0" onClick={() => removeLuminaria(i)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
-              <Button variant="outline" size="sm" className="gap-2" onClick={addLuminaria}>
-                <Plus className="h-4 w-4" /> Adicionar Luminária
-              </Button>
-            </TabsContent>
+              );
+            })}
 
-            {/* ─── Tab Sistemas de Iluminação ─── */}
-            <TabsContent value="sistemas" className="space-y-4 mt-4">
-              <p className="text-xs text-muted-foreground mb-3">Fitas LED, perfis, drivers e componentes que formam um sistema.</p>
-              {ambiente.sistemas.map((sis, si) => {
-                const demandaFita = calcularDemandaFita(sis);
-                const consumoW = calcularConsumoW(sis);
-                const qtdDrivers = calcularQtdDrivers(sis);
-                const motivoDrivers = motivoQtdDrivers(sis);
-                const subtotal = calcularSubtotalSistemaSemFita(sis);
+            {/* Sistemas de Fita Padrão — card byte-identical, apenas movido para fora das tabs */}
+            {ambiente.sistemas.map((sis, si) => {
+              const demandaFita = calcularDemandaFita(sis);
+              const consumoW = calcularConsumoW(sis);
+              const qtdDrivers = calcularQtdDrivers(sis);
+              const motivoDrivers = motivoQtdDrivers(sis);
+              const subtotal = calcularSubtotalSistemaSemFita(sis);
 
-                return (
-                  <div key={sis.id} className="rounded-lg border bg-muted/20 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
+              return (
+                <div key={sis.id} className="rounded-lg border bg-muted/20 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground">Sistema {si + 1}</span>
+                      {(() => {
+                        const fv = sis.fita.voltagem, dv = sis.driver.voltagem;
+                        const temDivergencia = !!sis.fita.codigo && !!sis.driver.codigo && fv !== undefined && dv !== undefined && fv !== dv;
+                        return temDivergencia ? (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">⚠ {fv}V × {dv}V</Badge>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const semPerfilEInvalido = !!sis.fita.codigo && !sis.perfil && (!sis.metragemManual || sis.metragemManual <= 0);
+                        return semPerfilEInvalido ? (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">⚠ Metragem obrigatória</Badge>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {subtotal > 0 && <Badge variant="outline" className="text-xs">Subtotal (s/ fita): {formatarMoeda(subtotal)}</Badge>}
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Duplicar sistema" onClick={() => duplicarSistema(si)}>
+                        <span className="sr-only">Duplicar sistema</span>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeSistema(si)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-3">
+
+                    {/* ── LOCAL (opcional, Phase 5 PDF-01) ── */}
+                    <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">Sistema {si + 1}</span>
-                        {(() => {
-                          const fv = sis.fita.voltagem, dv = sis.driver.voltagem;
-                          const temDivergencia = !!sis.fita.codigo && !!sis.driver.codigo && fv !== undefined && dv !== undefined && fv !== dv;
-                          return temDivergencia ? (
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">⚠ {fv}V × {dv}V</Badge>
-                          ) : null;
-                        })()}
-                        {(() => {
-                          const semPerfilEInvalido = !!sis.fita.codigo && !sis.perfil && (!sis.metragemManual || sis.metragemManual <= 0);
-                          return semPerfilEInvalido ? (
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">⚠ Metragem obrigatória</Badge>
-                          ) : null;
-                        })()}
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Local</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Opcional</Badge>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {subtotal > 0 && <Badge variant="outline" className="text-xs">Subtotal (s/ fita): {formatarMoeda(subtotal)}</Badge>}
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Duplicar sistema" onClick={() => duplicarSistema(si)}>
-                          <span className="sr-only">Duplicar sistema</span>
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeSistema(si)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                      <Input
+                        value={sis.local ?? ""}
+                        onChange={(e) => updateSistema(si, { ...sis, local: e.target.value || null })}
+                        placeholder="Sanca, Rasgo, Pé-direito... (deixe em branco se não aplicar)"
+                        maxLength={40}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    {/* ── FITA LED ── */}
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-primary uppercase tracking-wide">Fita LED</span>
+                      <ProdutoAutocomplete value={sis.fita.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'fita')} placeholder="Código da fita" filtro="fita" />
+                      <Input value={sis.fita.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">W/m:</span>
+                          <Input type="number" min={0} step={0.1} value={sis.fita.wm} onChange={(e) => { const raw = e.target.value; updateSistema(si, { ...sis, fita: { ...sis.fita, wm: raw === "" ? 0 : (parseFloat(raw) || 0) } }); }} className="w-20 h-8" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Rolo:</span>
+                          <Select value={String(sis.fita.metragemRolo)} onValueChange={(v) => updateSistema(si, { ...sis, fita: { ...sis.fita, metragemRolo: Number(v) as 5 | 10 | 15 } })}>
+                            <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">5m</SelectItem>
+                              <SelectItem value="10">10m</SelectItem>
+                              <SelectItem value="15">15m</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
+                          <PrecoInput value={sis.fita.precoUnitario} min={sis.fita.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, fita: { ...sis.fita, precoUnitario: v } })} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {sis.fita.voltagem && <Badge variant="outline" className="text-xs">{sis.fita.voltagem}V</Badge>}
+                        {consumoW > 0 && <Badge variant="secondary" className="text-xs">Consumo: {consumoW.toFixed(1)}W</Badge>}
+                        {demandaFita > 0 && <Badge variant="secondary" className="text-xs">Demanda: {demandaFita}m</Badge>}
                       </div>
                     </div>
 
-                    <div className="p-4 space-y-3">
+                    <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground" /></div>
 
-                      {/* ── LOCAL (opcional, Phase 5 PDF-01) ── */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Local</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">Opcional</Badge>
-                        </div>
-                        <Input
-                          value={sis.local ?? ""}
-                          onChange={(e) => updateSistema(si, { ...sis, local: e.target.value || null })}
-                          placeholder="Sanca, Rasgo, Pé-direito... (deixe em branco se não aplicar)"
-                          maxLength={40}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-
-                      {/* ── FITA LED ── */}
-                      <div className="space-y-2">
-                        <span className="text-xs font-semibold text-primary uppercase tracking-wide">Fita LED</span>
-                        <ProdutoAutocomplete value={sis.fita.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'fita')} placeholder="Código da fita" filtro="fita" />
-                        <Input value={sis.fita.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">W/m:</span>
-                            <Input type="number" min={0} step={0.1} value={sis.fita.wm} onChange={(e) => { const raw = e.target.value; updateSistema(si, { ...sis, fita: { ...sis.fita, wm: raw === "" ? 0 : (parseFloat(raw) || 0) } }); }} className="w-20 h-8" />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">Rolo:</span>
-                            <Select value={String(sis.fita.metragemRolo)} onValueChange={(v) => updateSistema(si, { ...sis, fita: { ...sis.fita, metragemRolo: Number(v) as 5 | 10 | 15 } })}>
-                              <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="5">5m</SelectItem>
-                                <SelectItem value="10">10m</SelectItem>
-                                <SelectItem value="15">15m</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
-                            <PrecoInput value={sis.fita.precoUnitario} min={sis.fita.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, fita: { ...sis.fita, precoUnitario: v } })} />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {sis.fita.voltagem && <Badge variant="outline" className="text-xs">{sis.fita.voltagem}V</Badge>}
-                          {consumoW > 0 && <Badge variant="secondary" className="text-xs">Consumo: {consumoW.toFixed(1)}W</Badge>}
-                          {demandaFita > 0 && <Badge variant="secondary" className="text-xs">Demanda: {demandaFita}m</Badge>}
-                        </div>
-                      </div>
-
-                      <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground" /></div>
-
-                      {/* ── PERFIL (opcional) ── */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-primary uppercase tracking-wide">Perfil</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">Opcional</Badge>
-                          {!sis.perfil ? (
-                            <Button size="sm" variant="outline" className="h-6 text-xs gap-1" onClick={() => vincularPerfil(si)}>
-                              <Link className="h-3 w-3" /> Vincular Perfil
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="ghost" className="h-6 text-xs gap-1 text-destructive" onClick={() => desvincularPerfil(si)}>
-                              <Unlink className="h-3 w-3" /> Desvincular
-                            </Button>
-                          )}
-                        </div>
-                        {sis.perfil ? (
-                          <>
-                            <ProdutoAutocomplete value={sis.perfil.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'perfil')} placeholder="Código do perfil" filtro="perfil" />
-                            <Input value={sis.perfil.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground">Comprimento:</span>
-                                <Select value={String(sis.perfil.comprimentoPeca)} onValueChange={(v) => {
-                                  const novoComp = Number(v) as 1 | 2 | 3;
-                                  updateSistema(si, { ...sis, perfil: { ...sis.perfil!, comprimentoPeca: novoComp, descricao: aplicarSufixoMetragem(sis.perfil!.descricao, novoComp, sis.perfil!.quantidade) } });
-                                }}>
-                                  <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="1">1m</SelectItem>
-                                    <SelectItem value="2">2m</SelectItem>
-                                    <SelectItem value="3">3m</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground">Qtd:</span>
-                                <Input type="number" min={1} value={sis.perfil.quantidade} onChange={(e) => { const raw = e.target.value; const qtd = raw === "" ? 0 : (parseInt(raw) || 0); updateSistema(si, { ...sis, perfil: { ...sis.perfil!, quantidade: qtd, descricao: aplicarSufixoMetragem(sis.perfil!.descricao, sis.perfil!.comprimentoPeca, qtd) } }); }} className="w-20 h-8" />
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground">Passadas:</span>
-                                <Select
-                                  value={String(sis.perfil.passadas)}
-                                  onValueChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, passadas: Number(v) as 1 | 2 | 3 } })}
-                                >
-                                  <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    {[1, 2, 3]
-                                      .filter((n) => n <= (sis.perfil!.passadasPadrao ?? 3))
-                                      .map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <Badge variant="secondary" className="text-xs">Metragem: {calcularMetragemTotal(sis.perfil)}m</Badge>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
-                                <PrecoInput value={sis.perfil.precoUnitario} min={sis.perfil.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, precoUnitario: v } })} />
-                              </div>
-                            </div>
-                          </>
+                    {/* ── PERFIL (opcional) ── */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-primary uppercase tracking-wide">Perfil</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Opcional</Badge>
+                        {!sis.perfil ? (
+                          <Button size="sm" variant="outline" className="h-6 text-xs gap-1" onClick={() => vincularPerfil(si)}>
+                            <Link className="h-3 w-3" /> Vincular Perfil
+                          </Button>
                         ) : (
-                          <div className="flex items-center gap-3 flex-wrap rounded-md border border-dashed p-3 bg-muted/30">
+                          <Button size="sm" variant="ghost" className="h-6 text-xs gap-1 text-destructive" onClick={() => desvincularPerfil(si)}>
+                            <Unlink className="h-3 w-3" /> Desvincular
+                          </Button>
+                        )}
+                      </div>
+                      {sis.perfil ? (
+                        <>
+                          <ProdutoAutocomplete value={sis.perfil.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'perfil')} placeholder="Código do perfil" filtro="perfil" />
+                          <Input value={sis.perfil.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
+                          <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-1">
-                              <span className="text-xs text-muted-foreground">Metragem (m):</span>
-                              <Input type="number" min={0} step={0.1} value={sis.metragemManual ?? ""} onChange={(e) => { const raw = e.target.value; updateSistema(si, { ...sis, metragemManual: raw === "" ? null : (parseFloat(raw) || 0) }); }} className="w-24 h-8" placeholder="Ex: 12" />
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-muted-foreground">Passadas:</span>
-                              <Select value={String(sis.passadasManual)} onValueChange={(v) => updateSistema(si, { ...sis, passadasManual: Number(v) as 1 | 2 | 3 })}>
+                              <span className="text-xs text-muted-foreground">Comprimento:</span>
+                              <Select value={String(sis.perfil.comprimentoPeca)} onValueChange={(v) => {
+                                const novoComp = Number(v) as 1 | 2 | 3;
+                                updateSistema(si, { ...sis, perfil: { ...sis.perfil!, comprimentoPeca: novoComp, descricao: aplicarSufixoMetragem(sis.perfil!.descricao, novoComp, sis.perfil!.quantidade) } });
+                              }}>
                                 <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="1">1</SelectItem>
-                                  <SelectItem value="2">2</SelectItem>
-                                  <SelectItem value="3">3</SelectItem>
+                                  <SelectItem value="1">1m</SelectItem>
+                                  <SelectItem value="2">2m</SelectItem>
+                                  <SelectItem value="3">3m</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
-                            {demandaFita > 0 && <Badge variant="secondary" className="text-xs">Demanda fita: {demandaFita}m</Badge>}
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">Qtd:</span>
+                              <Input type="number" min={1} value={sis.perfil.quantidade} onChange={(e) => { const raw = e.target.value; const qtd = raw === "" ? 0 : (parseInt(raw) || 0); updateSistema(si, { ...sis, perfil: { ...sis.perfil!, quantidade: qtd, descricao: aplicarSufixoMetragem(sis.perfil!.descricao, sis.perfil!.comprimentoPeca, qtd) } }); }} className="w-20 h-8" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">Passadas:</span>
+                              <Select
+                                value={String(sis.perfil.passadas)}
+                                onValueChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, passadas: Number(v) as 1 | 2 | 3 } })}
+                              >
+                                <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {[1, 2, 3]
+                                    .filter((n) => n <= (sis.perfil!.passadasPadrao ?? 3))
+                                    .map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground" /></div>
-
-                      {/* ── DRIVER ── */}
-                      <div className="space-y-2">
-                        <span className="text-xs font-semibold text-primary uppercase tracking-wide">Driver</span>
-                        <ProdutoAutocomplete value={sis.driver.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'driver')} placeholder="Código do driver" filtro="driver" filtroVoltagem={sis.fita.voltagem} />
-                        <Input value={sis.driver.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
-                        <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <Badge variant="secondary" className="text-xs">Metragem: {calcularMetragemTotal(sis.perfil)}m</Badge>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
+                              <PrecoInput value={sis.perfil.precoUnitario} min={sis.perfil.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, precoUnitario: v } })} />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-3 flex-wrap rounded-md border border-dashed p-3 bg-muted/30">
                           <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">Potência (W):</span>
-                            <Input type="number" min={0} value={sis.driver.potencia} onChange={(e) => { const raw = e.target.value; updateSistema(si, { ...sis, driver: { ...sis.driver, potencia: raw === "" ? 0 : (parseFloat(raw) || 0) } }); }} className="w-24 h-8" />
+                            <span className="text-xs text-muted-foreground">Metragem (m):</span>
+                            <Input type="number" min={0} step={0.1} value={sis.metragemManual ?? ""} onChange={(e) => { const raw = e.target.value; updateSistema(si, { ...sis, metragemManual: raw === "" ? null : (parseFloat(raw) || 0) }); }} className="w-24 h-8" placeholder="Ex: 12" />
                           </div>
                           <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">Voltagem:</span>
-                            <Select value={String(sis.driver.voltagem)} onValueChange={(v) => updateSistema(si, { ...sis, driver: { ...sis.driver, voltagem: Number(v) as 12 | 24 | 48 } })}>
+                            <span className="text-xs text-muted-foreground">Passadas:</span>
+                            <Select value={String(sis.passadasManual)} onValueChange={(v) => updateSistema(si, { ...sis, passadasManual: Number(v) as 1 | 2 | 3 })}>
                               <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="12">12V</SelectItem>
-                                <SelectItem value="24">24V</SelectItem>
-                                <SelectItem value="48">48V</SelectItem>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
+                          {demandaFita > 0 && <Badge variant="secondary" className="text-xs">Demanda fita: {demandaFita}m</Badge>}
                         </div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {qtdDrivers > 0 && <Badge variant="secondary" className="text-xs">Qtd Drivers: {qtdDrivers}</Badge>}
-                          {consumoW > 0 && <Badge variant="outline" className="text-xs">Consumo: {consumoW.toFixed(1)}W</Badge>}
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
-                            <PrecoInput value={sis.driver.precoUnitario} min={sis.driver.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, driver: { ...sis.driver, precoUnitario: v } })} />
-                          </div>
-                        </div>
-                        {qtdDrivers > 1 && (
-                          <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                            {motivoDrivers.motivo === 'potencia' && (
-                              <>⚡ Consumo total ({motivoDrivers.consumoW.toFixed(1)}W) excede a potência do driver ({sis.driver.potencia}W). Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
-                            )}
-                            {motivoDrivers.motivo === 'extensao' && (
-                              <>📏 Extensão de fita ({motivoDrivers.demandaM}m) excede o limite de {motivoDrivers.limiteM}m para {sis.driver.voltagem}V. Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
-                            )}
-                            {motivoDrivers.motivo === 'potencia_e_extensao' && (
-                              <>⚡📏 Consumo ({motivoDrivers.consumoW.toFixed(1)}W) e extensão ({motivoDrivers.demandaM}m) excedem os limites. Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* ── PAINEL DE VALIDAÇÃO ── */}
-                      <ValidacaoPanel validacao={validacoes[sis.id]} />
-
+                      )}
                     </div>
+
+                    <div className="flex justify-center"><ArrowDown className="h-4 w-4 text-muted-foreground" /></div>
+
+                    {/* ── DRIVER ── */}
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-primary uppercase tracking-wide">Driver</span>
+                      <ProdutoAutocomplete value={sis.driver.codigo} onSelect={(p) => handleSelectProdutoSistema(p, si, 'driver')} placeholder="Código do driver" filtro="driver" filtroVoltagem={sis.fita.voltagem} />
+                      <Input value={sis.driver.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Potência (W):</span>
+                          <Input type="number" min={0} value={sis.driver.potencia} onChange={(e) => { const raw = e.target.value; updateSistema(si, { ...sis, driver: { ...sis.driver, potencia: raw === "" ? 0 : (parseFloat(raw) || 0) } }); }} className="w-24 h-8" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Voltagem:</span>
+                          <Select value={String(sis.driver.voltagem)} onValueChange={(v) => updateSistema(si, { ...sis, driver: { ...sis.driver, voltagem: Number(v) as 12 | 24 | 48 } })}>
+                            <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="12">12V</SelectItem>
+                              <SelectItem value="24">24V</SelectItem>
+                              <SelectItem value="48">48V</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {qtdDrivers > 0 && <Badge variant="secondary" className="text-xs">Qtd Drivers: {qtdDrivers}</Badge>}
+                        {consumoW > 0 && <Badge variant="outline" className="text-xs">Consumo: {consumoW.toFixed(1)}W</Badge>}
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>
+                          <PrecoInput value={sis.driver.precoUnitario} min={sis.driver.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, driver: { ...sis.driver, precoUnitario: v } })} />
+                        </div>
+                      </div>
+                      {qtdDrivers > 1 && (
+                        <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                          {motivoDrivers.motivo === 'potencia' && (
+                            <>⚡ Consumo total ({motivoDrivers.consumoW.toFixed(1)}W) excede a potência do driver ({sis.driver.potencia}W). Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
+                          )}
+                          {motivoDrivers.motivo === 'extensao' && (
+                            <>📏 Extensão de fita ({motivoDrivers.demandaM}m) excede o limite de {motivoDrivers.limiteM}m para {sis.driver.voltagem}V. Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
+                          )}
+                          {motivoDrivers.motivo === 'potencia_e_extensao' && (
+                            <>⚡📏 Consumo ({motivoDrivers.consumoW.toFixed(1)}W) e extensão ({motivoDrivers.demandaM}m) excedem os limites. Necessário dividir em <strong>{qtdDrivers} drivers</strong>.</>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── PAINEL DE VALIDAÇÃO ── */}
+                    <ValidacaoPanel validacao={validacoes[sis.id]} />
+
                   </div>
-                );
-              })}
-              <Button variant="outline" size="sm" className="gap-2" onClick={addSistema}>
-                <Plus className="h-4 w-4" /> Novo Sistema
-              </Button>
-            </TabsContent>
-          </Tabs>
+                </div>
+              );
+            })}
+
+            {/* Estado vazio */}
+            {ambiente.luminarias.length === 0 && ambiente.sistemas.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                Nenhum item adicionado. Use a busca acima para adicionar luminárias ou sistemas.
+              </p>
+            )}
+          </div>
         </div>
       </CollapsibleContent>
     </Collapsible>
