@@ -12,7 +12,7 @@
 
 ### SIST — Montagem de sistemas compostos
 
-- [ ] **SIST-05**: Ao criar um sistema, o colaborador escolhe o tipo (Fita Padrão / Modular / Magnético 48V / Magnético 24V); o default "Fita Padrão" mantém o fluxo atual idêntico (branch point — sem isso não há flow de montagem).
+- [ ] **SIST-05**: O colaborador adiciona produtos por uma **busca única (product-first)** e o sistema **detecta automaticamente** o tipo de fluxo a partir do produto âncora (luminária avulsa / fita / MAGNETO 48V / TINY 24V / modular) — **sem seleção manual de tipo**. Fita continua em `sistemas[]` (card/cálculo idênticos); avulsa em `luminarias[]`; compostos em `luminarias[].composicao[]`. (Phase 20 — seletor de tipo removido por design na decisão product-first de 2026-06-15.)
 - [ ] **SIST-01**: Colaborador monta um sistema **MAGNETO 48V** (trilho MAGNETO 22 + N módulos com SKU+qtd) e o sistema deriva a carga total automaticamente, sem contagem manual.
 - [ ] **SIST-02**: Colaborador monta um sistema **TINY MAGNETO 24V** (trilho + N módulos), com a carga total derivada.
 - [ ] **SIST-03**: Colaborador monta um sistema **modular SYSTEM MOLD** (perfil modular + módulos difusos), com a demanda de fita derivada automaticamente de `Σ(comprimento × qtd)` dos módulos.

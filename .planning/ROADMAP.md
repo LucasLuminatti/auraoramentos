@@ -40,11 +40,11 @@
 **UI hint**: yes
 
 ### Phase 20: Fluxos Magnéticos
-**Goal**: O colaborador consegue montar um sistema MAGNETO 48V ou TINY MAGNETO 24V diretamente no wizard — escolhendo o tipo, adicionando módulos, recebendo recomendação de driver com um clique "aplicar", e sendo alertado sobre componentes obrigatórios ausentes
+**Goal**: O colaborador consegue montar um sistema MAGNETO 48V ou TINY MAGNETO 24V diretamente no wizard — buscando o produto âncora (product-first; o tipo é detectado automaticamente), adicionando módulos, recebendo recomendação de driver com um clique "aplicar", e sendo alertado sobre componentes obrigatórios ausentes
 **Depends on**: Phase 19
 **Requirements**: SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02
 **Success Criteria** (what must be TRUE):
-  1. Ao criar um sistema, o colaborador vê o seletor de tipo (Fita Padrão / Magnético 48V / Magnético 24V / Modular); escolher "Fita Padrão" abre o fluxo atual idêntico — nenhuma regressão
+  1. O colaborador adiciona produtos por uma busca única (product-first) e o sistema **detecta automaticamente** o tipo de fluxo a partir do produto âncora (luminária avulsa / fita / MAGNETO 48V / TINY 24V / modular) — **sem seletor de tipo manual** (removido por design, decisão product-first 2026-06-15); adicionar uma fita abre o fluxo de Fita Padrão atual idêntico — nenhuma regressão
   2. Com tipo "Magnético 48V": o colaborador adiciona trilho MAGNETO 22 + N módulos com SKU e quantidade; a carga total (W) é calculada automaticamente sem entrada manual
   3. Com tipo "Magnético 24V": o colaborador adiciona trilho TINY MAG + módulos; mesma mecânica de carga automática, pool de drivers 24V
   4. O painel de recomendação de driver exibe o SKU correto (LM2343 100W / LM2344 200W para 48V; menor driver compatível para 24V) e o botão "aplicar" preenche os campos do driver do sistema com um clique — o colaborador pode revisar ou sobrescrever depois
