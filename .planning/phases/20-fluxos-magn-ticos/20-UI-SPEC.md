@@ -35,7 +35,7 @@ Segue o 8-point scale existente do Tailwind/shadcn. As classes já em uso no Amb
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px (`gap-1`, `px-1.5`, `py-0`) | Gaps internos de badge, ícones inline |
+| xs | 4px (`gap-1`, `px-1`, `py-0`) | Gaps internos de badge, ícones inline |
 | sm | 8px (`gap-2`, `p-2`, `px-3 py-2`) | Espaçamento compacto entre campos, padding de aviso |
 | md | 16px (`p-4`, `gap-4`) | Padding padrão de card, seções internas |
 | lg | 24px (`space-y-3`, `space-y-4`) | Separação entre grupos de campos |
@@ -46,7 +46,7 @@ Segue o 8-point scale existente do Tailwind/shadcn. As classes já em uso no Amb
 Exceções:
 - Altura de input compacto: `h-8` (32px) — padrão já em uso no card de fita/driver.
 - Área de toque mínima em botões de ação inline: `h-7 w-7` (28px) — aceito para ações secundárias (ícone de lixeira, copiar). Botões CTA (Aplicar driver, Adicionar componente) usam altura `h-8` mínima.
-- Badge de tipo detectado: `px-1.5 py-0 text-[10px]` — segue padrão dos badges de validação existentes.
+- Badge de tipo detectado: `px-1 py-0 text-[10px]` — segue padrão dos badges de validação existentes.
 
 ---
 
@@ -64,7 +64,7 @@ Herdada diretamente do design system existente. Nenhuma nova escala de tipo é i
 Pesos declarados: **400 (regular)** e **600 (semibold)** — apenas esses dois, consistente com o código existente.
 
 Novas ocorrências de tipo introduzidas nesta fase:
-- Badge de tipo detectado: `text-[10px] font-medium` — mesma convenção dos badges de divergência de voltagem existentes.
+- Badge de tipo detectado: `text-[10px] font-semibold` — hierarquia suficiente em 10px; alinhado com os dois pesos declarados.
 - Painel de driver (recomendação): `text-xs` body, `text-xs font-semibold` para SKU destacado.
 - Checklist de obrigatórios: `text-xs` para cada linha de item, ícone de check/X `h-3.5 w-3.5`.
 
@@ -181,7 +181,7 @@ Depois, para cada entrada em `sistemas[]`:
 └────────────────────────────────────────────────────────────────┘
 ```
 
-- **Badge de tipo detectado** (informativo, não requisito obrigatório): `Badge variant="outline"` com `text-[10px] px-1.5 py-0`. Valores: `"MAGNETO 48V"` (borda âmbar `border-amber-500 text-amber-700 bg-amber-50`) ou `"TINY 24V"` (borda violeta `border-violet-400 text-violet-700 bg-violet-50`).
+- **Badge de tipo detectado** (informativo, não requisito obrigatório): `Badge variant="outline"` com `text-[10px] px-1 py-0 font-semibold`. Valores: `"MAGNETO 48V"` (borda âmbar `border-amber-500 text-amber-700 bg-amber-50`) ou `"TINY 24V"` (borda violeta `border-violet-400 text-violet-700 bg-violet-50`).
 - **Carga total**: `Badge variant="secondary" text-xs` — `"Carga: {N}W"`. Derivado de `Σ(módulo.potenciaW × quantidade)`. Aparece sempre que carga > 0.
 - **Botão remover composição:** `Button size="icon" variant="ghost" h-7 w-7 text-destructive` com `Trash2 h-3.5 w-3.5`.
 
@@ -298,7 +298,7 @@ Cada linha:
 
 **Regras de presença por família:**
 - `magneto_48v` → verifica `LM2338`; kit `LM2987` apenas se trilho âncora tiver `EMBUTIR` na descrição.
-- `tiny_magneto` → satisfeito com `LM3168` **OU** `LM3168` — não acusa falta por cor (D-10). Atalho "Adicionar" usa `LM3168` como default. Kit `LM2987` apenas para embutir.
+- `tiny_magneto` → satisfeito com `LM3168` (preto) OU `LM3169` (branco) — não acusa falta por cor (D-10). Atalho "Adicionar" usa `LM3168` como default. Kit `LM2987` apenas para embutir.
 
 **Embutir detection (D-11):** regex `/EMBUTIR/i` aplicado sobre `item.descricao` do trilho âncora. Se match → linha do kit aparece no checklist. Sem match → linha do kit não aparece.
 
