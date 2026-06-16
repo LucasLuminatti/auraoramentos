@@ -94,6 +94,9 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   const [buscando24v, setBuscando24v] = useState(false);
   const [sem24v, setSem24v] = useState(false);
 
+  // Invalida buscas de driver em voo — a mais recente sempre vence (evita advisory obsoleto)
+  const driverReqId = useRef(0);
+
   // Derivações
   const composicao = item.composicao ?? [];
   const cargaTotalW = calcularCargaComposicao(item.composicao);
@@ -328,11 +331,12 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     const consumo = wm * metragemEf * MARGEM_SEGURANCA_DRIVER;
     if (consumo <= 0) return;
 
-    let cancelled = false;
+    // Request-id: uma busca mais nova invalida as anteriores (resolução fora de ordem)
+    const reqId = ++driverReqId.current;
     setBuscando24v(true);
     setSem24v(false);
 
-    (async () => {
+    try {
       const { data } = await supabase
         .from("produtos")
         .select("id, codigo, descricao, preco_tabela, preco_minimo, driver_potencia_w:potencia_watts")
@@ -343,7 +347,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
         .order("potencia_watts", { ascending: true })
         .limit(1);
 
-      if (cancelled) return;
+      if (reqId !== driverReqId.current) return; // superada por uma busca mais recente
 
       const row = data?.[0] as
         | { codigo: string; descricao: string; driver_potencia_w: number | null; preco_tabela: number; preco_minimo: number }
@@ -362,10 +366,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
         setSugestao24v(null);
         setSem24v(true);
       }
-      setBuscando24v(false);
-    })();
-
-    return () => { cancelled = true; };
+    } finally {
+      // Só a busca vigente reseta o loading — evita "Calculando..." travado
+      if (reqId === driverReqId.current) setBuscando24v(false);
+    }
   };
 
   // Seleciona driver manual (busca de autocomplete no modo "Alterar")

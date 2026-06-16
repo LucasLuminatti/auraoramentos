@@ -88,7 +88,7 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
 
   // DUP-01 / D-05: estado do seletor de destino para duplicação de composto
   const [dupState, setDupState] = useState<{ item: ItemLuminaria; origemIdx: number } | null>(null);
-  const [dupDestinoIdx, setDupDestinoIdx] = useState<string>('');
+  const [dupDestinoId, setDupDestinoId] = useState<string>('');
 
   const addAmbiente = () => {
     const novo: Ambiente = {
@@ -117,24 +117,32 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
   };
 
   // DUP-01 / D-06: clona com novos UUIDs em toda a árvore e insere no ambiente destino
-  const inserirCompostoEm = (destinoIdx: number, item: ItemLuminaria) => {
+  // Chaveado por id (não índice) — robusto se a lista mudar com o dialog aberto
+  const inserirCompostoEm = (destinoId: string, item: ItemLuminaria) => {
+    const destino = ambientes.find((a) => a.id === destinoId);
+    if (!destino) {
+      toast.error("Ambiente de destino não encontrado.");
+      setDupState(null);
+      setDupDestinoId('');
+      return;
+    }
     const clone = clonarItemLuminaria(item);
-    const arr = ambientes.map((a, idx) =>
-      idx === destinoIdx ? { ...a, luminarias: [...a.luminarias, clone] } : a
+    const arr = ambientes.map((a) =>
+      a.id === destinoId ? { ...a, luminarias: [...a.luminarias, clone] } : a
     );
     onChange(arr);
     setDupState(null);
-    setDupDestinoIdx('');
-    toast.success(`Sistema duplicado para "${ambientes[destinoIdx].nome}".`);
+    setDupDestinoId('');
+    toast.success(`Sistema duplicado para "${destino.nome}".`);
   };
 
   // DUP-01 / D-05: inicia o fluxo de duplicação — insere direto se só 1 ambiente
   const iniciarDuplicacaoComposto = (item: ItemLuminaria, origemIdx: number) => {
     if (ambientes.length === 1) {
-      inserirCompostoEm(0, item);
+      inserirCompostoEm(ambientes[0].id, item);
       return;
     }
-    setDupDestinoIdx(String(origemIdx)); // pré-seleciona o ambiente de origem
+    setDupDestinoId(ambientes[origemIdx]?.id ?? ''); // pré-seleciona o ambiente de origem
     setDupState({ item, origemIdx });
   };
 
@@ -265,7 +273,7 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
       </div>
 
       {/* DUP-01 / D-05: seletor de ambiente destino para duplicação de composto */}
-      <Dialog open={dupState !== null} onOpenChange={(open) => { if (!open) { setDupState(null); setDupDestinoIdx(''); } }}>
+      <Dialog open={dupState !== null} onOpenChange={(open) => { if (!open) { setDupState(null); setDupDestinoId(''); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Duplicar sistema para qual ambiente?</DialogTitle>
@@ -274,13 +282,13 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
             <p className="text-sm text-muted-foreground">
               Escolha o ambiente de destino para o clone do sistema composto.
             </p>
-            <Select value={dupDestinoIdx} onValueChange={setDupDestinoIdx}>
+            <Select value={dupDestinoId} onValueChange={setDupDestinoId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um ambiente..." />
               </SelectTrigger>
               <SelectContent>
-                {ambientes.map((a, idx) => (
-                  <SelectItem key={a.id} value={String(idx)}>
+                {ambientes.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
                     {a.nome}
                   </SelectItem>
                 ))}
@@ -288,14 +296,14 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDupState(null); setDupDestinoIdx(''); }}>
+            <Button variant="outline" onClick={() => { setDupState(null); setDupDestinoId(''); }}>
               Cancelar
             </Button>
             <Button
-              disabled={dupDestinoIdx === ''}
+              disabled={dupDestinoId === ''}
               onClick={() => {
-                if (dupState && dupDestinoIdx !== '') {
-                  inserirCompostoEm(Number(dupDestinoIdx), dupState.item);
+                if (dupState && dupDestinoId !== '') {
+                  inserirCompostoEm(dupDestinoId, dupState.item);
                 }
               }}
             >
