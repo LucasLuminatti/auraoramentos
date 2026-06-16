@@ -48,7 +48,7 @@ export interface ItemComposicao {
   precoUnitario: number;
   precoMinimo: number;
   imagemUrl?: string;
-  papel: 'modulo' | 'driver_recomendado' | 'driver_obrigatorio' | 'conector_energia' | 'kit_fixacao' | 'acessorio_opcional';
+  papel: 'modulo' | 'driver_recomendado' | 'driver_obrigatorio' | 'conector_energia' | 'kit_fixacao' | 'acessorio_opcional' | 'fita_modular';
   obrigatorio: boolean;
   /** Comprimento em metros do módulo (SYSTEM MOLD deriva fita de Σ(comprimento × qtd)). Phase 21. */
   comprimento?: number;
@@ -185,6 +185,25 @@ export function calcularCargaComposicao(composicao: ItemComposicao[] | undefined
   return composicao
     .filter(c => c.papel === 'modulo')
     .reduce((s, c) => s + (c.potenciaW ?? 0) * c.quantidade, 0);
+}
+
+/** Metragem de fita derivada dos módulos difusos de um SYSTEM MOLD (Phase 21 / D-01).
+ *  = Σ(comprimento × quantidade) dos itens papel==='modulo' com comprimento definido. */
+export function calcularMetragemModulosDifusos(composicao: ItemComposicao[] | undefined): number {
+  if (!composicao?.length) return 0;
+  return composicao
+    .filter(c => c.papel === 'modulo' && c.comprimento != null)
+    .reduce((s, c) => s + (c.comprimento ?? 0) * c.quantidade, 0);
+}
+
+/** Parse do comprimento (m) do módulo difuso a partir da descrição. Snapshot no add-time.
+ *  Verificado contra os 15 difusos: 132MM→0.132 ... 660MM→0.66, 1MT→1.0, 2MT→2.0. Phase 21 / D-01. */
+export function parsearComprimentoModulo(descricao: string): number | undefined {
+  const mmMatch = descricao.match(/FITA LED\s+(\d+(?:[,.]\d+)?)\s*MM/i);
+  if (mmMatch) return parseFloat(mmMatch[1].replace(',', '.')) / 1000;
+  const mtMatch = descricao.match(/FITA LED\s+(\d+(?:[,.]\d+)?)\s*MT/i);
+  if (mtMatch) return parseFloat(mtMatch[1].replace(',', '.'));
+  return undefined;
 }
 
 export type RecomendacaoDriver48V =
@@ -610,13 +629,23 @@ export function clonarSistemaParaAmbiente(sis: SistemaIluminacao): SistemaIlumin
   };
 }
 
+/** Clona um ItemLuminaria com novos UUIDs em TODA a árvore (raiz + composicao[]).
+ *  composicao ausente → permanece undefined (backward-compat). Phase 21 / D-06. */
+export function clonarItemLuminaria(item: ItemLuminaria): ItemLuminaria {
+  return {
+    ...item,
+    id: crypto.randomUUID(),
+    composicao: item.composicao?.map(c => ({ ...c, id: crypto.randomUUID() })),
+  };
+}
+
 /** Duplica um ambiente inteiro (UX-04). Novos UUIDs em toda a árvore + sufixo " (cópia)" no nome. */
 export function clonarAmbiente(amb: Ambiente): Ambiente {
   return {
     ...amb,
     id: crypto.randomUUID(),
     nome: `${amb.nome} (cópia)`,
-    luminarias: amb.luminarias.map((l) => ({ ...l, id: crypto.randomUUID() })),
+    luminarias: amb.luminarias.map(clonarItemLuminaria),
     sistemas: amb.sistemas.map((sis) => clonarSistemaParaAmbiente(sis)),
   };
 }
