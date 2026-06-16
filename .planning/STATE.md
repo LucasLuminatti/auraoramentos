@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: executing
-last_updated: "2026-06-16T16:30:19.005Z"
+status: verifying
+last_updated: "2026-06-16T16:58:48.339Z"
 last_activity: 2026-06-16
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
-  percent: 89
+  completed_plans: 9
+  percent: 100
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-16 — Phase 21 Plan 03 em progresso (2/3 tasks, parado em checkpoint:human-verify Task 3). VAL-01: detectarAvisosComposto() exportado + 3 novos tipos advisory (composto-sem-driver, composto-sem-conector, modular-sem-fita) no handleNext não-bloqueante + 12 novos testes. DUP-01: onDuplicarComposto threaded AmbienteCard→ComposicaoCard, iniciarDuplicacaoComposto + inserirCompostoEm via clonarItemLuminaria, Dialog de seleção de ambiente destino. 196 testes verdes. Commits: 62b0f95 2992bc5.
+**Last updated:** 2026-06-16 — Phase 21 COMPLETA (3/3 plans). Plan 03 encerrado: VAL-01 detectarAvisosComposto() + 3 advisory não-bloqueantes; DUP-01 duplicação com seletor de destino via clonarItemLuminaria; 3 follow-up fixes (driverReqId ref WR-01/02, duplicação por id WR-03, DialogDescription a11y). Checkpoint humano aprovado. 196 testes verdes. Commits: 62b0f95 2992bc5 3ba38f7 609f216.
 
 ## Current Position
 
-Phase: 21 (system-mold-valida-o-reuso) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 21 (system-mold-valida-o-reuso) — COMPLETE
+Plan: 3 of 3 (todos entregues)
+Status: Phase 22 (PDF v3) — Not started
 Last activity: 2026-06-16
 
 ## Project Reference
@@ -31,7 +31,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
 - **Current Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-- **Current Focus:** Phase 21 — system-mold-valida-o-reuso
+- **Current Focus:** Phase 22 — PDF v3 Sistemas Compostos (próxima)
 - **Mode:** yolo
 
 ## Roadmap Summary (v1.3)
@@ -40,7 +40,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 |-------|------|--------------|--------|
 | 19. Fundação Compostos | Data model aditivo + `produto_composicao` table + CAT-03 catalog fix | CAT-03 | Complete (3/3 plans) |
 | 20. Fluxos Magnéticos | Seletor de tipo + MAGNETO 48V + TINY 24V + checklist + voltage lock + driver auto | SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02 | Complete (3/3 plans) |
-| 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | In progress (1/3 plans) |
+| 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | Complete (3/3 plans) |
 | 22. PDF v3 — Sistemas Compostos | Seção "Sistemas Compostos" no PDF v3 sem arriscar v2 | PDF-03 | Not started |
 
 ## Latest Milestone Shipped
@@ -85,6 +85,9 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **parsearComprimentoModulo exportada de orcamento.ts (Phase 21 / Plan 01)** — reutilizável por ComposicaoCard Wave 2/3; testável separadamente; não local no componente
 - **fita_modular só no TS union (Phase 21 / Plan 01)** — Pitfall 4: jsonb snapshot em orcamentos.ambientes não tem FK para produto_composicao CHECK constraint
 - **clonarItemLuminaria helper extraído (Phase 21 / Plan 01)** — reutilizável para DUP-01 Wave 3; fix de clone raso de composicao[] em clonarAmbiente (Pitfall 2)
+- **detectarAvisosComposto exportada como função pura (Phase 21 / Plan 03)** — advisory testável sem montar componente React; integrada no handleNext não-bloqueante
+- **driverReqId ref substitui cancelled flag morto (Phase 21 / Plan 03 / WR-01/02)** — ref garante que só a busca mais recente reseta loading e aplica sugestão de driver
+- **inserirCompostoEm chaveado por ambiente.id em vez de índice (Phase 21 / Plan 03 / WR-03)** — robusto a reordenações enquanto o dialog de destino está aberto
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -119,7 +122,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 21 Plan 02 COMPLETE (2026-06-16). Rota 'modular' em AmbienteCard, ComposicaoCard ramo isModular: badge MODULAR, difusos (comprimento snapshot), fita derivada (Σ), "Adicionar fita" advisory + driver advisory (sugestao24v reutilizado), botão Duplicar (onDuplicate? — wiring Plan 03). 184 testes verdes. Commits: e22aa82 0e847ef. Próximo: Phase 21 Plan 03 — aviso Step 2→3 + wiring botão Duplicar (VAL-01 + DUP-01).
+Phase 21 COMPLETA (2026-06-16). SYSTEM MOLD completo: migration s_mode + helpers (Plan 01), ComposicaoCard modular (Plan 02), advisory VAL-01 + duplicação DUP-01 + 3 follow-up fixes (Plan 03). 196 testes verdes. Próximo: Phase 22 — PDF v3 com seção "Sistemas Compostos" (PDF-03). Ativar `pdf_template_version: 3` condicionalmente quando `ambientes.some(a => a.luminarias.some(l => l.composicao?.length))`.
 
 ### Lições da verificação 20-03 (perpetual)
 
@@ -128,4 +131,4 @@ Phase 21 Plan 02 COMPLETE (2026-06-16). Rota 'modular' em AmbienteCard, Composic
 - **Build + unit tests não cobrem queries live nem JSX de painéis** — Playwright é obrigatório para validar busca escopada e fluxo de driver.
 
 ---
-*STATE refreshed: 2026-06-16 — Phase 21 Plan 02 completo (8/9 plans total). Rota modular AmbienteCard + ComposicaoCard ramo isModular (difusos, fita derivada, driver advisory, botão Duplicar). 184 testes verdes.*
+*STATE refreshed: 2026-06-16 — Phase 21 COMPLETA (9/9 plans total). SYSTEM MOLD + advisory VAL-01 + duplicação DUP-01 + fixes WR-01/02/03 + a11y. 196 testes verdes. Próximo: Phase 22 PDF v3.*

@@ -30,7 +30,7 @@
 
 ### VAL — Validação no fluxo
 
-- [ ] **VAL-01**: Ao avançar do Step 2 para o Step 3, o sistema **avisa (não-bloqueante)** quando um sistema composto está incompleto (trilho sem driver, ou sem o conector obrigatório da família), com opção de continuar mesmo assim.
+- [x] **VAL-01**: Ao avançar do Step 2 para o Step 3, o sistema **avisa (não-bloqueante)** quando um sistema composto está incompleto (trilho sem driver, ou sem o conector obrigatório da família), com opção de continuar mesmo assim.
 
 ### CAT — Catálogo & busca
 
@@ -84,6 +84,6 @@
 | DRV-01 | Phase 20 | Complete |
 | DRV-02 | Phase 20 | Complete |
 | SIST-03 | Phase 21 | Complete |
-| VAL-01 | Phase 21 | Pending |
+| VAL-01 | Phase 21 | Complete |
 | DUP-01 | Phase 21 | Complete |
 | PDF-03 | Phase 22 | Pending |
