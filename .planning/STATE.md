@@ -15,7 +15,7 @@ progress:
 
 # STATE: AURA
 
-**Last updated:** 2026-06-16 — Phase 21 Plan 02 COMPLETO. Rota 'modular' em AmbienteCard (sistema='s_mode', composicao:[]), ComposicaoCard ramo isModular: badge MODULAR, difusos com comprimento snapshot, painel fita derivada (Σ comprimento × qtd), "Adicionar fita" (SKU escolhido pelo vendedor, metragem pré-preenchida), driver advisory reutilizando padrão 24V, botão Duplicar (onDuplicate? — wiring Plan 03). 184 testes verdes. Commits: e22aa82 0e847ef.
+**Last updated:** 2026-06-16 — Phase 21 Plan 03 em progresso (2/3 tasks, parado em checkpoint:human-verify Task 3). VAL-01: detectarAvisosComposto() exportado + 3 novos tipos advisory (composto-sem-driver, composto-sem-conector, modular-sem-fita) no handleNext não-bloqueante + 12 novos testes. DUP-01: onDuplicarComposto threaded AmbienteCard→ComposicaoCard, iniciarDuplicacaoComposto + inserirCompostoEm via clonarItemLuminaria, Dialog de seleção de ambiente destino. 196 testes verdes. Commits: 62b0f95 2992bc5.
 
 ## Current Position
 
