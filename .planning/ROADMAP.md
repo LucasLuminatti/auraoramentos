@@ -66,7 +66,7 @@
   3. O colaborador consegue duplicar um sistema composto (trilho + módulos + driver + conectores) para outro ambiente; o clone aparece com novos UUIDs e os valores somam corretamente no Step 3
 **Plans**: 3 plans
 - [x] 21-01-PLAN.md — Fundação: migration sistema='s_mode' (12 perfis + 15 difusos) + helpers puros (calcularMetragemModulosDifusos, parsearComprimentoModulo, clonarItemLuminaria, fix clonarAmbiente) + filtro 'modulo_difuso'
-- [ ] 21-02-PLAN.md — UI SYSTEM MOLD (SIST-03): rota 'modular' no AmbienteCard + ramo modular no ComposicaoCard (difusos + fita derivada + driver advisory) + botão Duplicar no header
+- [x] 21-02-PLAN.md — UI SYSTEM MOLD (SIST-03): rota 'modular' no AmbienteCard + ramo modular no ComposicaoCard (difusos + fita derivada + driver advisory) + botão Duplicar no header
 - [ ] 21-03-PLAN.md — Advisory VAL-01 (3 condições de composto incompleto) + orquestração DUP-01 (seletor de destino + clone) + checkpoint visual
 **UI hint**: yes
 
@@ -116,7 +116,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 18. UX Transversal | v1.2 | 4/4 | Complete | 2026-06-12 |
 | 19. Fundação Compostos | v1.3 | 3/3 | Complete    | 2026-06-12 |
 | 20. Fluxos Magnéticos | v1.3 | 3/3 | Complete   | 2026-06-15 |
-| 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 1/3 | In Progress|  |
+| 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 2/3 | In Progress|  |
 | 22. PDF v3 — Sistemas Compostos | v1.3 | 0/? | Not started | - |
 
 ## Backlog

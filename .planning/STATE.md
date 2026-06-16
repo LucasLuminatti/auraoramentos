@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
 status: executing
-last_updated: "2026-06-16T16:20:46.563Z"
+last_updated: "2026-06-16T16:30:19.005Z"
 last_activity: 2026-06-16
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
-  percent: 78
+  completed_plans: 8
+  percent: 89
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-16 — Phase 21 Plan 01 COMPLETO. Migration s_mode (12 perfis + 15 difusos), helpers calcularMetragemModulosDifusos/parsearComprimentoModulo/clonarItemLuminaria, fix clonarAmbiente deep-clone, filtro modulo_difuso. 184 testes verdes. Commits: 1e4d4c6 c50c384 479d52f 35a5147.
+**Last updated:** 2026-06-16 — Phase 21 Plan 02 COMPLETO. Rota 'modular' em AmbienteCard (sistema='s_mode', composicao:[]), ComposicaoCard ramo isModular: badge MODULAR, difusos com comprimento snapshot, painel fita derivada (Σ comprimento × qtd), "Adicionar fita" (SKU escolhido pelo vendedor, metragem pré-preenchida), driver advisory reutilizando padrão 24V, botão Duplicar (onDuplicate? — wiring Plan 03). 184 testes verdes. Commits: e22aa82 0e847ef.
 
 ## Current Position
 
 Phase: 21 (system-mold-valida-o-reuso) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 21
-Last activity: 2026-06-16 — 21-01 complete
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-06-16
 
 ## Project Reference
 
@@ -119,7 +119,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 21 Plan 01 COMPLETE (2026-06-16). Migration s_mode (12 perfis + 15 difusos aplicados), helpers calcularMetragemModulosDifusos/parsearComprimentoModulo/clonarItemLuminaria exportados, fix clonarAmbiente deep-clone (Pitfall 2), filtro modulo_difuso. 184 testes verdes. Próximo: Phase 21 Plan 02 — ComposicaoCard extensão SYSTEM MOLD (painel fita derivada + botão duplicar + advisory VAL-01).
+Phase 21 Plan 02 COMPLETE (2026-06-16). Rota 'modular' em AmbienteCard, ComposicaoCard ramo isModular: badge MODULAR, difusos (comprimento snapshot), fita derivada (Σ), "Adicionar fita" advisory + driver advisory (sugestao24v reutilizado), botão Duplicar (onDuplicate? — wiring Plan 03). 184 testes verdes. Commits: e22aa82 0e847ef. Próximo: Phase 21 Plan 03 — aviso Step 2→3 + wiring botão Duplicar (VAL-01 + DUP-01).
 
 ### Lições da verificação 20-03 (perpetual)
 
@@ -128,4 +128,4 @@ Phase 21 Plan 01 COMPLETE (2026-06-16). Migration s_mode (12 perfis + 15 difusos
 - **Build + unit tests não cobrem queries live nem JSX de painéis** — Playwright é obrigatório para validar busca escopada e fluxo de driver.
 
 ---
-*STATE refreshed: 2026-06-16 — Phase 21 Plan 01 completo (7/9 plans total). Migration s_mode aplicada (12+15 rows), 4 helpers exportados, fix clonarAmbiente deep-clone, filtro modulo_difuso. 184 testes verdes.*
+*STATE refreshed: 2026-06-16 — Phase 21 Plan 02 completo (8/9 plans total). Rota modular AmbienteCard + ComposicaoCard ramo isModular (difusos, fita derivada, driver advisory, botão Duplicar). 184 testes verdes.*
