@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calcularDriversPorProjeto, calcularRolosPorGrupo, detectarTipoAncora, calcularCargaComposicao, recomendarDriver48V, calcularDemandaFita, calcularConsumoW, calcularSubtotalSistemaSemFita } from '@/types/orcamento';
-import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver, LocalBreakdown, Produto, ItemComposicao } from '@/types/orcamento';
+import { calcularDriversPorProjeto, calcularRolosPorGrupo, detectarTipoAncora, calcularCargaComposicao, recomendarDriver48V, calcularDemandaFita, calcularConsumoW, calcularSubtotalSistemaSemFita, calcularMetragemModulosDifusos, parsearComprimentoModulo, clonarItemLuminaria, clonarAmbiente } from '@/types/orcamento';
+import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver, LocalBreakdown, Produto, ItemComposicao, ItemLuminaria } from '@/types/orcamento';
 
 // ─── Helpers mínimos para montar fixtures ───
 
@@ -500,5 +500,184 @@ describe('Guard: 5 calc sites de Fita Padrão — assinaturas inalteradas (Phase
     };
     expect(typeof calcularSubtotalSistemaSemFita).toBe('function');
     expect(typeof calcularSubtotalSistemaSemFita(sistema)).toBe('number');
+  });
+});
+
+// ─── Testes Phase 21: calcularMetragemModulosDifusos ───
+
+describe('calcularMetragemModulosDifusos — metragem derivada dos módulos difusos (Phase 21 / D-01)', () => {
+  it('soma comprimento × quantidade dos módulos difusos', () => {
+    const composicao: ItemComposicao[] = [
+      { id: '1', codigo: 'LM2270', descricao: 'DIFUSO 264MM', quantidade: 2, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false, comprimento: 0.264 },
+      { id: '2', codigo: 'LM2274', descricao: 'DIFUSO 1MT', quantidade: 1, precoUnitario: 120, precoMinimo: 96, papel: 'modulo', obrigatorio: false, comprimento: 1.0 },
+    ];
+    // 0.264×2 + 1.0×1 = 0.528 + 1.0 = 1.528
+    expect(calcularMetragemModulosDifusos(composicao)).toBeCloseTo(1.528, 5);
+  });
+
+  it('undefined → 0', () => {
+    expect(calcularMetragemModulosDifusos(undefined)).toBe(0);
+  });
+
+  it('array vazio → 0', () => {
+    expect(calcularMetragemModulosDifusos([])).toBe(0);
+  });
+
+  it('ignora itens com papel !== modulo', () => {
+    const composicao: ItemComposicao[] = [
+      { id: '1', codigo: 'LM2270', descricao: 'DIFUSO 264MM', quantidade: 2, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false, comprimento: 0.264 },
+      { id: '2', codigo: 'DR001', descricao: 'Driver 24V', quantidade: 1, precoUnitario: 200, precoMinimo: 160, papel: 'driver_recomendado', obrigatorio: false, comprimento: 0 },
+      { id: '3', codigo: 'CONN1', descricao: 'Conector', quantidade: 1, precoUnitario: 50, precoMinimo: 40, papel: 'conector_energia', obrigatorio: true, comprimento: 5.0 },
+    ];
+    // Only modulo item: 0.264×2 = 0.528
+    expect(calcularMetragemModulosDifusos(composicao)).toBeCloseTo(0.528, 5);
+  });
+
+  it('ignora módulos com comprimento null/undefined', () => {
+    const composicao: ItemComposicao[] = [
+      { id: '1', codigo: 'LM2270', descricao: 'DIFUSO 264MM', quantidade: 2, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false, comprimento: 0.264 },
+      { id: '2', codigo: 'LM0001', descricao: 'Módulo sem comprimento', quantidade: 3, precoUnitario: 50, precoMinimo: 40, papel: 'modulo', obrigatorio: false },
+    ];
+    // Only first item counts: 0.264×2 = 0.528
+    expect(calcularMetragemModulosDifusos(composicao)).toBeCloseTo(0.528, 5);
+  });
+});
+
+// ─── Testes Phase 21: parsearComprimentoModulo ───
+
+describe('parsearComprimentoModulo — parse de comprimento do módulo (Phase 21 / D-01)', () => {
+  it('132MM → 0.132', () => {
+    expect(parsearComprimentoModulo('MODULO DIFUSO PARA FITA LED 132MM BRANCO')).toBeCloseTo(0.132, 5);
+  });
+
+  it('264MM → 0.264', () => {
+    expect(parsearComprimentoModulo('MODULO DIFUSO PARA FITA LED 264MM BRANCO')).toBeCloseTo(0.264, 5);
+  });
+
+  it('396MM → 0.396', () => {
+    expect(parsearComprimentoModulo('SYSTEM MOLD MODULO DIFUSO FITA LED 396MM')).toBeCloseTo(0.396, 5);
+  });
+
+  it('528MM → 0.528', () => {
+    expect(parsearComprimentoModulo('SYSTEM MOLD MODULO DIFUSO FITA LED 528MM')).toBeCloseTo(0.528, 5);
+  });
+
+  it('660MM → 0.66', () => {
+    expect(parsearComprimentoModulo('SYSTEM MOLD MODULO DIFUSO FITA LED 660MM')).toBeCloseTo(0.66, 5);
+  });
+
+  it('1MT → 1.0', () => {
+    expect(parsearComprimentoModulo('SYSTEM MOLD MODULO DIFUSO PARA FITA LED 1MT BRANCO')).toBeCloseTo(1.0, 5);
+  });
+
+  it('2MT → 2.0', () => {
+    expect(parsearComprimentoModulo('SYSTEM MOLD MODULO DIFUSO PARA FITA LED 2MT BRANCO')).toBeCloseTo(2.0, 5);
+  });
+
+  it('sem match → undefined', () => {
+    expect(parsearComprimentoModulo('PERFIL NOFRAME MODULAR 1M BRANCO')).toBeUndefined();
+  });
+
+  it('case-insensitive (fita led minúsculas)', () => {
+    expect(parsearComprimentoModulo('modulo difuso para fita led 264mm branco')).toBeCloseTo(0.264, 5);
+  });
+});
+
+// ─── Testes Phase 21: clonarItemLuminaria ───
+
+function makeItemLuminaria(overrides: Partial<ItemLuminaria> = {}): ItemLuminaria {
+  return {
+    id: 'lum-original',
+    codigo: 'LM1998',
+    descricao: 'SYSTEM MOLD PERFIL NOFRAME MODULAR 1M BRANCO',
+    quantidade: 1,
+    precoUnitario: 429.48,
+    precoMinimo: 362.37,
+    sistema: 's_mode',
+    composicao: [
+      { id: 'comp-01', codigo: 'LM2270', descricao: 'DIFUSO 264MM', quantidade: 2, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false, comprimento: 0.264 },
+      { id: 'comp-02', codigo: 'LM2274', descricao: 'DIFUSO 1MT', quantidade: 1, precoUnitario: 120, precoMinimo: 96, papel: 'modulo', obrigatorio: false, comprimento: 1.0 },
+    ],
+    ...overrides,
+  };
+}
+
+describe('clonarItemLuminaria — clone deep com novos UUIDs (Phase 21 / D-06)', () => {
+  it('root.id é diferente do original', () => {
+    const original = makeItemLuminaria();
+    const clone = clonarItemLuminaria(original);
+    expect(clone.id).not.toBe(original.id);
+  });
+
+  it('cada composicao[i].id é diferente do original', () => {
+    const original = makeItemLuminaria();
+    const clone = clonarItemLuminaria(original);
+    expect(clone.composicao).toBeDefined();
+    expect(clone.composicao!.length).toBe(2);
+    expect(clone.composicao![0].id).not.toBe(original.composicao![0].id);
+    expect(clone.composicao![1].id).not.toBe(original.composicao![1].id);
+  });
+
+  it('demais campos da composicao são preservados', () => {
+    const original = makeItemLuminaria();
+    const clone = clonarItemLuminaria(original);
+    expect(clone.composicao![0].codigo).toBe(original.composicao![0].codigo);
+    expect(clone.composicao![0].comprimento).toBe(original.composicao![0].comprimento);
+    expect(clone.composicao![0].quantidade).toBe(original.composicao![0].quantidade);
+  });
+
+  it('composicao undefined → clone mantém undefined (backward-compat)', () => {
+    const original = makeItemLuminaria({ composicao: undefined });
+    const clone = clonarItemLuminaria(original);
+    expect(clone.composicao).toBeUndefined();
+  });
+
+  it('demais campos do ItemLuminaria são preservados', () => {
+    const original = makeItemLuminaria();
+    const clone = clonarItemLuminaria(original);
+    expect(clone.codigo).toBe(original.codigo);
+    expect(clone.descricao).toBe(original.descricao);
+    expect(clone.sistema).toBe(original.sistema);
+    expect(clone.precoUnitario).toBe(original.precoUnitario);
+  });
+});
+
+// ─── Testes Phase 21: clonarAmbiente deep-clona composicao[] (regressão Pitfall 2) ───
+
+describe('clonarAmbiente — deep-clona composicao[] sem compartilhar referências (Phase 21 / D-06)', () => {
+  function makeAmbienteComComposto(): Ambiente {
+    return {
+      id: 'amb-original',
+      nome: 'Sala',
+      luminarias: [makeItemLuminaria()],
+      sistemas: [],
+    };
+  }
+
+  it('nenhum id de ItemComposicao do clone colide com o original', () => {
+    const original = makeAmbienteComComposto();
+    const clone = clonarAmbiente(original);
+
+    const idsOriginal = original.luminarias.flatMap(l => (l.composicao ?? []).map(c => c.id));
+    const idsClone = clone.luminarias.flatMap(l => (l.composicao ?? []).map(c => c.id));
+
+    expect(idsClone.length).toBe(idsOriginal.length);
+    for (const id of idsClone) {
+      expect(idsOriginal).not.toContain(id);
+    }
+  });
+
+  it('luminaria root id do clone é diferente do original', () => {
+    const original = makeAmbienteComComposto();
+    const clone = clonarAmbiente(original);
+    expect(clone.luminarias[0].id).not.toBe(original.luminarias[0].id);
+  });
+
+  it('clone não compartilha referência de objeto com original', () => {
+    const original = makeAmbienteComComposto();
+    const clone = clonarAmbiente(original);
+    // Mutating clone should not affect original
+    clone.luminarias[0].composicao![0].quantidade = 99;
+    expect(original.luminarias[0].composicao![0].quantidade).toBe(2);
   });
 });
