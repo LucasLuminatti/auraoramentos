@@ -13,6 +13,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -277,11 +278,11 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Duplicar sistema para qual ambiente?</DialogTitle>
+            <DialogDescription>
+              Escolha o ambiente de destino para o clone do sistema composto.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Escolha o ambiente de destino para o clone do sistema composto.
-            </p>
             <Select value={dupDestinoId} onValueChange={setDupDestinoId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um ambiente..." />
