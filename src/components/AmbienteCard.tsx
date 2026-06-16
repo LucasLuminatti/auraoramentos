@@ -417,7 +417,23 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCar
       return;
     }
 
-    // 'modular' (Phase 21), 'luminaria' e fallback (D-03): item simples, SEM composicao.
+    if (tipo === 'modular') {
+      // Inicia composição SYSTEM MOLD: ItemLuminaria raiz (perfil modular) com composicao: [].
+      // composicao: [] presença ativa o ComposicaoCard.
+      const novaRaiz: ItemLuminaria = {
+        id: uid(),
+        codigo: produto.codigo, descricao: produto.descricao, quantidade: 1,
+        precoUnitario: preco, precoMinimo: precoMin, imagemUrl: imgUrl,
+        sistema: 's_mode',
+        potencia_watts: null,            // perfil modular não tem potencia
+        tensao: produto.voltagem ?? null,
+        composicao: [],                  // presença ativa o ComposicaoCard
+      };
+      onChange({ ...ambiente, luminarias: [...ambiente.luminarias, novaRaiz] });
+      return;
+    }
+
+    // 'luminaria' e fallback (D-03): item simples, SEM composicao.
     // Preservar toasts de REGRA #24 e #25 para itens simples.
     const d = (produto.descricao || '').toUpperCase();
     const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
