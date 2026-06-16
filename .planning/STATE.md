@@ -2,27 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: verifying
-last_updated: "2026-06-16T14:20:00.000Z"
+status: executing
+last_updated: "2026-06-16T16:20:46.563Z"
 last_activity: 2026-06-16
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 7
+  percent: 78
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-16 — Phase 20 checkpoint:human-verify CONCLUÍDO. Verificação (Playwright + 162 testes + code-review) achou e corrigiu 1 BLOCKER + WR-02/03 + IN-01/02. Commit fix: 4e90164 (pushed). Fase 20 fechada.
+**Last updated:** 2026-06-16 — Phase 21 Plan 01 COMPLETO. Migration s_mode (12 perfis + 15 difusos), helpers calcularMetragemModulosDifusos/parsearComprimentoModulo/clonarItemLuminaria, fix clonarAmbiente deep-clone, filtro modulo_difuso. 184 testes verdes. Commits: 1e4d4c6 c50c384 479d52f 35a5147.
 
 ## Current Position
 
-Phase: 20 (fluxos-magn-ticos) — COMPLETE ✓
-Plan: 3 of 3 (verificado e corrigido)
-Status: Phase complete — checkpoint aprovado
-Last activity: 2026-06-16
+Phase: 21 (system-mold-valida-o-reuso) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 21
+Last activity: 2026-06-16 — 21-01 complete
 
 ## Project Reference
 
@@ -31,7 +31,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
 - **Current Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-- **Current Focus:** Phase 20 — fluxos-magn-ticos
+- **Current Focus:** Phase 21 — system-mold-valida-o-reuso
 - **Mode:** yolo
 
 ## Roadmap Summary (v1.3)
@@ -40,7 +40,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 |-------|------|--------------|--------|
 | 19. Fundação Compostos | Data model aditivo + `produto_composicao` table + CAT-03 catalog fix | CAT-03 | Complete (3/3 plans) |
 | 20. Fluxos Magnéticos | Seletor de tipo + MAGNETO 48V + TINY 24V + checklist + voltage lock + driver auto | SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02 | Complete (3/3 plans) |
-| 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | Not started |
+| 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | In progress (1/3 plans) |
 | 22. PDF v3 — Sistemas Compostos | Seção "Sistemas Compostos" no PDF v3 sem arriscar v2 | PDF-03 | Not started |
 
 ## Latest Milestone Shipped
@@ -81,6 +81,10 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **filtroSistema como 4º param opcional em useProdutoSearch (Phase 20 / Plan 01)** — usa coluna `sistema` do banco (não alias `sistema_magnetico`); exclui driver/conector/kit_fixacao/perfil para retornar só módulos
 - **ComposicaoCard autocontido (Phase 20 / Plan 02)** — recebe `item` + callbacks, sem conhecer ambiente pai; reconciliação pós-await via `useRef(item)`; voltage lock por construção (filtroVoltagem); checklist lê REGRAS_COMPOSICAO do código (não do banco)
 - **AmbienteCard product-first (Phase 20 / Plan 03)** — `handleSelectProdutoGlobal` roteia via `detectarTipoAncora`; fita route usa sistema pré-populado inline (Pitfall 4 — sem stale closure); `handleSelectProdutoLuminaria` preservado para edição inline de itens simples existentes; Fita Padrão byte-idêntica; lista unificada luminarias[]+sistemas[]
+- **Migration s_mode via REST PATCH + repair (Phase 21 / Plan 01)** — `supabase db push` inseguro; aplicação via PATCH /rest/v1/product_variants com service_role + migration repair reconcilia histórico
+- **parsearComprimentoModulo exportada de orcamento.ts (Phase 21 / Plan 01)** — reutilizável por ComposicaoCard Wave 2/3; testável separadamente; não local no componente
+- **fita_modular só no TS union (Phase 21 / Plan 01)** — Pitfall 4: jsonb snapshot em orcamentos.ambientes não tem FK para produto_composicao CHECK constraint
+- **clonarItemLuminaria helper extraído (Phase 21 / Plan 01)** — reutilizável para DUP-01 Wave 3; fix de clone raso de composicao[] em clonarAmbiente (Pitfall 2)
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -115,7 +119,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 20 COMPLETE (commit fix 4e90164 pushed). Verificação do checkpoint via Playwright achou 1 BLOCKER (busca de módulos retornava zero por `NULL NOT IN` no Postgres) + WR-02/WR-03 + IN-01/IN-02, todos corrigidos e revalidados (162 testes, build verde, code-review limpo, 0 erros de console). WR-01 era falso-positivo (dead code não alcançável). Próximo: Phase 21 (SYSTEM MOLD + Validação & Reuso) — `/gsd-plan-phase 21`.
+Phase 21 Plan 01 COMPLETE (2026-06-16). Migration s_mode (12 perfis + 15 difusos aplicados), helpers calcularMetragemModulosDifusos/parsearComprimentoModulo/clonarItemLuminaria exportados, fix clonarAmbiente deep-clone (Pitfall 2), filtro modulo_difuso. 184 testes verdes. Próximo: Phase 21 Plan 02 — ComposicaoCard extensão SYSTEM MOLD (painel fita derivada + botão duplicar + advisory VAL-01).
 
 ### Lições da verificação 20-03 (perpetual)
 
@@ -124,4 +128,4 @@ Phase 20 COMPLETE (commit fix 4e90164 pushed). Verificação do checkpoint via P
 - **Build + unit tests não cobrem queries live nem JSX de painéis** — Playwright é obrigatório para validar busca escopada e fluxo de driver.
 
 ---
-*STATE refreshed: 2026-06-15 — Phase 20 Plan 03 Tasks 1+2 completos (6/6 plans total). AmbienteCard product-first entregue. Aguardando verificação visual humana (Task 3 checkpoint).*
+*STATE refreshed: 2026-06-16 — Phase 21 Plan 01 completo (7/9 plans total). Migration s_mode aplicada (12+15 rows), 4 helpers exportados, fix clonarAmbiente deep-clone, filtro modulo_difuso. 184 testes verdes.*
