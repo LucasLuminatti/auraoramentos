@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
 status: verifying
-last_updated: "2026-06-15T13:47:17.416Z"
-last_activity: 2026-06-15
+last_updated: "2026-06-16T14:20:00.000Z"
+last_activity: 2026-06-16
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
   completed_plans: 6
   percent: 100
@@ -15,14 +15,14 @@ progress:
 
 # STATE: AURA
 
-**Last updated:** 2026-06-15 — Phase 20 Plan 03 Tasks 1+2 concluídos: `AmbienteCard.tsx` reorganizado — busca product-first única (sem abas), lista unificada luminarias[]+sistemas[], roteamento `handleSelectProdutoGlobal` via `detectarTipoAncora`, `ComposicaoCard` integrado, Fita Padrão byte-idêntico, 5 calc sites intocados. Commit: 237468c. Aguardando checkpoint:human-verify (Task 3).
+**Last updated:** 2026-06-16 — Phase 20 checkpoint:human-verify CONCLUÍDO. Verificação (Playwright + 162 testes + code-review) achou e corrigiu 1 BLOCKER + WR-02/03 + IN-01/02. Commit fix: 4e90164 (pushed). Fase 20 fechada.
 
 ## Current Position
 
-Phase: 20 (fluxos-magn-ticos) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-06-15
+Phase: 20 (fluxos-magn-ticos) — COMPLETE ✓
+Plan: 3 of 3 (verificado e corrigido)
+Status: Phase complete — checkpoint aprovado
+Last activity: 2026-06-16
 
 ## Project Reference
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | 19. Fundação Compostos | Data model aditivo + `produto_composicao` table + CAT-03 catalog fix | CAT-03 | Complete (3/3 plans) |
-| 20. Fluxos Magnéticos | Seletor de tipo + MAGNETO 48V + TINY 24V + checklist + voltage lock + driver auto | SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02 | Not started |
+| 20. Fluxos Magnéticos | Seletor de tipo + MAGNETO 48V + TINY 24V + checklist + voltage lock + driver auto | SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02 | Complete (3/3 plans) |
 | 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | Not started |
 | 22. PDF v3 — Sistemas Compostos | Seção "Sistemas Compostos" no PDF v3 sem arriscar v2 | PDF-03 | Not started |
 
@@ -115,7 +115,13 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 20 Plan 03 Tasks 1+2 concluídos (commit 237468c). Aguardando checkpoint:human-verify — usuário deve rodar `npm run dev`, abrir wizard Step 2, e confirmar os 9 cenários (fita, MAGNETO 48V, >200W, TINY 24V, embutir, item simples, console, regressão, orçamento antigo). Após aprovação ("approved"), fechar fase e avançar para Phase 21.
+Phase 20 COMPLETE (commit fix 4e90164 pushed). Verificação do checkpoint via Playwright achou 1 BLOCKER (busca de módulos retornava zero por `NULL NOT IN` no Postgres) + WR-02/WR-03 + IN-01/IN-02, todos corrigidos e revalidados (162 testes, build verde, code-review limpo, 0 erros de console). WR-01 era falso-positivo (dead code não alcançável). Próximo: Phase 21 (SYSTEM MOLD + Validação & Reuso) — `/gsd-plan-phase 21`.
+
+### Lições da verificação 20-03 (perpetual)
+
+- **Postgres `NULL NOT IN (...)` = NULL (falsy)** — nunca usar `.not('col','in',(...))` para filtrar quando NULL é um valor válido a manter; usar `.is('col', null)` ou `.or('col.is.null,...')`.
+- **Módulos magnéticos têm `tipo_produto=NULL`** (CAT-03 só categorizou conector/driver/kit); trilhos-âncora distinguíveis por descrição "TRILHO DE "/"TRILHO PENDENTE" (módulos dizem "P/ TRILHO"/"PARA USO NO TRILHO" → heurístico `/TRILHO/` puro é inválido).
+- **Build + unit tests não cobrem queries live nem JSX de painéis** — Playwright é obrigatório para validar busca escopada e fluxo de driver.
 
 ---
 *STATE refreshed: 2026-06-15 — Phase 20 Plan 03 Tasks 1+2 completos (6/6 plans total). AmbienteCard product-first entregue. Aguardando verificação visual humana (Task 3 checkpoint).*
