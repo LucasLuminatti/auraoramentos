@@ -14,13 +14,47 @@ import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
 import type { Ambiente } from "@/types/orcamento";
-import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente } from "@/types/orcamento";
+import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos } from "@/types/orcamento";
 import { toast } from "sonner";
 
 interface AdvisoryItem {
   ambienteNome: string;
-  tipo: 'fita-sem-driver' | 'driver-sem-fita' | 'perfil-sem-fita' | 'peca-sem-lampada';
+  tipo: 'fita-sem-driver' | 'driver-sem-fita' | 'perfil-sem-fita' | 'peca-sem-lampada'
+      | 'composto-sem-driver' | 'composto-sem-conector' | 'modular-sem-fita';
   descricao: string;
+}
+
+/** Detecta avisos de composto incompleto para um único ambiente (VAL-01 / D-03).
+ *  Função pura exportada — testável sem montar o componente. */
+export function detectarAvisosComposto(amb: Ambiente): AdvisoryItem[] {
+  const avisos: AdvisoryItem[] = [];
+  for (const lum of amb.luminarias) {
+    if (!lum.composicao?.length) continue;
+    const comp = lum.composicao;
+    const sistema = lum.sistema ?? '';
+
+    // D-03.1: composto magnético sem driver aplicado
+    if ((sistema === 'magneto_48v' || sistema === 'tiny_magneto') &&
+        !comp.some(c => c.papel === 'driver_recomendado')) {
+      avisos.push({ ambienteNome: amb.nome, tipo: 'composto-sem-driver', descricao: lum.descricao });
+    }
+
+    // D-03.2: conector obrigatório da família ausente
+    const regras = REGRAS_COMPOSICAO[sistema];
+    if (regras && !regras.conectoresObrigatorios.some(sku => comp.some(c => c.codigo === sku))) {
+      avisos.push({ ambienteNome: amb.nome, tipo: 'composto-sem-conector', descricao: lum.descricao });
+    }
+
+    // D-03.3: SYSTEM MOLD sem fita adicionada
+    if (sistema === 's_mode') {
+      const metragem = calcularMetragemModulosDifusos(comp);
+      const temFita = comp.some(c => c.papel === 'fita_modular');
+      if (metragem > 0 && !temFita) {
+        avisos.push({ ambienteNome: amb.nome, tipo: 'modular-sem-fita', descricao: lum.descricao });
+      }
+    }
+  }
+  return avisos;
 }
 
 interface Step2Props {
@@ -35,6 +69,9 @@ const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
   'driver-sem-fita': 'Driver sem fita',
   'perfil-sem-fita': 'Perfil sem fita LED',
   'peca-sem-lampada': 'Peça sem lâmpada (não tem LED integrado)',
+  'composto-sem-driver': 'Sistema composto sem driver aplicado',
+  'composto-sem-conector': 'Sistema composto sem o conector obrigatório da família',
+  'modular-sem-fita': 'SYSTEM MOLD sem fita adicionada',
 };
 
 const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => {
@@ -137,6 +174,8 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
           }
         }
       }
+      // VAL-01 / D-03: avisos de compostos incompletos (não-bloqueante)
+      itensIncompletos.push(...detectarAvisosComposto(amb));
     }
 
     if (itensIncompletos.length > 0) {
