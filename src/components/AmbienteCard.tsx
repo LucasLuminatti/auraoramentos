@@ -20,6 +20,7 @@ interface AmbienteCardProps {
   onChange: (ambiente: Ambiente) => void;
   onRemove: () => void;
   onDuplicate?: () => void;
+  onDuplicarComposto?: (item: ItemLuminaria) => void;   // Phase 21 / DUP-01 (D-05)
 }
 
 function PrecoInput({ value, min, onChange }: { value: number; min: number; onChange: (v: number) => void }) {
@@ -40,7 +41,7 @@ function PrecoInput({ value, min, onChange }: { value: number; min: number; onCh
   );
 }
 
-const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCardProps) => {
+const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarComposto }: AmbienteCardProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(ambiente.nome);
@@ -535,6 +536,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCar
                     indice={i}
                     onChange={(novo) => updateLuminaria(i, novo)}
                     onRemove={() => removeLuminaria(i)}
+                    onDuplicate={onDuplicarComposto ? () => onDuplicarComposto(item) : undefined}
                   />
                 );
               }

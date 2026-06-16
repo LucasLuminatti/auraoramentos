@@ -10,11 +10,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
-import type { Ambiente } from "@/types/orcamento";
-import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos } from "@/types/orcamento";
+import type { Ambiente, ItemLuminaria } from "@/types/orcamento";
+import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos, clonarItemLuminaria } from "@/types/orcamento";
 import { toast } from "sonner";
 
 interface AdvisoryItem {
@@ -78,6 +86,10 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
   const [advisoryOpen, setAdvisoryOpen] = useState(false);
   const [advisoryItems, setAdvisoryItems] = useState<AdvisoryItem[]>([]);
 
+  // DUP-01 / D-05: estado do seletor de destino para duplicação de composto
+  const [dupState, setDupState] = useState<{ item: ItemLuminaria; origemIdx: number } | null>(null);
+  const [dupDestinoIdx, setDupDestinoIdx] = useState<string>('');
+
   const addAmbiente = () => {
     const novo: Ambiente = {
       id: crypto.randomUUID(),
@@ -102,6 +114,28 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
     const arr = [...ambientes];
     arr.splice(index + 1, 0, clone);
     onChange(arr);
+  };
+
+  // DUP-01 / D-06: clona com novos UUIDs em toda a árvore e insere no ambiente destino
+  const inserirCompostoEm = (destinoIdx: number, item: ItemLuminaria) => {
+    const clone = clonarItemLuminaria(item);
+    const arr = ambientes.map((a, idx) =>
+      idx === destinoIdx ? { ...a, luminarias: [...a.luminarias, clone] } : a
+    );
+    onChange(arr);
+    setDupState(null);
+    setDupDestinoIdx('');
+    toast.success(`Sistema duplicado para "${ambientes[destinoIdx].nome}".`);
+  };
+
+  // DUP-01 / D-05: inicia o fluxo de duplicação — insere direto se só 1 ambiente
+  const iniciarDuplicacaoComposto = (item: ItemLuminaria, origemIdx: number) => {
+    if (ambientes.length === 1) {
+      inserirCompostoEm(0, item);
+      return;
+    }
+    setDupDestinoIdx(String(origemIdx)); // pré-seleciona o ambiente de origem
+    setDupState({ item, origemIdx });
   };
 
   const handleNext = () => {
@@ -207,6 +241,7 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
             onChange={(a) => updateAmbiente(i, a)}
             onRemove={() => removeAmbiente(i)}
             onDuplicate={() => duplicarAmbiente(i)}
+            onDuplicarComposto={(item) => iniciarDuplicacaoComposto(item, i)}
           />
         ))}
       </div>
@@ -228,6 +263,47 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
           Próximo <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* DUP-01 / D-05: seletor de ambiente destino para duplicação de composto */}
+      <Dialog open={dupState !== null} onOpenChange={(open) => { if (!open) { setDupState(null); setDupDestinoIdx(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicar sistema para qual ambiente?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Escolha o ambiente de destino para o clone do sistema composto.
+            </p>
+            <Select value={dupDestinoIdx} onValueChange={setDupDestinoIdx}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um ambiente..." />
+              </SelectTrigger>
+              <SelectContent>
+                {ambientes.map((a, idx) => (
+                  <SelectItem key={a.id} value={String(idx)}>
+                    {a.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDupState(null); setDupDestinoIdx(''); }}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={dupDestinoIdx === ''}
+              onClick={() => {
+                if (dupState && dupDestinoIdx !== '') {
+                  inserirCompostoEm(Number(dupDestinoIdx), dupState.item);
+                }
+              }}
+            >
+              Duplicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={advisoryOpen} onOpenChange={setAdvisoryOpen}>
         <AlertDialogContent>
