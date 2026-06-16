@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Produto } from "@/types/orcamento";
 
-export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'conector' | 'kit_fixacao' | 'luminaria' | 'todos';
+export type ProdutoFiltro = 'fita' | 'driver' | 'perfil' | 'conector' | 'kit_fixacao' | 'luminaria' | 'todos' | 'modulo_difuso';
 
 export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos', filtroVoltagem?: number, filtroSistema?: string) {
   const [results, setResults] = useState<Produto[]>([]);
@@ -29,6 +29,13 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
           queryBuilder = queryBuilder.eq('tipo_produto', filtro);
         } else if (filtro === 'luminaria') {
           queryBuilder = queryBuilder.or('tipo_produto.is.null,tipo_produto.in.(spot,lampada,acessorio,conector,suporte)');
+        } else if (filtro === 'modulo_difuso') {
+          // Difusos SYSTEM MOLD têm tipo_produto='acessorio' e sistema='s_mode' (Phase 21 / SIST-03).
+          // NÃO reusar filtroSistema — ele tem .is('tipo_produto', null) que exclui difusos (Pitfall 1).
+          // NÃO usar .not('sistema','in',...) — NULL NOT IN = NULL (falsy), descartaria tudo (Phase 20 lesson).
+          queryBuilder = queryBuilder
+            .eq('tipo_produto', 'acessorio')
+            .eq('sistema', 's_mode');
         }
 
         // Pré-filtro de voltagem do driver: 46/61 drivers têm tensao=null mas são compatíveis (D-01)
