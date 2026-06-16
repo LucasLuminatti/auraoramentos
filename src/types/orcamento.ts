@@ -196,9 +196,12 @@ export type RecomendacaoDriver48V =
  *  > 200W: D-08 — avisa para dividir em N circuitos, NÃO auto-insere. Margem ×1.05. */
 export function recomendarDriver48V(cargaTotalW: number): RecomendacaoDriver48V {
   if (cargaTotalW <= 0) return { estado: 'sem_carga' };
-  const potenciaSeguraW = Math.round(cargaTotalW * MARGEM_SEGURANCA_DRIVER * 100) / 100;
-  if (potenciaSeguraW <= 100) return { estado: 'recomendado', sku: 'LM2343', potenciaW: 100, potenciaSeguraW };
-  if (potenciaSeguraW <= 200) return { estado: 'recomendado', sku: 'LM2344', potenciaW: 200, potenciaSeguraW };
+  // Bucket no valor CRU (não arredondado): arredondar antes da comparação pode empurrar
+  // uma carga marginalmente acima de 100/200W para o driver menor (subdimensionado por centésimos).
+  const seguraRaw = cargaTotalW * MARGEM_SEGURANCA_DRIVER;
+  const potenciaSeguraW = Math.round(seguraRaw * 100) / 100; // só para exibição
+  if (seguraRaw <= 100) return { estado: 'recomendado', sku: 'LM2343', potenciaW: 100, potenciaSeguraW };
+  if (seguraRaw <= 200) return { estado: 'recomendado', sku: 'LM2344', potenciaW: 200, potenciaSeguraW };
   return { estado: 'excede_200w', potenciaSeguraW };
 }
 

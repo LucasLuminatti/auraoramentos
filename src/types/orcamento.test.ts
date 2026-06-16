@@ -419,12 +419,23 @@ describe('recomendarDriver48V — buckets 48V com margem ×1.05 (Phase 20 / D-07
     }
   });
 
-  it('carga 95.24W → bucket LM2343 (95.24×1.05≈100 ≤ 100, fronteira)', () => {
-    // 95.24 × 1.05 = 99.999... <= 100
-    const resultado = recomendarDriver48V(95.24);
+  it('carga 95.23W → bucket LM2343 (95.23×1.05=99.99 ≤ 100, fronteira real)', () => {
+    // 95.23 × 1.05 = 99.9915 <= 100 → 100W basta
+    const resultado = recomendarDriver48V(95.23);
     expect(resultado.estado).toBe('recomendado');
     if (resultado.estado === 'recomendado') {
       expect(resultado.sku).toBe('LM2343');
+    }
+  });
+
+  it('carga 95.24W → bucket LM2344 (95.24×1.05=100.002 > 100 — WR-03: bucket no valor cru)', () => {
+    // Regressão WR-03: 95.24 × 1.05 = 100.002W. Arredondar (→100.00) escondia que
+    // a carga real excede 100W e atribuía um driver subdimensionado. Deve ser LM2344.
+    const resultado = recomendarDriver48V(95.24);
+    expect(resultado.estado).toBe('recomendado');
+    if (resultado.estado === 'recomendado') {
+      expect(resultado.sku).toBe('LM2344');
+      expect(resultado.potenciaW).toBe(200);
     }
   });
 

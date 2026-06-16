@@ -267,16 +267,6 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
     onChange({ ...base, composicao: [...semDriverAnterior, driverItem] });
   };
 
-  // Remove driver aplicado (para "Alterar")
-  const removerDriver = () => {
-    const base = itemRef.current;
-    const nova = (base.composicao ?? []).filter(
-      (c) => c.papel !== "driver_recomendado"
-    );
-    onChange({ ...base, composicao: nova });
-    setMostrarBuscaDriver(false);
-  };
-
   // Seleciona módulo da busca escopada
   const handleSelecionarModulo = (produto: Produto) => {
     const novoModulo: ItemComposicao = {
@@ -428,7 +418,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
             size="sm"
             variant="outline"
             className="h-8"
-            onClick={removerDriver}
+            onClick={() => setMostrarBuscaDriver(true)}
           >
             Alterar
           </Button>
@@ -436,7 +426,8 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
       );
     }
 
-    // Subdimensionado
+    // Subdimensionado — rec48v é garantidamente 'recomendado' aqui (sem_carga e excede_200w
+    // já retornaram no topo da função), então rec48v.sku está sempre definido.
     return (
       <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1">
         <p>
@@ -448,9 +439,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
           size="sm"
           variant="default"
           className="h-8 mt-1"
-          onClick={() =>
-            rec48v.estado === "recomendado" && aplicarDriver48V(rec48v.sku)
-          }
+          onClick={() => aplicarDriver48V(rec48v.sku)}
         >
           Reaplicar recomendação
         </Button>
@@ -519,7 +508,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
               size="sm"
               variant="outline"
               className="h-8"
-              onClick={removerDriver}
+              onClick={() => setMostrarBuscaDriver(true)}
             >
               Alterar
             </Button>
@@ -779,8 +768,14 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
               )}
               <span className="text-xs flex-1">
                 {temConector
-                  ? `Conector ${regras.conectoresObrigatorios[0]} — presente`
-                  : `Conector ${regras.conectoresObrigatorios[0]} — ausente`}
+                  ? `Conector ${regras.conectoresObrigatorios.join(" / ")} — presente`
+                  : `Conector ${skuConectorDefault}${
+                      regras.conectoresObrigatorios.length > 1
+                        ? ` (ou ${regras.conectoresObrigatorios
+                            .filter((s) => s !== skuConectorDefault)
+                            .join(" / ")})`
+                        : ""
+                    } — ausente`}
               </span>
               {!temConector && (
                 <Button

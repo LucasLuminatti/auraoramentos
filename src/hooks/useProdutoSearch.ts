@@ -37,11 +37,17 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
         }
 
         // Busca escopada de módulos por família (Phase 20 / D-12) — usa a coluna 'sistema'
-        // (NÃO o alias 'sistema_magnetico'). Exclui trilhos/conectores/drivers/kits para retornar só módulos.
+        // (NÃO o alias 'sistema_magnetico'). Módulos/spots magnéticos têm tipo_produto NULL;
+        // conector/driver/kit_fixacao já são categorizados (CAT-03) e ficam de fora via IS NULL.
+        // Os trilhos-âncora ("TRILHO DE ..." / "TRILHO PENDENTE") também são NULL, então
+        // excluímos por descrição para listar só os módulos. NÃO usar `.not('tipo_produto','in',...)`:
+        // em Postgres `NULL NOT IN (...)` = NULL (falsy) e descartaria TODOS os módulos.
         if (filtroSistema) {
           queryBuilder = queryBuilder
             .eq('sistema', filtroSistema)
-            .not('tipo_produto', 'in', '("driver","conector","kit_fixacao","perfil")');
+            .is('tipo_produto', null)
+            .not('descricao', 'ilike', '%TRILHO DE %')
+            .not('descricao', 'ilike', '%TRILHO PENDENTE%');
         }
 
         if (query.trim().length >= 2) {
@@ -55,7 +61,7 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
 
         // UX-01: fallback de detecção de tipo real quando luminária não acha nada
         let redirect: string | null = null;
-        if (filtro === 'luminaria' && (data?.length ?? 0) === 0 && query.trim().length >= 2) {
+        if (filtro === 'luminaria' && !filtroSistema && (data?.length ?? 0) === 0 && query.trim().length >= 2) {
           const { data: fb } = await supabase
             .from("produtos")
             .select("codigo, tipo_produto")

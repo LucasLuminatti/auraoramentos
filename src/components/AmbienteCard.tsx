@@ -401,11 +401,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate }: AmbienteCar
           toast.info(`🧲 Módulo/spot magnético 48V: certifique-se de que o trilho e o driver (100W ou 200W) estão no orçamento.`, { duration: 8000 });
         }
       } else if (tipo === 'tiny_magneto' || /TINY\s+MAG/.test(d)) {
-        if (/TRILHO.*EMBUTIR/.test(d)) {
-          toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
-        } else {
-          toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
-        }
+        toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
       }
 
       const novaRaiz: ItemLuminaria = {
