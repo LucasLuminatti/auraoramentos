@@ -36,6 +36,8 @@ Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com 
 
 ## Current State
 
+**Em andamento — v1.3 (Sistemas Compostos):** Phase 21 SYSTEM MOLD completa (2026-06-16) — fluxo modular montável de ponta a ponta: migration `sistema='s_mode'` (12 perfis-âncora + 15 difusos) desbloqueia `detectarTipoAncora → 'modular'`; ComposicaoCard modular (busca de difuso, metragem derivada `Σ`, "Adicionar fita" com SKU escolhido pelo vendedor e metragem pré-preenchida, driver advisory); advisory não-bloqueante de composto incompleto (VAL-01); duplicação de composto entre ambientes com novos UUIDs (DUP-01). Verificado via Playwright + code review (WR-01/02/03 corrigidos). Requisitos SIST-03, VAL-01, DUP-01 validados.
+
 **Latest milestone shipped:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (2026-06-10 → 2026-06-12, 3 dias)
 
 Novo em prod com v1.2 (subsistema fita/perfil/driver/magneto do wizard):
