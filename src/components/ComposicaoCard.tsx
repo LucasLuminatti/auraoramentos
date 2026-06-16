@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Check, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Check, AlertCircle, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import ProdutoAutocomplete from "@/components/ProdutoAutocomplete";
@@ -14,6 +14,8 @@ import {
   formatarMoeda,
   MARGEM_SEGURANCA_DRIVER,
   REGRAS_COMPOSICAO,
+  calcularMetragemModulosDifusos,
+  parsearComprimentoModulo,
 } from "@/types/orcamento";
 
 // ─── PrecoInput local (equivalente ao do AmbienteCard) ───
@@ -50,6 +52,7 @@ interface ComposicaoCardProps {
   item: ItemLuminaria;
   onChange: (item: ItemLuminaria) => void;
   onRemove: () => void;
+  onDuplicate?: () => void;   // Phase 21 / DUP-01 (D-04)
   indice: number;
 }
 
@@ -65,9 +68,10 @@ interface Sugestao24V {
 
 // ─── ComposicaoCard ───
 
-const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProps) => {
+const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: ComposicaoCardProps) => {
   const is48V = item.sistema === "magneto_48v";
   const is24V = item.sistema === "tiny_magneto";
+  const isModular = item.sistema === "s_mode";
   const familiaSistema = item.sistema ?? undefined;
 
   // Ref para reconciliação pós-await (Pitfall 3)
@@ -78,6 +82,9 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
 
   // Estado local para busca de módulo
   const [mostrarBuscaModulo, setMostrarBuscaModulo] = useState(false);
+
+  // Estado local para busca de fita modular (SYSTEM MOLD)
+  const [mostrarBuscaFita, setMostrarBuscaFita] = useState(false);
 
   // Estado local para busca manual de driver (estado "Alterar")
   const [mostrarBuscaDriver, setMostrarBuscaDriver] = useState(false);
@@ -92,6 +99,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
   const cargaTotalW = calcularCargaComposicao(item.composicao);
   const modulos = composicao.filter((c) => c.papel === "modulo");
   const driverAplicado = composicao.find((c) => c.papel === "driver_recomendado");
+
+  // Derivações modulares (SYSTEM MOLD)
+  const metragemDerivada = isModular ? calcularMetragemModulosDifusos(item.composicao) : 0;
+  const fitaModular = composicao.find((c) => c.papel === "fita_modular");
 
   // Recomendação 48V (pura, sem side-effect)
   const rec48v = is48V ? recomendarDriver48V(cargaTotalW) : null;
@@ -269,6 +280,8 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
 
   // Seleciona módulo da busca escopada
   const handleSelecionarModulo = (produto: Produto) => {
+    // Para SYSTEM MOLD, grava comprimento como snapshot via parsearComprimentoModulo
+    const comprimento = isModular ? parsearComprimentoModulo(produto.descricao) : undefined;
     const novoModulo: ItemComposicao = {
       id: crypto.randomUUID(),
       codigo: produto.codigo,
@@ -279,11 +292,80 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
       imagemUrl: produto.imagem_url || undefined,
       papel: "modulo",
       obrigatorio: false,
-      potenciaW: produto.driver_potencia_w ?? undefined,
+      comprimento,
+      potenciaW: isModular ? undefined : (produto.driver_potencia_w ?? undefined),
     };
     const base = itemRef.current;
     onChange({ ...base, composicao: [...(base.composicao ?? []), novoModulo] });
     setMostrarBuscaModulo(false);
+  };
+
+  // Adiciona fita modular escolhida pelo vendedor (SYSTEM MOLD) com metragem pré-preenchida
+  const handleAdicionarFitaModular = (produto: Produto) => {
+    const metragem = calcularMetragemModulosDifusos(itemRef.current.composicao);
+    const novaFita: ItemComposicao = {
+      id: crypto.randomUUID(),
+      codigo: produto.codigo,
+      descricao: produto.descricao,
+      quantidade: 1,
+      precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100,
+      precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100,
+      imagemUrl: produto.imagem_url || undefined,
+      papel: 'fita_modular',
+      obrigatorio: false,
+      comprimento: metragem,  // metragem pré-preenchida (D-01)
+    };
+    const nova = [...(itemRef.current.composicao ?? []), novaFita];
+    onChange({ ...itemRef.current, composicao: nova });
+    setMostrarBuscaFita(false);
+    // Dispara recomendação advisory de driver (não-bloqueante)
+    buscarDriverModular(produto.voltagem ?? 24, produto.wm ?? 0, metragem);
+  };
+
+  // Busca driver para SYSTEM MOLD (advisory — vendedor clica Aplicar para inserir)
+  const buscarDriverModular = async (voltagem: number, wm: number, metragem: number) => {
+    const metragemEf = metragem > 0 ? metragem : 5;
+    const consumo = wm * metragemEf * MARGEM_SEGURANCA_DRIVER;
+    if (consumo <= 0) return;
+
+    let cancelled = false;
+    setBuscando24v(true);
+    setSem24v(false);
+
+    (async () => {
+      const { data } = await supabase
+        .from("produtos")
+        .select("id, codigo, descricao, preco_tabela, preco_minimo, driver_potencia_w:potencia_watts")
+        .eq("tipo_produto", "driver")
+        .eq("tensao", voltagem)
+        .gte("potencia_watts", consumo)
+        .not("descricao", "ilike", "%DESCONTINUAR%")
+        .order("potencia_watts", { ascending: true })
+        .limit(1);
+
+      if (cancelled) return;
+
+      const row = data?.[0] as
+        | { codigo: string; descricao: string; driver_potencia_w: number | null; preco_tabela: number; preco_minimo: number }
+        | undefined;
+
+      if (row) {
+        setSugestao24v({
+          sku: row.codigo,
+          descricao: row.descricao,
+          potenciaW: row.driver_potencia_w ?? 0,
+          precoTabela: Math.round((row.preco_tabela || 0) * 100) / 100,
+          precoMinimo: Math.round((row.preco_minimo || 0) * 100) / 100,
+        });
+        setSem24v(false);
+      } else {
+        setSugestao24v(null);
+        setSem24v(true);
+      }
+      setBuscando24v(false);
+    })();
+
+    return () => { cancelled = true; };
   };
 
   // Seleciona driver manual (busca de autocomplete no modo "Alterar")
@@ -599,6 +681,14 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
               TINY 24V
             </Badge>
           )}
+          {isModular && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1 py-0 font-semibold border-sky-400 text-sky-700 bg-sky-50"
+            >
+              MODULAR
+            </Badge>
+          )}
           <span className="text-sm font-semibold text-foreground">
             Sistema {indice + 1}
           </span>
@@ -608,14 +698,27 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
             </Badge>
           )}
         </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 text-destructive"
-          onClick={onRemove}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {onDuplicate && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground"
+              title="Duplicar"
+              onClick={onDuplicate}
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-destructive"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       {/* Corpo */}
@@ -719,9 +822,9 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
             <ProdutoAutocomplete
               value=""
               onSelect={handleSelecionarModulo}
-              placeholder="Buscar módulo..."
-              filtro="luminaria"
-              filtroSistema={familiaSistema}
+              placeholder={isModular ? "Buscar difuso SYSTEM MOLD..." : "Buscar módulo..."}
+              filtro={isModular ? "modulo_difuso" : "luminaria"}
+              filtroSistema={isModular ? undefined : familiaSistema}
             />
             <Button
               variant="ghost"
@@ -739,18 +842,106 @@ const ComposicaoCard = ({ item, onChange, onRemove, indice }: ComposicaoCardProp
             className="gap-2 mt-2"
             onClick={() => setMostrarBuscaModulo(true)}
           >
-            <Plus className="h-4 w-4" />+ Adicionar módulo
+            <Plus className="h-4 w-4" />{isModular ? "+ Adicionar difuso" : "+ Adicionar módulo"}
           </Button>
         )}
 
+        {/* Painel de fita derivada (SYSTEM MOLD) */}
+        {isModular && (
+          <div className="rounded-md border border-sky-300/50 bg-sky-50/50 px-3 py-2 space-y-2">
+            <p className="text-xs font-semibold text-sky-900">
+              Fita necessária:{" "}
+              {metragemDerivada > 0
+                ? `${metragemDerivada.toFixed(3).replace(/\.?0+$/, "").replace(".", ",")} m`
+                : "—"}
+              <span className="font-normal text-sky-700"> (Σ comprimento × qtd dos difusos)</span>
+            </p>
+            {fitaModular ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  value={fitaModular.codigo}
+                  readOnly
+                  className="bg-muted/50 w-28 h-8"
+                />
+                <Input
+                  value={fitaModular.descricao}
+                  readOnly
+                  className="bg-muted/50 flex-1 h-8 min-w-0"
+                />
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">m:</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={fitaModular.comprimento ?? metragemDerivada}
+                    onChange={(e) =>
+                      atualizarComposicaoItem(fitaModular.id, {
+                        comprimento: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-20 h-8"
+                  />
+                </div>
+                <PrecoInput
+                  value={fitaModular.precoUnitario}
+                  min={fitaModular.precoMinimo}
+                  onChange={(v) =>
+                    atualizarComposicaoItem(fitaModular.id, { precoUnitario: v })
+                  }
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-destructive"
+                  onClick={() => removerComposicaoItem(fitaModular.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              metragemDerivada > 0 && !mostrarBuscaFita && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setMostrarBuscaFita(true)}
+                >
+                  <Plus className="h-3 w-3" /> Adicionar fita
+                </Button>
+              )
+            )}
+            {mostrarBuscaFita && (
+              <div className="space-y-1">
+                <ProdutoAutocomplete
+                  filtro="fita"
+                  placeholder="Buscar fita LED..."
+                  onSelect={handleAdicionarFitaModular}
+                  value=""
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setMostrarBuscaFita(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Painel de driver */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-            Driver
-          </p>
-          {is48V && renderPainelDriver48V()}
-          {is24V && renderPainelDriver24V()}
-        </div>
+        {(is48V || is24V || isModular) && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+              Driver
+            </p>
+            {is48V && renderPainelDriver48V()}
+            {(is24V || isModular) && renderPainelDriver24V()}
+          </div>
+        )}
 
         {/* Checklist de componentes obrigatórios */}
         {regras && (
