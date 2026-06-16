@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: verifying
-last_updated: "2026-06-16T16:58:48.339Z"
+status: Phase 22 (PDF v3) — Not started
+last_updated: "2026-06-16T17:06:49.153Z"
 last_activity: 2026-06-16
 progress:
   total_phases: 5
@@ -19,8 +19,8 @@ progress:
 
 ## Current Position
 
-Phase: 21 (system-mold-valida-o-reuso) — COMPLETE
-Plan: 3 of 3 (todos entregues)
+Phase: 999.1
+Plan: Not started
 Status: Phase 22 (PDF v3) — Not started
 Last activity: 2026-06-16
 

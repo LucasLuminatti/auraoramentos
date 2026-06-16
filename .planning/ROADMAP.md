@@ -116,7 +116,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 18. UX Transversal | v1.2 | 4/4 | Complete | 2026-06-12 |
 | 19. Fundação Compostos | v1.3 | 3/3 | Complete    | 2026-06-12 |
 | 20. Fluxos Magnéticos | v1.3 | 3/3 | Complete   | 2026-06-15 |
-| 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 3/3 | Complete   | 2026-06-16 |
+| 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 3/3 | Complete    | 2026-06-16 |
 | 22. PDF v3 — Sistemas Compostos | v1.3 | 0/? | Not started | - |
 
 ## Backlog
