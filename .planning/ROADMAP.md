@@ -7,7 +7,7 @@
 - ✅ **v1.0 — Melhorias v1** — Phases 1-6 (shipped 2026-05-07) → [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - ✅ **v1.1 — Polimento UAT + Multi-tenancy + Automação** — Phases 7-13 (shipped 2026-05-15) → [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 - ✅ **v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação** — Phases 14-18 (shipped 2026-06-12) → [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) · [audit](milestones/v1.2-MILESTONE-AUDIT.md)
-- 🚧 **v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)** — Phases 19-22 (em andamento)
+- ✅ **v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)** — Phases 19-22 (shipped 2026-06-17)
 
 ---
 
@@ -15,10 +15,10 @@
 
 ### Phases
 
-- [ ] **Phase 19: Fundação Compostos** — Decisão de arquitetura (`luminarias[].composicao?`), data model aditivo, tabela `produto_composicao`, e fix de catálogo para conectores/kits (CAT-03)
-- [ ] **Phase 20: Fluxos Magnéticos** — Seletor de tipo de sistema (SIST-05), montagem MAGNETO 48V (SIST-01) e TINY 24V (SIST-02), checklist de componentes + atalho (COMP-01/02), voltage lock 48V (COMP-03), driver auto-dimensionado com painel "aplicar" (DRV-01/02)
-- [ ] **Phase 21: SYSTEM MOLD + Validação & Reuso** — Montagem modular SYSTEM MOLD (SIST-03), aviso não-bloqueante Step 2→3 (VAL-01), duplicar sistema composto entre ambientes (DUP-01)
-- [ ] **Phase 22: PDF v3 — Sistemas Compostos** — Nova seção de compostos no PDF (PDF-03), router v3 condicional, sem arriscar PDF v2
+- [x] **Phase 19: Fundação Compostos** — Decisão de arquitetura (`luminarias[].composicao?`), data model aditivo, tabela `produto_composicao`, e fix de catálogo para conectores/kits (CAT-03)
+- [x] **Phase 20: Fluxos Magnéticos** — Seletor de tipo de sistema (SIST-05), montagem MAGNETO 48V (SIST-01) e TINY 24V (SIST-02), checklist de componentes + atalho (COMP-01/02), voltage lock 48V (COMP-03), driver auto-dimensionado com painel "aplicar" (DRV-01/02)
+- [x] **Phase 21: SYSTEM MOLD + Validação & Reuso** — Montagem modular SYSTEM MOLD (SIST-03), aviso não-bloqueante Step 2→3 (VAL-01), duplicar sistema composto entre ambientes (DUP-01)
+- [x] **Phase 22: PDF v3 — Sistemas Compostos** — Nova seção de compostos no PDF (PDF-03), router v3 condicional, sem arriscar PDF v2
 
 ---
 
@@ -80,7 +80,7 @@
   3. Orçamentos e snapshots antigos (v1 e v2) continuam renderizando seus PDFs sem nenhuma alteração — o router v1/v2/v3 é aditivo
 **Plans**: 2 plans (2 waves)
 - [x] 22-01-PLAN.md — Template v3 (pdfTemplates/v3.ts) com bloco composto inline + branch v3 no router + buildAtributosMap estendido para composicao[] + guard v2 intocado
-- [ ] 22-02-PLAN.md — Disparo condicional: helper resolverTemplateVersion + writer (Step3Revisao) persiste 2/3 + reader (OrcamentoDetalhe) + checkpoint visual v3/v2/antigo
+- [x] 22-02-PLAN.md — Disparo condicional: helper resolverTemplateVersion + writer (Step3Revisao) persiste 2/3 + reader (OrcamentoDetalhe) + checkpoint visual v3/v2/antigo
 **UI hint**: yes
 
 ---
@@ -119,7 +119,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 19. Fundação Compostos | v1.3 | 3/3 | Complete    | 2026-06-12 |
 | 20. Fluxos Magnéticos | v1.3 | 3/3 | Complete   | 2026-06-15 |
 | 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 3/3 | Complete    | 2026-06-16 |
-| 22. PDF v3 — Sistemas Compostos | v1.3 | 1/2 | In Progress|  |
+| 22. PDF v3 — Sistemas Compostos | v1.3 | 2/2 | Complete | 2026-06-17 |
 
 ## Backlog
 
@@ -139,4 +139,4 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 > Promovido para milestone ativo **v1.3** em 2026-06-12. Requirements: SIST-01/02/03/05, DRV-01/02, COMP-01/02/03, VAL-01, CAT-03, DUP-01, PDF-03. Ver Phase Details acima (Phases 19-22).
 
 ---
-*Last updated: 2026-06-15 — Phase 20 planejada (3 plans, 3 waves, product-first). v1.3 roadmap (Phases 19-22, 13 requirements).*
+*Last updated: 2026-06-17 — v1.3 COMPLETO. Phase 22 concluída (2/2 plans). PDF-03 fechado: template v3 blocoComposto + wiring condicional resolverTemplateVersion. Milestone v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR) — SHIPPED 2026-06-17.*

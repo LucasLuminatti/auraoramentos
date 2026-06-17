@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: executing
-last_updated: "2026-06-17T11:50:53.484Z"
+status: verifying
+last_updated: "2026-06-17T12:08:23.143Z"
 last_activity: 2026-06-17
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 10
-  percent: 91
+  completed_plans: 11
+  percent: 100
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-17 — Phase 22 Plan 01 COMPLETO. Template v3 criado (blocoComposto inline MAGNETO/TINY/SYSTEM MOLD) + router v3 aditivo + buildAtributosMap estendido para composicao[]. 20 testes v3 verdes. Guard D-04 confirmado (v2.ts não varre composicao[]). 216 testes totais. Commits: 1924012 d565735.
+**Last updated:** 2026-06-17 — Phase 22 COMPLETA (2/2 plans). Plan 02: helper resolverTemplateVersion centralizado (pdfTemplateVersion.ts), writer Step3Revisao persiste 3 ou 2 condicionalmente, reader OrcamentoDetalhe confirmado sem mudança (select(*) já inclui pdf_template_version), 5 testes verdes, fix WR-01 thumbnails composicao[]. Checkpoint visual Playwright aprovado: v3/v2/snapshot antigo corretos, console limpo. PDF-03 fechado fim-a-fim. Milestone v1.3 COMPLETO. Commits: b7c35a5 800bbbd 18e303d.
 
 ## Current Position
 
-Phase: 22 (pdf-v3-sistemas-compostos) — EXECUTING
+Phase: 22 (pdf-v3-sistemas-compostos) — COMPLETE
 Plan: 2 of 2
-Status: Ready to execute
+Status: Milestone v1.3 completo — todos os requirements entregues
 Last activity: 2026-06-17
 
 ## Project Reference
@@ -41,7 +41,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 | 19. Fundação Compostos | Data model aditivo + `produto_composicao` table + CAT-03 catalog fix | CAT-03 | Complete (3/3 plans) |
 | 20. Fluxos Magnéticos | Seletor de tipo + MAGNETO 48V + TINY 24V + checklist + voltage lock + driver auto | SIST-05, SIST-01, SIST-02, COMP-01, COMP-02, COMP-03, DRV-01, DRV-02 | Complete (3/3 plans) |
 | 21. SYSTEM MOLD + Validação & Reuso | SYSTEM MOLD + aviso Step 2→3 + duplicar composto | SIST-03, VAL-01, DUP-01 | Complete (3/3 plans) |
-| 22. PDF v3 — Sistemas Compostos | Seção "Sistemas Compostos" no PDF v3 sem arriscar v2 | PDF-03 | Not started |
+| 22. PDF v3 — Sistemas Compostos | Seção "Sistemas Compostos" no PDF v3 sem arriscar v2 | PDF-03 | Complete (2/2 plans) |
 
 ## Latest Milestone Shipped
 
@@ -90,6 +90,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **inserirCompostoEm chaveado por ambiente.id em vez de índice (Phase 21 / Plan 03 / WR-03)** — robusto a reordenações enquanto o dialog de destino está aberto
 - **helpers copiados localmente em v3.ts, zero-toque em v2.ts (Phase 22 / Plan 01)** — zero-toque absoluto: esc/chip/thumb/agruparPorLocal copiados em v3.ts em vez de adicionar exports em v2.ts; elimina qualquer risco de interferência de bundler; guard D-04 prova v2 inalterado via grep e Teste 5
 - **router aditivo v3 branch ANTES do v2 (Phase 22 / Plan 01)** — `if (v >= 3)` inserido antes de `if (v >= 2)`; default `?? 2` inalterado; disparo de v3 condicional reservado ao Plan 02 (writer Step3Revisao)
+- **resolverTemplateVersion centralizado em pdfTemplateVersion.ts (Phase 22 / Plan 02)** — helper puro `temSistemaComposto/resolverTemplateVersion`; writer Step3Revisao importa e computa UMA vez por persist/handlePDF; nenhum literal `pdf_template_version: 2` restante; reader OrcamentoDetalhe sem mudança (select(*) já inclui coluna); fix WR-01: pdfImages.ts percorre composicao[] para thumbnails inline
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 
@@ -124,7 +125,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 
 ## Next Action
 
-Phase 21 COMPLETA (2026-06-16). SYSTEM MOLD completo: migration s_mode + helpers (Plan 01), ComposicaoCard modular (Plan 02), advisory VAL-01 + duplicação DUP-01 + 3 follow-up fixes (Plan 03). 196 testes verdes. Próximo: Phase 22 — PDF v3 com seção "Sistemas Compostos" (PDF-03). Ativar `pdf_template_version: 3` condicionalmente quando `ambientes.some(a => a.luminarias.some(l => l.composicao?.length))`.
+Phase 22 COMPLETA (2026-06-17). PDF v3 com bloco composto inline entregue: template v3 (Plan 01) + wiring condicional writer/reader (Plan 02). PDF-03 fechado fim-a-fim. Milestone v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR) — COMPLETO: todos os requirements entregues (CAT-03, SIST-01/02/03/05, COMP-01/02/03, DRV-01/02, VAL-01, DUP-01, PDF-03). Próximo: fechar milestone v1.3 (audit/retrospectiva) ou iniciar v1.4 conforme prioridade do Lenny.
 
 ### Lições da verificação 20-03 (perpetual)
 
@@ -133,4 +134,4 @@ Phase 21 COMPLETA (2026-06-16). SYSTEM MOLD completo: migration s_mode + helpers
 - **Build + unit tests não cobrem queries live nem JSX de painéis** — Playwright é obrigatório para validar busca escopada e fluxo de driver.
 
 ---
-*STATE refreshed: 2026-06-16 — Phase 21 COMPLETA (9/9 plans total). SYSTEM MOLD + advisory VAL-01 + duplicação DUP-01 + fixes WR-01/02/03 + a11y. 196 testes verdes. Próximo: Phase 22 PDF v3.*
+*STATE refreshed: 2026-06-17 — Phase 22 COMPLETA (11/11 plans total). PDF-03 fechado: template v3 blocoComposto + wiring condicional resolverTemplateVersion + checkpoint Playwright aprovado. Milestone v1.3 COMPLETO.*
