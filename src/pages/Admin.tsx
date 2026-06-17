@@ -456,9 +456,25 @@ const Admin = () => {
 
   const handleDeleteCliente = async () => {
     if (!deleteTarget) return;
+    // Guard: não cascatear exclusão de venda fechada (registro de venda concretizada).
+    // A FK orcamentos.cliente_id é ON DELETE CASCADE, então sem esse bloqueio um
+    // orçamento "fechado" seria apagado silenciosamente junto com o cliente.
+    const { count: fechados, error: countError } = await supabase
+      .from("orcamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", deleteTarget.id)
+      .eq("status", "fechado");
+    if (countError) {
+      toast.error("Erro ao verificar orçamentos do cliente: " + countError.message);
+      return;
+    }
+    if (fechados && fechados > 0) {
+      toast.error(`Cliente possui ${fechados} orçamento(s) fechado(s) — não é possível excluir. Arquive ou remova esses orçamentos primeiro.`);
+      return;
+    }
     const { error } = await supabase.from("clientes").delete().eq("id", deleteTarget.id);
     if (error) {
-      toast.error("Erro ao excluir cliente. Verifique se não há projetos vinculados.");
+      toast.error("Erro ao excluir cliente: " + error.message);
       return;
     }
     toast.success("Cliente excluído!");
@@ -1168,7 +1184,7 @@ const Admin = () => {
             <DialogTitle>Excluir Cliente</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Tem certeza que deseja excluir o cliente <strong>{deleteTarget?.nome}</strong>? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir o cliente <strong>{deleteTarget?.nome}</strong>? Isso também remove os projetos, orçamentos e arquivos vinculados. Esta ação não pode ser desfeita.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>

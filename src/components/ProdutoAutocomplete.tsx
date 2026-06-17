@@ -15,9 +15,11 @@ interface ProdutoAutocompleteProps {
   filtroVoltagem?: number;
   filtroSistema?: string;
   onRedirectToSistemas?: () => void;
+  /** Limpa o campo de busca após selecionar (usado na busca "Adicionar ao ambiente"). */
+  clearOnSelect?: boolean;
 }
 
-const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className, filtro, filtroVoltagem, filtroSistema, onRedirectToSistemas }: ProdutoAutocompleteProps) => {
+const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou descrição...", className, filtro, filtroVoltagem, filtroSistema, onRedirectToSistemas, clearOnSelect }: ProdutoAutocompleteProps) => {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const { results, loading, redirectTipo } = useProdutoSearch(query, filtro, filtroVoltagem, filtroSistema);
@@ -71,7 +73,7 @@ const ProdutoAutocomplete = ({ value, onSelect, placeholder = "Buscar código ou
             <button
               key={p.id}
               className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => { onSelect(p); setQuery(p.codigo); setOpen(false); }}
+              onClick={() => { onSelect(p); setQuery(clearOnSelect ? "" : p.codigo); setOpen(false); }}
             >
               <span className="font-mono font-semibold text-primary">{p.codigo}</span>
               <span className="truncate text-muted-foreground flex-1">{p.descricao}</span>

@@ -339,7 +339,7 @@ function blocoTermos(): string {
 
       <div class="term-block">
         <h3 class="term-header">Observações</h3>
-        <p>Valores sujeitos a alteração sem aviso prévio. Proposta válida por 15 dias a partir da data de emissão.</p>
+        <p>Valores sujeitos a alteração sem aviso prévio. Proposta válida por 10 dias a partir da data de emissão.</p>
         <p>Levando em consideração que a iluminação faz parte da arte e tem aspecto decorativo e funcional simultâneos, gerando variedade infinita de efeitos e usos, nossa proposta é uma sugestão particular que deve ser validada com arquiteto ou especialista.</p>
         <p>Recomendamos profissionais capacitados para a instalação — a forma de aplicação pode comprometer totalmente o efeito esperado. Não estão inclusos acompanhamento, suporte ou visitas à obra (cotados separadamente). Não aceitamos devolução. Não enviamos projetos luminotécnicos com especificações antes do fechamento do pedido. Os projetos luminotécnicos de autoria da AURA podem ser alterados até 3 vezes.</p>
         <p>No recebimento, conferir junto ao entregador: (a) quantidade de caixas, etiquetas e produtos; (b) estado físico da mercadoria e correspondência com a nota fiscal; (c) integridade dos lacres — em caso de violação ou recolagem, todo o conteúdo deve ser revisado.</p>
@@ -380,8 +380,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 
 /* ─── Header ─── */
 .doc-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:32px;border-bottom:1px solid #e8ecf0;margin-bottom:48px}
-.logo{height:64px;width:auto}
+.logo{height:104px;width:auto}
 .logo-text{font-family:'Playfair Display',serif;font-size:28px;font-weight:500;color:#1a1f2e;letter-spacing:.02em}
+.doc-conditions{margin:-32px 0 40px;padding-bottom:24px;border-bottom:1px solid #e8ecf0}
+.doc-conditions p{font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:#5a6475;letter-spacing:.02em;line-height:1.7}
 .doc-meta{text-align:right}
 .doc-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:400;color:#1a1f2e;letter-spacing:-.01em;line-height:1.1;margin-bottom:16px}
 .doc-meta-row{font-family:'Inter',sans-serif;font-size:10px;color:#5a6475;letter-spacing:.04em;line-height:1.7}
@@ -459,6 +461,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       <div class="doc-meta-row"><strong>Tipo:</strong> ${esc(tipo || "Orçamento")}</div>
     </div>
   </header>
+
+  <!-- CONDIÇÕES -->
+  <div class="doc-conditions">
+    <p>*FRETE GRÁTIS EM PEDIDOS ACIMA DE R$1.200,00</p>
+    <p>*A data de validade está condicionada a existência dos produtos em nosso estoque no momento da confirmação deste orçamento</p>
+  </div>
 
   <!-- AMBIENTES -->
   ${ambientesHtml}

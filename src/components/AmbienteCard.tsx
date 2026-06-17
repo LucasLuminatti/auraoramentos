@@ -508,6 +508,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
               onSelect={handleSelectProdutoGlobal}
               placeholder="Buscar produto por código ou descrição..."
               className="w-full"
+              clearOnSelect
             />
           </div>
 

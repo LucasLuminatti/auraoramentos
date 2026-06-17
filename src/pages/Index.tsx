@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import logo from "@/assets/logo.png";
 import StepIndicator from "@/components/StepIndicator";
 import Step1DadosOrcamento from "@/components/Step1DadosOrcamento";
@@ -95,6 +95,47 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orcamentoParaReabrir]);
 
+  // Mantém o step atual acessível dentro do listener de popstate sem recriar o efeito a cada passo.
+  const stepRef = useRef(step);
+  useEffect(() => { stepRef.current = step; }, [step]);
+  // Sentinela armada = a entrada que empilhamos ainda está no topo do histórico (não consumida por um popstate).
+  const sentinelaArmadaRef = useRef(false);
+  // Sinaliza que o popstate em curso veio de uma saída in-app (botão/logo), não do Voltar do navegador.
+  const saindoRef = useRef(false);
+
+  // Integra os passos do wizard ao botão "Voltar" do navegador: ao entrar no modo criação
+  // empilhamos uma entrada-sentinela no histórico e, a cada "Voltar", recuamos um passo
+  // (3→2→1→lista) em vez de sair do site. Re-arma a sentinela a cada pop.
+  useEffect(() => {
+    if (mode !== "create") return;
+    window.history.pushState({ wizardStep: stepRef.current }, "");
+    sentinelaArmadaRef.current = true;
+    const onPop = () => {
+      // O navegador já removeu a entrada do topo (nossa sentinela).
+      sentinelaArmadaRef.current = false;
+      // Saída in-app (botão "Voltar à lista" / logo): só consome a sentinela e vai pra lista.
+      if (saindoRef.current) { saindoRef.current = false; setMode("list"); return; }
+      const atual = stepRef.current;
+      if (atual > 1) {
+        stepRef.current = atual - 1; // sincroniza já — evita dessincronia em Backs rápidos
+        window.history.pushState({ wizardStep: atual - 1 }, "");
+        sentinelaArmadaRef.current = true;
+        setStep(atual - 1);
+      } else {
+        setMode("list");
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [mode]);
+
+  // Saída in-app para a lista: consome a sentinela do histórico (se ainda no topo) para não
+  // deixar entrada órfã que viraria um "Voltar morto" depois. Caso contrário, sai direto.
+  const sairParaLista = () => {
+    if (sentinelaArmadaRef.current) { saindoRef.current = true; window.history.back(); }
+    else { setMode("list"); }
+  };
+
   const orcamento: Orcamento = { dados, ambientes };
 
   const handleNovoOrcamento = (clienteId: string, projetoId: string, projetoNome: string, clienteNome: string) => {
@@ -114,7 +155,6 @@ const Index = () => {
   };
 
   const handleConfirmarVoltar = () => {
-    setMode("list");
     setStep(1);
     setDados({ colaborador: colaborador?.nome || "", tipo: "" });
     setAmbientes([]);
@@ -124,6 +164,7 @@ const Index = () => {
     setCurrentProjetoNome("");
     setReopenedOrcamentoId(null);
     setConfirmVoltarOpen(false);
+    sairParaLista();
   };
 
   const saudacao = getSaudacao();
@@ -152,7 +193,7 @@ const Index = () => {
               </Button>
             )}
             {mode === "create" && (
-              <Button variant="outline" size="sm" onClick={() => setMode("list")}>
+              <Button variant="outline" size="sm" onClick={sairParaLista}>
                 Voltar à lista
               </Button>
             )}

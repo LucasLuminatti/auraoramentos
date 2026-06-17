@@ -316,7 +316,7 @@ td.c{text-align:center}
     <div class="tagline-inner">
       <span class="tagline-text">Iluminação que transforma ambientes</span>
       <div class="validity-pills">
-        <div class="pill"><span class="pill-dot"></span>Validade: 15 dias</div>
+        <div class="pill"><span class="pill-dot"></span>Validade: 10 dias</div>
         <div class="pill blue"><span class="pill-dot"></span>${tipo || "Orçamento"}</div>
       </div>
     </div>
@@ -355,7 +355,7 @@ td.c{text-align:center}
         </div>
         <div class="info-card">
           <div class="info-icon">📋</div>
-          <div class="info-text"><strong>Observações</strong><br/>Valores sujeitos a alteração sem aviso prévio. Proposta válida por 15 dias.</div>
+          <div class="info-text"><strong>Observações</strong><br/>Valores sujeitos a alteração sem aviso prévio. Proposta válida por 10 dias.</div>
         </div>
       </div>
     </div>
