@@ -5,3 +5,8 @@ verify_jwt = false
 
 [functions.review-access]
 verify_jwt = false
+
+# Cron-only (sem usuário). verify_jwt=false porque a partir da migração de chaves
+# (sb_secret_, não-JWT) o cron autentica via Bearer secret-key checado dentro da fn.
+[functions.aniversario-clientes]
+verify_jwt = false

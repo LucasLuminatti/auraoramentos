@@ -38,9 +38,21 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Auth do cron (verify_jwt=false): só quem tem a chave secreta (nova sb_secret_ OU a
+    // service_role legada durante a transição) pode disparar. Bloqueia chave pública/sem credencial.
+    const SECRET = Deno.env.get("SB_SECRET_KEY");
+    const LEGACY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
+    if (!bearer || (bearer !== SECRET && bearer !== LEGACY)) {
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      (SECRET ?? LEGACY)!
     );
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
