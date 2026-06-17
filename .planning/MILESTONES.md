@@ -1,5 +1,19 @@
 # Milestones — AURA
 
+## v1.3 Sistemas Compostos (MAGNETO / TINY / MODULAR) (Shipped: 2026-06-17)
+
+**Completado:** 4 phases (19-22), 11 plans, 13/13 requirements · ciclo de ~6 dias (2026-06-12 → 2026-06-17) · 62 commits · +11.141 / −348 LOC
+
+**Key accomplishments:**
+
+- **Montagem product-first de sistemas compostos** no wizard — MAGNETO 48V, TINY 24V e SYSTEM MOLD detectados automaticamente pelo produto-âncora, sem seleção manual de tipo (SIST-01/02/03/05).
+- **Driver auto-dimensionado** com painel "aplicar" + voltage lock 48V + checklist de componentes obrigatórios com atalho de inserção em 1 clique (DRV-01/02, COMP-01/02/03).
+- **Advisory não-bloqueante** de composto incompleto no Step 2→3 (VAL-01) + **duplicação de composto inteiro** entre ambientes com novos UUIDs em toda a árvore (DUP-01).
+- **Fix de catálogo**: conectores/kits aparecendo na busca de componentes via `tipo_produto` + filtro do `useProdutoSearch` (CAT-03).
+- **PDF v3 aditivo**: compostos como bloco estruturado inline (trilho + módulos + fita modular + driver + acessórios, preço por linha + subtotal do sistema), router v3 condicional sem tocar o PDF v1/v2 (PDF-03).
+
+---
+
 > **Índice canônico:** `.planning/milestones/MILESTONES.md` (narrativa completa por marco). Esta página é o índice resumido legado.
 
 ## v1.2 Correções UAT + UX do Wizard de Sistemas de Iluminação (Shipped: 2026-06-12)

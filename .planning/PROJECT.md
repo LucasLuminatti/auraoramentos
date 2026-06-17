@@ -8,7 +8,9 @@ Sistema web de criação de orçamentos de iluminação da Luminatti, em produç
 
 Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com dados organizados por arquiteto e filtráveis — e o admin consegue controlar preços, pedidos e margens sem planilha paralela.
 
-## Current Milestone: v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
+## Último marco entregue: v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR) ✅ SHIPPED 2026-06-17
+
+> Nenhum marco ativo. Próximo via `/gsd-new-milestone`. Detalhe arquivado em `milestones/v1.3-ROADMAP.md` + `v1.3-REQUIREMENTS.md`.
 
 **Goal:** O colaborador monta sistemas compostos direto no wizard — trilho magnético 48V (MAGNETO 22), trilho 24V (TINY MAG) e perfil modular (SYSTEM MOLD) — com módulos, driver dimensionado automaticamente (assistido, mas auditável) e componentes obrigatórios checados, em vez de adicioná-los como luminária avulsa. Resolve os comentários UAT 8, 9, 11 e parte do 10, movidos da v1.2 por serem evolução estrutural.
 
@@ -36,11 +38,15 @@ Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com 
 
 ## Current State
 
-**Em andamento — v1.3 (Sistemas Compostos) — feature-complete:** Phase 22 PDF v3 completa (2026-06-17) — fecha **PDF-03** fim-a-fim: template aditivo `gerarOrcamentoHtmlV3` renderiza cada luminária com `composicao?.length` como bloco inline "Sistema Composto N — {TIPO}" (MAGNETO 48V / TINY 24V / SYSTEM MOLD) com trilho no topo, sub-linhas ordenadas (módulo→fita modular→driver→acessório) com chip técnico por papel, preço por linha, "Subtotal do sistema" e resumo "{W}W total · fita {m}m". Disparo condicional via fonte única `resolverTemplateVersion(ambientes)` (`pdfTemplateVersion.ts`): orçamento com composto persiste/gera `3`→v3, senão `2`→v2 inalterado; reader `?? 1` cobre snapshots antigos. v1/v2 byte-intocados (guard D-04: `blocoResumoFitas` não varre `composicao[]`); `inlineImagensSnapshot` estendido para thumbnails de componente (fix WR-01). Verificado via Playwright contra o `gerarOrcamentoHtml` real (3 cenários v3/v2/v1 + rótulos + esc, 0 erros console) + 226 testes verdes + build verde. PDF-03 validado.
+**Marco v1.3 (Sistemas Compostos) SHIPPED 2026-06-17** (Phases 19-22, 11 plans, 13/13 requirements, ~6 dias). Phase 22 PDF v3 fecha **PDF-03** fim-a-fim: template aditivo `gerarOrcamentoHtmlV3` renderiza cada luminária com `composicao?.length` como bloco inline "Sistema Composto N — {TIPO}" (MAGNETO 48V / TINY 24V / SYSTEM MOLD) com trilho no topo, sub-linhas ordenadas (módulo→fita modular→driver→acessório) com chip técnico por papel, preço por linha, "Subtotal do sistema" e resumo "{W}W total · fita {m}m". Disparo condicional via fonte única `resolverTemplateVersion(ambientes)` (`pdfTemplateVersion.ts`): orçamento com composto persiste/gera `3`→v3, senão `2`→v2 inalterado; reader `?? 1` cobre snapshots antigos. v1/v2 byte-intocados (guard D-04: `blocoResumoFitas` não varre `composicao[]`); `inlineImagensSnapshot` estendido para thumbnails de componente (fix WR-01). Verificado via Playwright contra o `gerarOrcamentoHtml` real (3 cenários v3/v2/v1 + rótulos + esc, 0 erros console) + 226 testes verdes + build verde. PDF-03 validado.
 
 **Phase 21 SYSTEM MOLD completa (2026-06-16):** fluxo modular montável de ponta a ponta: migration `sistema='s_mode'` (12 perfis-âncora + 15 difusos) desbloqueia `detectarTipoAncora → 'modular'`; ComposicaoCard modular (busca de difuso, metragem derivada `Σ`, "Adicionar fita" com SKU escolhido pelo vendedor e metragem pré-preenchida, driver advisory); advisory não-bloqueante de composto incompleto (VAL-01); duplicação de composto entre ambientes com novos UUIDs (DUP-01). Requisitos SIST-03, VAL-01, DUP-01 validados.
 
-**Latest milestone shipped:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (2026-06-10 → 2026-06-12, 3 dias)
+**Validated Requirements (v1.3):** 13/13 — SIST-01/02/03/05, DRV-01/02, COMP-01/02/03, VAL-01, DUP-01, CAT-03, PDF-03. Migradas pra `.planning/milestones/v1.3-REQUIREMENTS.md`.
+
+**Pós-v1.3 (mesma janela, não no escopo do marco):** importação de preços em massa ativada (Admin > Preços > Importação, preserva edição manual) + travas de admin reais em preço/produtos (RLS + edge fns) + 49 perfis re-tagueados no catálogo.
+
+**Marco anterior:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (2026-06-10 → 2026-06-12, 3 dias)
 
 Novo em prod com v1.2 (subsistema fita/perfil/driver/magneto do wizard):
 - **Catálogo corrigido** — 401 perfis + 18 fitas que sumiam dos seletores por `tipo_produto` null/errado ganharam o valor correto em PROD (migration aditiva); dica MAGNETO 48V validada (já estava correta no dado)
@@ -177,4 +183,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Current State + Validated Requirements + Key Decisions
 
 ---
-*Last updated: 2026-06-17 — Phase 22 (PDF v3) completa: fecha PDF-03 com template aditivo de sistemas compostos + disparo condicional via `resolverTemplateVersion`; v1/v2 byte-intocados (guard D-04), fix WR-01 (thumbnails de componente). milestone v1.3 (Sistemas Compostos MAGNETO/TINY/MODULAR) feature-complete — pronto para `/gsd-complete-milestone`.*
+*Last updated: 2026-06-17 após marco v1.3 — Sistemas Compostos (MAGNETO/TINY/MODULAR) SHIPPED (Phases 19-22, 13/13 requirements). Arquivado em milestones/v1.3-*. Nenhum marco ativo; próximo via /gsd-new-milestone (candidato forte: Marco 2 margem, quando chegar a planilha de custos). Backlog: 999.1 PDF vetorial.*

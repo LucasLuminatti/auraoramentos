@@ -48,6 +48,37 @@
 
 ---
 
+## Milestone: v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
+
+**Shipped:** 2026-06-17
+**Phases:** 4 (19-22) | **Plans:** 11 | **Requirements:** 13/13 | **Ciclo:** ~6 dias (2026-06-12 → 2026-06-17), 62 commits
+
+### What Was Built
+Montagem product-first de sistemas compostos no wizard (MAGNETO 48V / TINY 24V / SYSTEM MOLD detectados pelo produto-âncora, sem seleção manual de tipo), driver auto-dimensionado com painel "aplicar", voltage lock 48V, checklist de obrigatórios com atalho, advisory não-bloqueante de composto incompleto, duplicação de composto entre ambientes, fix de catálogo (conectores/kits) e PDF v3 aditivo com bloco estruturado inline.
+
+### What Worked
+- Decisão de arquitetura conservadora (D-01: compostos em `luminarias[].composicao?`, não em `sistemas[]`) preservou os 5 calc sites de Fita Padrão intocados — zero regressão no fluxo estável.
+- Camada aditiva no PDF (v3 como template novo, router condicional) protegeu snapshots e o PDF v2 aprovado.
+- Pipeline de verificação (code review → Playwright contra o código real) pegou bugs reais antes de shippar: WR-01 (thumbnails de composicao não inlinados) e a brecha de RLS de preço.
+
+### What Was Inefficient
+- O MCP Supabase ficou instável (504 intermitente) — várias queries/migrations precisaram de retry ou caminho alternativo (aplicar via client autenticado no navegador).
+- Verificação de PDF dependeu de renderizar o HTML via dynamic import no navegador (html2pdf não dá pra inspecionar o raster) — funcionou bem, mas é um padrão a documentar.
+
+### Patterns Established
+- **Verificar PDF gerando o HTML real via `import()` do módulo no Playwright** e renderizando numa aba — inspeção visual + asserts sem depender do raster.
+- **Trava de admin em edge fn**: `getUser(token)` → checar `user_roles` role=admin → 403; RLS da tabela só com policy de admin. Replicável pras demais fns.
+
+### Key Lessons
+- "Tranca só na UI" não é segurança — a brecha de UPDATE em `product_variants` mostrou que policy permissiva antiga sobrevive silenciosa. Auditar RLS por tabela quando a ação é sensível.
+- Requirements do UAT (documento dos funcionários) seguem sendo a melhor fonte de escopo — revalidar contra o dado real (catálogo) pega caudas que o "feito" do roadmap esconde (49 perfis sem tag).
+
+### Cost Observations
+- Model mix: orquestração opus + executores/verificadores sonnet (profile `balanced`)
+- Notable: execução sequencial na main (worktrees desligados no Windows por regressão conhecida)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

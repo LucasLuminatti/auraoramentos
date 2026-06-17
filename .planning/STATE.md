@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos
 status: Milestone v1.3 completo — todos os requirements entregues
-last_updated: "2026-06-17T12:14:04.985Z"
+last_updated: "2026-06-17T13:31:16.955Z"
 last_activity: 2026-06-17
 progress:
   total_phases: 5
