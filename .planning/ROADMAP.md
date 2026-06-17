@@ -71,14 +71,16 @@
 **UI hint**: yes
 
 ### Phase 22: PDF v3 — Sistemas Compostos
-**Goal**: O PDF de orçamentos com sistemas compostos apresenta os compostos como bloco estruturado (trilho, módulos, driver, acessórios) em uma seção dedicada, sem alterar o PDF v2 para orçamentos sem compostos
+**Goal**: O PDF de orçamentos com sistemas compostos apresenta os compostos como bloco estruturado inline no ambiente (trilho/perfil no topo + módulos, fita modular, driver e acessórios em sub-linhas), via router v3 aditivo, sem alterar o PDF v2 para orçamentos sem compostos
 **Depends on**: Phase 21
 **Requirements**: PDF-03
 **Success Criteria** (what must be TRUE):
   1. Um orçamento com sistemas compostos gera PDF v3 com uma seção "Sistemas Compostos" contendo: SKU e quantidade do trilho, tabela de módulos com SKU/qtd, quantidade e SKU do driver, acessórios obrigatórios — tudo visível e organizado para o cliente
   2. Um orçamento sem sistemas compostos (só Fita Padrão) continua gerando PDF v2 — o router `pdf_template_version` define v3 condicionalmente apenas quando `ambientes.some(a => a.luminarias.some(l => l.composicao?.length))`
   3. Orçamentos e snapshots antigos (v1 e v2) continuam renderizando seus PDFs sem nenhuma alteração — o router v1/v2/v3 é aditivo
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
+- [ ] 22-01-PLAN.md — Template v3 (pdfTemplates/v3.ts) com bloco composto inline + branch v3 no router + buildAtributosMap estendido para composicao[] + guard v2 intocado
+- [ ] 22-02-PLAN.md — Disparo condicional: helper resolverTemplateVersion + writer (Step3Revisao) persiste 2/3 + reader (OrcamentoDetalhe) + checkpoint visual v3/v2/antigo
 **UI hint**: yes
 
 ---
@@ -117,7 +119,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 19. Fundação Compostos | v1.3 | 3/3 | Complete    | 2026-06-12 |
 | 20. Fluxos Magnéticos | v1.3 | 3/3 | Complete   | 2026-06-15 |
 | 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 3/3 | Complete    | 2026-06-16 |
-| 22. PDF v3 — Sistemas Compostos | v1.3 | 0/? | Not started | - |
+| 22. PDF v3 — Sistemas Compostos | v1.3 | 0/2 | Not started | - |
 
 ## Backlog
 
