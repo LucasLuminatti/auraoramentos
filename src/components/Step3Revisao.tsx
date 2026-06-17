@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { gerarOrcamentoHtml } from "@/lib/gerarPdfHtml";
+import { resolverTemplateVersion } from "@/lib/pdfTemplateVersion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useColaborador } from "@/hooks/useColaborador";
@@ -387,6 +388,8 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
     setSavingOrcamento(true);
     // Supabase column is jsonb; Ambiente[] is JSON-serializable so this cast is safe.
     const ambientesJson = ambientes as unknown as Json;
+    // Phase 22: resolver versão do template uma vez para consistência writer↔persist.
+    const templateVersion = resolverTemplateVersion(ambientes);
     try {
       if (orcamentoId) {
         const { error } = await supabase
@@ -395,7 +398,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
             tipo: dados.tipo || null,
             ambientes: ambientesJson,
             valor: totalGeral,
-            pdf_template_version: 2,
+            pdf_template_version: templateVersion,
           })
           .eq("id", orcamentoId);
         if (error) throw error;
@@ -411,7 +414,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
           ambientes: ambientesJson,
           valor: totalGeral,
           status: "rascunho" satisfies StatusOrcamento,
-          pdf_template_version: 2,
+          pdf_template_version: templateVersion,
         })
         .select("id")
         .single();
@@ -462,7 +465,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         tipo: dados.tipo,
         ambientes: ambientesInline,
         logoBase64,
-        templateVersion: 2,
+        templateVersion: resolverTemplateVersion(ambientesInline),
       });
 
       // Renderiza o HTML num container oculto e converte para PDF download via html2pdf.
