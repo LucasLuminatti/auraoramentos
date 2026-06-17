@@ -17,6 +17,31 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // Segurança: import de preço é ação de ADMIN. verify_jwt só garante que há login —
+    // aqui validamos o papel. Sem isso, qualquer colaborador logado poderia chamar a fn.
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const token = authHeader.replace('Bearer ', '').trim();
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    const userId = userData?.user?.id;
+    if (userErr || !userId) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { data: adminRow } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+    if (!adminRow) {
+      return new Response(JSON.stringify({ error: 'Apenas administradores podem importar preços' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { precos } = await req.json();
 
     if (!Array.isArray(precos) || precos.length === 0) {
