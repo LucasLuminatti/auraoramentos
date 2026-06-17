@@ -20,6 +20,7 @@
 import type { Ambiente } from "@/types/orcamento";
 import { gerarOrcamentoHtmlV1 } from "./pdfTemplates/v1";
 import { gerarOrcamentoHtmlV2, type AtributosMap } from "./pdfTemplates/v2";
+import { gerarOrcamentoHtmlV3 } from "./pdfTemplates/v3";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PdfParams {
@@ -43,7 +44,11 @@ export interface PdfParams {
 async function buildAtributosMap(ambientes: Ambiente[]): Promise<AtributosMap> {
   const codigos = new Set<string>();
   for (const amb of ambientes) {
-    for (const l of amb.luminarias) if (l.codigo) codigos.add(l.codigo);
+    for (const l of amb.luminarias) {
+      if (l.codigo) codigos.add(l.codigo);
+      // Phase 22: incluir códigos de composicao[] para lookup de atributos no bloco composto
+      for (const c of l.composicao ?? []) if (c.codigo) codigos.add(c.codigo);
+    }
     for (const sis of amb.sistemas) {
       if (sis.fita?.codigo) codigos.add(sis.fita.codigo);
       if (sis.driver?.codigo) codigos.add(sis.driver.codigo);
@@ -74,6 +79,11 @@ async function buildAtributosMap(ambientes: Ambiente[]): Promise<AtributosMap> {
  */
 export async function gerarOrcamentoHtml(params: PdfParams): Promise<string> {
   const v = params.templateVersion ?? 2;
+  // Phase 22: branch v3 aditivo — dispara quando templateVersion >= 3 (default ?? 2 inalterado)
+  if (v >= 3) {
+    const atributosMap = await buildAtributosMap(params.ambientes);
+    return gerarOrcamentoHtmlV3({ ...params, atributosMap });
+  }
   if (v >= 2) {
     const atributosMap = await buildAtributosMap(params.ambientes);
     return gerarOrcamentoHtmlV2({ ...params, atributosMap });
