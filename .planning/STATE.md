@@ -2,27 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-status: Phase 22 (PDF v3) — Not started
-last_updated: "2026-06-16T17:06:49.153Z"
-last_activity: 2026-06-16
+status: executing
+last_updated: "2026-06-17T11:50:53.484Z"
+last_activity: 2026-06-17
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_plans: 11
+  completed_plans: 10
+  percent: 91
 ---
 
 # STATE: AURA
 
-**Last updated:** 2026-06-16 — Phase 21 COMPLETA (3/3 plans). Plan 03 encerrado: VAL-01 detectarAvisosComposto() + 3 advisory não-bloqueantes; DUP-01 duplicação com seletor de destino via clonarItemLuminaria; 3 follow-up fixes (driverReqId ref WR-01/02, duplicação por id WR-03, DialogDescription a11y). Checkpoint humano aprovado. 196 testes verdes. Commits: 62b0f95 2992bc5 3ba38f7 609f216.
+**Last updated:** 2026-06-17 — Phase 22 Plan 01 COMPLETO. Template v3 criado (blocoComposto inline MAGNETO/TINY/SYSTEM MOLD) + router v3 aditivo + buildAtributosMap estendido para composicao[]. 20 testes v3 verdes. Guard D-04 confirmado (v2.ts não varre composicao[]). 216 testes totais. Commits: 1924012 d565735.
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Phase 22 (PDF v3) — Not started
-Last activity: 2026-06-16
+Phase: 22 (pdf-v3-sistemas-compostos) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-06-17
 
 ## Project Reference
 
@@ -31,7 +31,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **Project:** AURA (sistema de orçamentos de iluminação da Luminatti)
 - **Core Value:** Um colaborador monta orçamento do zero ao PDF com dados organizados por arquiteto; admin controla preços, pedidos e filtragem sem planilha paralela.
 - **Current Milestone:** v1.3 — Sistemas Compostos (MAGNETO / TINY / MODULAR)
-- **Current Focus:** Phase 22 — PDF v3 Sistemas Compostos (próxima)
+- **Current Focus:** Phase 22 — pdf-v3-sistemas-compostos
 - **Mode:** yolo
 
 ## Roadmap Summary (v1.3)
@@ -88,6 +88,8 @@ See: `.planning/PROJECT.md` (updated 2026-06-12)
 - **detectarAvisosComposto exportada como função pura (Phase 21 / Plan 03)** — advisory testável sem montar componente React; integrada no handleNext não-bloqueante
 - **driverReqId ref substitui cancelled flag morto (Phase 21 / Plan 03 / WR-01/02)** — ref garante que só a busca mais recente reseta loading e aplica sugestão de driver
 - **inserirCompostoEm chaveado por ambiente.id em vez de índice (Phase 21 / Plan 03 / WR-03)** — robusto a reordenações enquanto o dialog de destino está aberto
+- **helpers copiados localmente em v3.ts, zero-toque em v2.ts (Phase 22 / Plan 01)** — zero-toque absoluto: esc/chip/thumb/agruparPorLocal copiados em v3.ts em vez de adicionar exports em v2.ts; elimina qualquer risco de interferência de bundler; guard D-04 prova v2 inalterado via grep e Teste 5
+- **router aditivo v3 branch ANTES do v2 (Phase 22 / Plan 01)** — `if (v >= 3)` inserido antes de `if (v >= 2)`; default `?? 2` inalterado; disparo de v3 condicional reservado ao Plan 02 (writer Step3Revisao)
 
 ### Key v1.3 architectural constraints (pré-Phase 19)
 

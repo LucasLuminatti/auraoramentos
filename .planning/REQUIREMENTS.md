@@ -42,7 +42,7 @@
 
 ### PDF — Apresentação ao cliente
 
-- [ ] **PDF-03**: O PDF (**v3**, camada nova via router) renderiza sistemas compostos como bloco estruturado — trilho (SKU+qtd), tabela de módulos, quantidade de driver, acessórios obrigatórios — sem alterar nem arriscar o PDF v2; snapshots/PDFs antigos continuam renderizando.
+- [x] **PDF-03**: O PDF (**v3**, camada nova via router) renderiza sistemas compostos como bloco estruturado — trilho (SKU+qtd), tabela de módulos, quantidade de driver, acessórios obrigatórios — sem alterar nem arriscar o PDF v2; snapshots/PDFs antigos continuam renderizando.
 
 ---
 
@@ -86,4 +86,4 @@
 | SIST-03 | Phase 21 | Complete |
 | VAL-01 | Phase 21 | Complete |
 | DUP-01 | Phase 21 | Complete |
-| PDF-03 | Phase 22 | Pending |
+| PDF-03 | Phase 22 | Complete |
