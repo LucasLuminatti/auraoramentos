@@ -119,7 +119,7 @@ Arquivados em [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) e [v1.1-ROADMAP.md](
 | 19. Fundação Compostos | v1.3 | 3/3 | Complete    | 2026-06-12 |
 | 20. Fluxos Magnéticos | v1.3 | 3/3 | Complete   | 2026-06-15 |
 | 21. SYSTEM MOLD + Validação & Reuso | v1.3 | 3/3 | Complete    | 2026-06-16 |
-| 22. PDF v3 — Sistemas Compostos | v1.3 | 2/2 | Complete | 2026-06-17 |
+| 22. PDF v3 — Sistemas Compostos | v1.3 | 2/2 | Complete    | 2026-06-17 |
 
 ## Backlog
 
