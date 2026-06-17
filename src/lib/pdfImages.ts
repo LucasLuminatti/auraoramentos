@@ -45,7 +45,11 @@ export async function inlineImagensSnapshot(ambientes: Ambiente[]): Promise<Ambi
     if (!urls.has(url)) urls.set(url, urlToBase64(url));
   };
   for (const amb of ambientes) {
-    for (const l of amb.luminarias) enqueue(l.imagemUrl);
+    for (const l of amb.luminarias) {
+      enqueue(l.imagemUrl);
+      // Phase 22 / PDF v3: componentes de sistema composto também têm thumbnail no PDF.
+      for (const c of l.composicao ?? []) enqueue(c.imagemUrl);
+    }
     for (const s of amb.sistemas) {
       enqueue(s.fita.imagemUrl);
       enqueue(s.driver.imagemUrl);
@@ -66,7 +70,13 @@ export async function inlineImagensSnapshot(ambientes: Ambiente[]): Promise<Ambi
   const swap = (url?: string): string | undefined => (url && resolved.get(url)) || url;
   return ambientes.map((amb) => ({
     ...amb,
-    luminarias: amb.luminarias.map((l) => ({ ...l, imagemUrl: swap(l.imagemUrl) })),
+    luminarias: amb.luminarias.map((l) => ({
+      ...l,
+      imagemUrl: swap(l.imagemUrl),
+      composicao: l.composicao
+        ? l.composicao.map((c) => ({ ...c, imagemUrl: swap(c.imagemUrl) }))
+        : l.composicao,
+    })),
     sistemas: amb.sistemas.map((s) => ({
       ...s,
       fita: { ...s.fita, imagemUrl: swap(s.fita.imagemUrl) },
