@@ -36,7 +36,9 @@ Um colaborador consegue montar um orçamento real, do zero ao PDF entregue, com 
 
 ## Current State
 
-**Em andamento — v1.3 (Sistemas Compostos):** Phase 21 SYSTEM MOLD completa (2026-06-16) — fluxo modular montável de ponta a ponta: migration `sistema='s_mode'` (12 perfis-âncora + 15 difusos) desbloqueia `detectarTipoAncora → 'modular'`; ComposicaoCard modular (busca de difuso, metragem derivada `Σ`, "Adicionar fita" com SKU escolhido pelo vendedor e metragem pré-preenchida, driver advisory); advisory não-bloqueante de composto incompleto (VAL-01); duplicação de composto entre ambientes com novos UUIDs (DUP-01). Verificado via Playwright + code review (WR-01/02/03 corrigidos). Requisitos SIST-03, VAL-01, DUP-01 validados.
+**Em andamento — v1.3 (Sistemas Compostos) — feature-complete:** Phase 22 PDF v3 completa (2026-06-17) — fecha **PDF-03** fim-a-fim: template aditivo `gerarOrcamentoHtmlV3` renderiza cada luminária com `composicao?.length` como bloco inline "Sistema Composto N — {TIPO}" (MAGNETO 48V / TINY 24V / SYSTEM MOLD) com trilho no topo, sub-linhas ordenadas (módulo→fita modular→driver→acessório) com chip técnico por papel, preço por linha, "Subtotal do sistema" e resumo "{W}W total · fita {m}m". Disparo condicional via fonte única `resolverTemplateVersion(ambientes)` (`pdfTemplateVersion.ts`): orçamento com composto persiste/gera `3`→v3, senão `2`→v2 inalterado; reader `?? 1` cobre snapshots antigos. v1/v2 byte-intocados (guard D-04: `blocoResumoFitas` não varre `composicao[]`); `inlineImagensSnapshot` estendido para thumbnails de componente (fix WR-01). Verificado via Playwright contra o `gerarOrcamentoHtml` real (3 cenários v3/v2/v1 + rótulos + esc, 0 erros console) + 226 testes verdes + build verde. PDF-03 validado.
+
+**Phase 21 SYSTEM MOLD completa (2026-06-16):** fluxo modular montável de ponta a ponta: migration `sistema='s_mode'` (12 perfis-âncora + 15 difusos) desbloqueia `detectarTipoAncora → 'modular'`; ComposicaoCard modular (busca de difuso, metragem derivada `Σ`, "Adicionar fita" com SKU escolhido pelo vendedor e metragem pré-preenchida, driver advisory); advisory não-bloqueante de composto incompleto (VAL-01); duplicação de composto entre ambientes com novos UUIDs (DUP-01). Requisitos SIST-03, VAL-01, DUP-01 validados.
 
 **Latest milestone shipped:** v1.2 — Correções UAT + UX do Wizard de Sistemas de Iluminação (2026-06-10 → 2026-06-12, 3 dias)
 
@@ -155,6 +157,7 @@ Outros candidatos na fila (carryover):
 | Clones com `crypto.randomUUID()` em toda a árvore | Duplicar sistema/ambiente sem colisão de key; cálculo agrupa por código (não id), clones somam corretamente | ✓ Validated v1.2 (Phase 18, RES-04/UX-04) |
 | Checklist pré-PDF como painel inline no Step 3 (não modal/reestruturação) | Decisão travada do Lenny: dentro do fluxo atual; gate `temErroBloqueante` aditivo preserva `hasUnresolved` | ✓ Validated v1.2 (Phase 18, UX-05) |
 | Compostos em `luminarias[].composicao?`, não em `sistemas[]` (D-01) | Opção mais conservadora (pesquisa HIGH); evita guards nas funções de cálculo de fita; snapshot-compat via campo opcional undefined; `sistemas[]` permanece exclusivo para Fita Padrão | ✓ Validated v1.3 (Phase 19, D-01) — os 5 calc sites (calcularDemandaFita/ConsumoW/QtdDrivers/SubtotalSistemaSemFita + isSistemaVazio no v2.ts) confirmados intocados via git diff; ItemComposicao forward-complete + calcularSubtotalComposicao folha + REGRAS_COMPOSICAO no código (D-07) |
+| PDF v3 como template novo (não estender v2) + disparo condicional via `resolverTemplateVersion` | v2/v1 byte-intocados protege snapshots/PDFs em prod; condição de composto centralizada em fonte única testável; router aditivo `v>=3→v3`, default `?? 2` | ✓ Validated v1.3 (Phase 22, PDF-03) — guard D-04 (`composicao` ausente em v2.ts), reader `?? 1` p/ snapshot antigo, fix WR-01 (thumbnails de `composicao[]` inline base64), 30 testes + checkpoint Playwright |
 
 ## Evolution
 
@@ -174,4 +177,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Current State + Validated Requirements + Key Decisions
 
 ---
-*Last updated: 2026-06-12 — Phase 19 (fundação de compostos) registrou D-01: compostos em `luminarias[].composicao?` (arquitetura conservadora, 5 calc sites de Fita Padrão intocados). milestone v1.3 iniciado (Sistemas Compostos MAGNETO/TINY/MODULAR). v1.2 shipped e arquivado em `.planning/milestones/v1.2-*.md`. Pesquisa reusada de `.planning/research/`.*
+*Last updated: 2026-06-17 — Phase 22 (PDF v3) completa: fecha PDF-03 com template aditivo de sistemas compostos + disparo condicional via `resolverTemplateVersion`; v1/v2 byte-intocados (guard D-04), fix WR-01 (thumbnails de componente). milestone v1.3 (Sistemas Compostos MAGNETO/TINY/MODULAR) feature-complete — pronto para `/gsd-complete-milestone`.*
