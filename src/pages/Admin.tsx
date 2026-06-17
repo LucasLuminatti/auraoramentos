@@ -17,6 +17,7 @@ import AdminExceptions from "@/components/AdminExceptions";
 import ImportMaster from "@/components/ImportMaster";
 import ImportProdutos from "@/components/ImportProdutos";
 import ImportImagens from "@/components/ImportImagens";
+import ImportPrecos from "@/components/ImportPrecos";
 import PrecosBatch from "@/components/PrecosBatch";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
@@ -25,7 +26,6 @@ import ProdutoEditDialog, { type ProdutoEditRow } from "@/components/ProdutoEdit
 import ArquitetoAutocomplete from "@/components/ArquitetoAutocomplete";
 import ClienteFilterAutocomplete from "@/components/ClienteFilterAutocomplete";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -532,7 +532,7 @@ const Admin = () => {
     { key: "master" as const, label: "Master (one-shot)", description: "Sobe planilha master 2026", icon: FileSpreadsheet },
     { key: "produtos" as const, label: "Produtos (CSV)", description: "Cria/atualiza por SKU", icon: FileSpreadsheet },
     { key: "imagens" as const, label: "Imagens", description: "Fotos dos produtos", icon: ImageIcon },
-    { key: "precos" as const, label: "Preços", description: "Indisponível neste marco", icon: DollarSign },
+    { key: "precos" as const, label: "Preços", description: "Atualiza preços por SKU", icon: DollarSign },
   ];
 
   return (
@@ -1150,23 +1150,7 @@ const Admin = () => {
                 {importSubTab === "master" && <ImportMaster />}
                 {importSubTab === "produtos" && <ImportProdutos />}
                 {importSubTab === "imagens" && <ImportImagens />}
-                {importSubTab === "precos" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Importação de Preços</CardTitle>
-                      <CardDescription>Indisponível neste marco</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        A importação de preços (preco_tabela / preco_minimo via CSV) está deferida para uma phase futura.
-                        Em produção real, preço é atualizado ~1x por mês — fluxo periódico, não dia-a-dia (decisão D-18 do CONTEXT da Phase 3 / IMP-02 deferido).
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Por enquanto, edite preços individualmente via aba <strong>Cadastros &gt; Produtos</strong> → Pencil → "Editar Produto".
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+                {importSubTab === "precos" && <ImportPrecos />}
               </TabsContent>
             </Tabs>
           </TabsContent>

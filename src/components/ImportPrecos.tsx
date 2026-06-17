@@ -40,6 +40,7 @@ const ImportPrecos = () => {
     }
 
     let totalUpdated = 0;
+    let totalPreservados = 0;
     const allFailed: ImportResult["failed"] = [];
 
     for (let i = 0; i < precos.length; i += BATCH_SIZE) {
@@ -58,6 +59,7 @@ const ImportPrecos = () => {
         }
       } else {
         totalUpdated += data.updated ?? 0;
+        totalPreservados += data.preservados?.length ?? 0;
         if (data.failed?.length) {
           for (const f of data.failed) {
             allFailed.push({ codigo: f.codigo, preco_tabela: f.preco_tabela, preco_minimo: f.preco_minimo, _erro: f.erro });
@@ -67,10 +69,12 @@ const ImportPrecos = () => {
       onProgress(Math.min(i + BATCH_SIZE, precos.length), precos.length);
     }
 
+    const preservadosMsg = totalPreservados > 0 ? ` ${totalPreservados} preço(s) editado(s) manualmente foram preservados.` : "";
+
     if (allFailed.length === 0) {
-      toast.success(`${totalUpdated} preços atualizados com sucesso!`);
+      toast.success(`${totalUpdated} preços atualizados com sucesso!${preservadosMsg}`);
     } else {
-      toast.warning(`${totalUpdated} atualizados, ${allFailed.length} com erro.`);
+      toast.warning(`${totalUpdated} atualizados, ${allFailed.length} com erro.${preservadosMsg}`);
     }
 
     return { totalProcessed: precos.length, totalSuccess: totalUpdated, failed: allFailed };
@@ -81,7 +85,7 @@ const ImportPrecos = () => {
       <div>
         <h2 className="text-lg font-semibold text-foreground">Importar Preços</h2>
         <p className="text-sm text-muted-foreground">
-          Faça upload da planilha e mapeie as colunas de <strong>código</strong>, <strong>preço tabela</strong> e <strong>preço mínimo</strong>. Os preços serão atualizados para produtos já cadastrados.
+          Faça upload da planilha e mapeie as colunas de <strong>código</strong>, <strong>preço tabela</strong> e <strong>preço mínimo</strong>. Os preços serão atualizados para produtos já cadastrados. Preços ajustados manualmente são <strong>preservados</strong> (não sobrescritos).
         </p>
       </div>
       <ImportMapper fields={fields} onImport={handleImport} importLabel="Atualizar preços de" />
