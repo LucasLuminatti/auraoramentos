@@ -1,5 +1,8 @@
 import { toast } from "sonner";
+import { Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { downloadPrecosTemplate } from "@/lib/downloadPrecosTemplate";
 import ImportMapper, { ImportField, ImportResult } from "./ImportMapper";
 
 const fields: ImportField[] = [
@@ -11,10 +14,17 @@ const fields: ImportField[] = [
 const parsePreco = (val: any): number | undefined => {
   if (typeof val === "number" && val > 0) return val;
   if (!val) return undefined;
-  const str = String(val).replace("R$", "").replace(/\s/g, "").replace(",", ".");
+  let str = String(val).replace("R$", "").replace(/\s/g, "");
   if (str === "-" || str === "" || str === "0") return undefined;
+  // Formato BR "1.234,56": ponto é separador de milhar, vírgula é decimal → remove pontos, vírgula vira ponto.
+  // Só vírgula "1234,56": vírgula é decimal. Só ponto "1234.56": já é decimal (deixa parseFloat resolver).
+  if (str.includes(",") && str.includes(".")) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else if (str.includes(",")) {
+    str = str.replace(",", ".");
+  }
   const num = parseFloat(str);
-  return num > 0 ? num : undefined;
+  return Number.isFinite(num) && num > 0 ? num : undefined;
 };
 
 const BATCH_SIZE = 500;
@@ -82,11 +92,16 @@ const ImportPrecos = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Importar Preços</h2>
-        <p className="text-sm text-muted-foreground">
-          Faça upload da planilha e mapeie as colunas de <strong>código</strong>, <strong>preço tabela</strong> e <strong>preço mínimo</strong>. Os preços serão atualizados para produtos já cadastrados. Preços ajustados manualmente são <strong>preservados</strong> (não sobrescritos).
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Importar Preços</h2>
+          <p className="text-sm text-muted-foreground">
+            Faça upload da planilha e mapeie as colunas de <strong>código</strong>, <strong>preço tabela</strong> e <strong>preço mínimo</strong>. Os preços serão atualizados para produtos já cadastrados. Preços ajustados manualmente são <strong>preservados</strong> (não sobrescritos).
+          </p>
+        </div>
+        <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={downloadPrecosTemplate}>
+          <Download className="h-4 w-4" /> Baixar modelo
+        </Button>
       </div>
       <ImportMapper fields={fields} onImport={handleImport} importLabel="Atualizar preços de" />
     </div>
