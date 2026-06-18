@@ -12,10 +12,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, FileDown, Loader2 } from "lucide-react";
+import { ArrowLeft, FileDown, Loader2, Copy, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import OrcamentoArquivos from "@/components/OrcamentoArquivos";
 import { gerarOrcamentoHtml, type PdfParams } from "@/lib/gerarPdfHtml";
 import logo from "@/assets/logo.png";
 import type { Ambiente } from "@/types/orcamento";
@@ -33,6 +44,7 @@ interface OrcamentoFull {
   status: string;
   tipo: string;
   projeto_id: string | null;
+  cliente_id: string | null;
   ambientes: Ambiente[];
   motivo_perda: string | null;
   fechado_at: string | null;
@@ -108,6 +120,34 @@ const OrcamentoDetalhe = () => {
   const [loading, setLoading] = useState(true);
   const [logoBase64, setLogoBase64] = useState<string>("");
   const [gerando, setGerando] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDuplicar = () => {
+    if (!orc) return;
+    navigate("/", { state: { duplicarDe: orc.id } });
+  };
+
+  const handleDelete = async () => {
+    if (!orc) return;
+    setDeleting(true);
+    // Remove os blobs dos anexos antes — o CASCADE apaga só as rows de cliente_arquivos, não o storage.
+    const { data: anexos } = await supabase
+      .from("cliente_arquivos")
+      .select("arquivo_path")
+      .eq("orcamento_id", orc.id);
+    if (anexos && anexos.length > 0) {
+      await supabase.storage.from("cliente-arquivos").remove(anexos.map((a) => a.arquivo_path));
+    }
+    const { error } = await supabase.from("orcamentos").delete().eq("id", orc.id);
+    setDeleting(false);
+    if (error) {
+      toast.error("Erro ao excluir orçamento: " + error.message);
+      return;
+    }
+    toast.success("Orçamento excluído!");
+    navigate("/admin?tab=pedidos");
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -116,7 +156,7 @@ const OrcamentoDetalhe = () => {
       const { data, error } = await supabase
         .from("orcamentos")
         .select(`
-          id, data, valor, status, tipo, projeto_id, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
+          id, data, valor, status, tipo, projeto_id, cliente_id, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
           clientes ( nome, email, telefone, contato, cpf_cnpj,
             arquitetos ( nome, contato )
           ),
@@ -276,6 +316,16 @@ const OrcamentoDetalhe = () => {
               Voltar para lista
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDuplicar}
+              disabled={!orc}
+              className="gap-1.5"
+            >
+              <Copy className="h-4 w-4" />
+              Duplicar
+            </Button>
+            <Button
               size="sm"
               onClick={handleReemitirPdf}
               disabled={gerando || !orc}
@@ -283,6 +333,16 @@ const OrcamentoDetalhe = () => {
             >
               {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
               Re-emitir PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteOpen(true)}
+              disabled={!orc}
+              className="gap-1.5 text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
             </Button>
           </div>
         </div>
@@ -566,6 +626,18 @@ const OrcamentoDetalhe = () => {
               </CardContent>
             </Card>
 
+            {/* 4.5 — ANEXOS DESTA REVISÃO (Feature 7) */}
+            {orc.cliente_id && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Anexos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <OrcamentoArquivos clienteId={orc.cliente_id} orcamentoId={orc.id} />
+                </CardContent>
+              </Card>
+            )}
+
             {/* 5 — HISTÓRICO DE EXCEÇÕES (só se houver) */}
             {exceptions.length > 0 && (
               <Card>
@@ -610,6 +682,23 @@ const OrcamentoDetalhe = () => {
           </>
         )}
       </main>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir orçamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este orçamento? Esta ação não poderá ser desfeita — os anexos vinculados a ele também serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

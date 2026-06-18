@@ -22,6 +22,7 @@ import PrecosBatch from "@/components/PrecosBatch";
 import CompletarCadastroBanner from "@/components/CompletarCadastroBanner";
 import ArquitetoDialog, { type ArquitetoRow } from "@/components/ArquitetoDialog";
 import ClienteDialog, { type ClienteRow } from "@/components/ClienteDialog";
+import StatusBadgeSelect from "@/components/StatusBadgeSelect";
 import ProdutoEditDialog, { type ProdutoEditRow } from "@/components/ProdutoEditDialog";
 import ArquitetoAutocomplete from "@/components/ArquitetoAutocomplete";
 import ClienteFilterAutocomplete from "@/components/ClienteFilterAutocomplete";
@@ -66,66 +67,6 @@ const LEGACY_TAB_MAP: Record<string, { tab: TopTab; sub?: string }> = {
   importacao: { tab: "precos", sub: "importacao" },
   excecoes: { tab: "excecoes" },
 };
-
-// ─── StatusBadgeSelect: dropdown de status com AlertDialog one-way para aprovado (WIZ-04) ───
-interface StatusBadgeSelectProps {
-  orcamentoId: string;
-  currentStatus: string;
-  onStatusChange: (orcamentoId: string, novo: string) => Promise<void>;
-}
-
-function StatusBadgeSelect({ orcamentoId, currentStatus, onStatusChange }: StatusBadgeSelectProps) {
-  const [confirmAprovarOpen, setConfirmAprovarOpen] = useState(false);
-  const [pendingValue, setPendingValue] = useState<string | null>(null);
-  const isAprovado = currentStatus === "aprovado";
-
-  const handleChange = (next: string) => {
-    if (next === currentStatus) return;
-    if (next === "aprovado") {
-      setPendingValue(next);
-      setConfirmAprovarOpen(true);
-      return;
-    }
-    void onStatusChange(orcamentoId, next);
-  };
-
-  const handleConfirmAprovado = async () => {
-    if (pendingValue) await onStatusChange(orcamentoId, pendingValue);
-    setConfirmAprovarOpen(false);
-    setPendingValue(null);
-  };
-
-  return (
-    <>
-      <Select value={currentStatus} onValueChange={handleChange} disabled={isAprovado}>
-        <SelectTrigger className="w-[140px] h-8" onClick={(e) => e.stopPropagation()}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent onClick={(e) => e.stopPropagation()}>
-          <SelectItem value="rascunho">Rascunho</SelectItem>
-          <SelectItem value="pendente">Pendente</SelectItem>
-          <SelectItem value="aprovado">Aprovado</SelectItem>
-          <SelectItem value="perdido">Perdido</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <AlertDialog open={confirmAprovarOpen} onOpenChange={setConfirmAprovarOpen}>
-        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Marcar como aprovado?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação é irreversível. Depois de aprovado, o orçamento não pode ser revertido para outro status. Tem certeza?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingValue(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmAprovado}>Confirmar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
-}
 
 const Admin = () => {
   const navigate = useNavigate();

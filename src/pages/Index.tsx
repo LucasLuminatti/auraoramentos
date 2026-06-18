@@ -42,6 +42,8 @@ const Index = () => {
 
   // WIZ-03 (D-09): detecta location.state.orcamentoId para reabrir rascunho
   const orcamentoParaReabrir = (location.state as { orcamentoId?: string } | null)?.orcamentoId ?? null;
+  // Feature 6: location.state.duplicarDe para criar um NOVO orçamento a partir de um existente
+  const orcamentoParaDuplicar = (location.state as { duplicarDe?: string } | null)?.duplicarDe ?? null;
 
   useEffect(() => {
     if (!orcamentoParaReabrir) return;
@@ -94,6 +96,51 @@ const Index = () => {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orcamentoParaReabrir]);
+
+  // Feature 6: duplica um orçamento existente como NOVO (reopenedOrcamentoId = null → salva nova linha)
+  useEffect(() => {
+    if (!orcamentoParaDuplicar) return;
+    let cancelled = false;
+
+    async function duplicar() {
+      try {
+        const { data, error } = await supabase
+          .from("orcamentos")
+          .select("cliente_id, projeto_id, tipo, ambientes, clientes:cliente_id(id, nome), projetos:projeto_id(id, nome)")
+          .eq("id", orcamentoParaDuplicar!)
+          .maybeSingle();
+
+        if (cancelled) return;
+        if (error || !data || !data.clientes) {
+          toast.error("Não foi possível duplicar este orçamento.");
+          navigate("/", { replace: true, state: null });
+          return;
+        }
+
+        setDados({ colaborador: colaborador?.nome ?? "", tipo: (data.tipo as DadosOrcamento["tipo"]) ?? "" });
+        setAmbientes((data.ambientes as unknown as Ambiente[]) ?? []);
+        setCurrentClienteId(data.cliente_id);
+        setCurrentClienteNome((data.clientes as any).nome ?? "");
+        setCurrentProjetoId(data.projeto_id);
+        setCurrentProjetoNome((data.projetos as any)?.nome ?? "");
+        setReopenedOrcamentoId(null); // NOVO orçamento — não sobrescreve o original
+        setStep(1);
+        setMode("create");
+        toast.success("Orçamento duplicado — ajuste o tipo/itens e salve como nova revisão.");
+
+        navigate("/", { replace: true, state: null });
+      } catch {
+        if (!cancelled) {
+          toast.error("Erro ao duplicar orçamento.");
+          navigate("/", { replace: true, state: null });
+        }
+      }
+    }
+
+    void duplicar();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orcamentoParaDuplicar]);
 
   // Mantém o step atual acessível dentro do listener de popstate sem recriar o efeito a cada passo.
   const stepRef = useRef(step);

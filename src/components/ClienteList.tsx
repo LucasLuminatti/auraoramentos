@@ -1,19 +1,33 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight, FileText, Users, FolderOpen, Plus, Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Users, FolderOpen, Plus, Pencil, Copy, Trash2, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import ClienteArquivos from "@/components/ClienteArquivos";
+import StatusBadgeSelect from "@/components/StatusBadgeSelect";
+import OrcamentoArquivos from "@/components/OrcamentoArquivos";
 
 interface OrcamentoRow {
   id: string;
   data: string;
   valor: number;
   status: string;
+  tipo: string | null;
 }
 
 interface ProjetoWithOrcamentos {
@@ -33,11 +47,14 @@ interface ClienteListProps {
 }
 
 const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState<ClienteWithProjetos[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedCliente, setExpandedCliente] = useState<string | null>(null);
   const [expandedProjeto, setExpandedProjeto] = useState<string | null>(null);
+  const [expandedAnexos, setExpandedAnexos] = useState<string | null>(null);
+  const [deleteOrcTarget, setDeleteOrcTarget] = useState<{ id: string; clienteId: string } | null>(null);
 
   // Novo projeto dialog
   const [projetoDialogOpen, setProjetoDialogOpen] = useState(false);
@@ -62,7 +79,7 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
 
     const { data: orcamentosData } = await supabase
       .from("orcamentos")
-      .select("id, data, valor, status, projeto_id")
+      .select("id, data, valor, status, tipo, projeto_id")
       .order("data", { ascending: false });
 
     if (clientesData) {
@@ -116,6 +133,55 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
     setRenameDialogOpen(false);
     setRenameNome("");
     setRenameProjetoId(null);
+    fetchData();
+  };
+
+  // Feature 9: o criador altera o status do próprio orçamento (RLS garante propriedade).
+  const handleStatusChangeOrcamento = async (id: string, novo: string) => {
+    const { error } = await supabase.from("orcamentos").update({ status: novo }).eq("id", id);
+    if (error) {
+      toast.error(
+        error.message?.includes("policy")
+          ? "Você não tem permissão para alterar este orçamento (ou ele já está aprovado)."
+          : `Erro ao atualizar status: ${error.message}`
+      );
+      return;
+    }
+    setClientes((prev) =>
+      prev.map((c) => ({
+        ...c,
+        projetos: c.projetos.map((p) => ({
+          ...p,
+          orcamentos: p.orcamentos.map((o) => (o.id === id ? { ...o, status: novo } : o)),
+        })),
+      }))
+    );
+    toast.success(`Status atualizado para ${novo}`);
+  };
+
+  // Feature 6: duplica o orçamento como nova revisão (wizard pré-preenchido, salva nova linha).
+  const handleDuplicar = (orcId: string) => {
+    navigate("/", { state: { duplicarDe: orcId } });
+  };
+
+  // Feature 8: exclusão de orçamento/revisão com confirmação.
+  const handleDeleteOrcamento = async (orcId: string) => {
+    // Remove os blobs dos anexos antes — o CASCADE apaga só as rows de cliente_arquivos, não o storage.
+    const { data: anexos } = await supabase
+      .from("cliente_arquivos")
+      .select("arquivo_path")
+      .eq("orcamento_id", orcId);
+    if (anexos && anexos.length > 0) {
+      await supabase.storage.from("cliente-arquivos").remove(anexos.map((a) => a.arquivo_path));
+    }
+
+    const { error } = await supabase.from("orcamentos").delete().eq("id", orcId);
+    if (error) {
+      toast.error("Erro ao excluir orçamento: " + error.message);
+      return;
+    }
+    toast.success("Orçamento excluído!");
+    setDeleteOrcTarget(null);
     fetchData();
   };
 
@@ -255,24 +321,58 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                           </div>
                           {isProjExpanded && (
                             <div className="border-t px-4 py-2 space-y-1.5">
-                              {projeto.orcamentos.map((orc) => (
-                                <div key={orc.id} className="flex items-center justify-between text-sm py-1.5">
-                                  <div className="flex items-center gap-3">
-                                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span className="text-muted-foreground">
-                                      {format(new Date(orc.data), "dd/MM/yyyy", { locale: ptBR })}
-                                    </span>
-                                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusClass(orc.status)}`}>
-                                      {statusLabel(orc.status)}
-                                    </span>
+                              {projeto.orcamentos.map((orc) => {
+                                const anexosOpen = expandedAnexos === orc.id;
+                                return (
+                                  <div key={orc.id} className="rounded-md border bg-muted/10">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-sm">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        <span className="font-medium text-foreground">{orc.tipo?.trim() || "Orçamento"}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {format(new Date(orc.data), "dd/MM/yyyy", { locale: ptBR })}
+                                        </span>
+                                        <span className="text-xs font-medium text-foreground">
+                                          R$ {Number(orc.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <StatusBadgeSelect
+                                          orcamentoId={orc.id}
+                                          currentStatus={orc.status}
+                                          onStatusChange={handleStatusChangeOrcamento}
+                                        />
+                                        <button
+                                          className={`p-1.5 rounded hover:bg-muted transition-colors ${anexosOpen ? "bg-muted" : ""}`}
+                                          title="Anexos desta revisão"
+                                          onClick={() => setExpandedAnexos(anexosOpen ? null : orc.id)}
+                                        >
+                                          <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </button>
+                                        <button
+                                          className="p-1.5 rounded hover:bg-muted transition-colors"
+                                          title="Duplicar como nova revisão"
+                                          onClick={() => handleDuplicar(orc.id)}
+                                        >
+                                          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </button>
+                                        <button
+                                          className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
+                                          title="Excluir orçamento"
+                                          onClick={() => setDeleteOrcTarget({ id: orc.id, clienteId: cliente.id })}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-destructive/70" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    {anexosOpen && (
+                                      <div className="border-t px-3 py-2">
+                                        <OrcamentoArquivos clienteId={cliente.id} orcamentoId={orc.id} />
+                                      </div>
+                                    )}
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-foreground">
-                                      R$ {Number(orc.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                               {projeto.orcamentos.length === 0 && (
                                 <p className="text-xs text-muted-foreground py-1">Nenhum orçamento neste projeto.</p>
                               )}
@@ -357,6 +457,23 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteOrcTarget} onOpenChange={(open) => !open && setDeleteOrcTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir orçamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este orçamento? Esta ação não poderá ser desfeita — os anexos vinculados a ele também serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteOrcTarget && handleDeleteOrcamento(deleteOrcTarget.id)}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </>
   );

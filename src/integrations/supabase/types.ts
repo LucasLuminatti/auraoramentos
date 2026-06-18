@@ -172,6 +172,7 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          orcamento_id: string | null
           pasta_id: string | null
           projeto_id: string | null
           tamanho: number
@@ -186,6 +187,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          orcamento_id?: string | null
           pasta_id?: string | null
           projeto_id?: string | null
           tamanho?: number
@@ -200,6 +202,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          orcamento_id?: string | null
           pasta_id?: string | null
           projeto_id?: string | null
           tamanho?: number
@@ -1024,4 +1027,3 @@ export const Constants = {
     },
   },
 } as const
-<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />
