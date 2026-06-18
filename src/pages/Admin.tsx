@@ -209,6 +209,8 @@ const Admin = () => {
   const dataDeParam = searchParams.get("data_de");                // null | "YYYY-MM-DD"
   const dataAteParam = searchParams.get("data_ate");              // null | "YYYY-MM-DD"
   const statusPedidosParam = searchParams.get("status_pedidos");  // null | enum
+  const colabPedidosParam = searchParams.get("colab_pedidos");    // null | "<uuid>" (colaborador responsável)
+  const qPedidosParam = searchParams.get("q_pedidos");            // null | texto livre (busca client-side)
 
   // Helper genérico — substitui setArqClientesParam/setArqProdutosParam quando útil; mantidos pra retro-compat com Plans 02/03
   const setUrlParam = (key: string, next: string | null) => {
@@ -312,8 +314,9 @@ const Admin = () => {
       dataDe: dataDeParam,
       dataAte: dataAteParam,
       status: statusPedidosParam,
+      colab: colabPedidosParam,
     });
-  }, [arqPedidosParam, cliPedidosParam, dataDeParam, dataAteParam, statusPedidosParam]);
+  }, [arqPedidosParam, cliPedidosParam, dataDeParam, dataAteParam, statusPedidosParam, colabPedidosParam]);
 
   // Sync nome do arquiteto no input do filtro Pedidos
   useEffect(() => {
@@ -378,6 +381,7 @@ const Admin = () => {
     dataDe?: string | null;
     dataAte?: string | null;
     status?: string | null;
+    colab?: string | null;
   }) => {
     const f = filters ?? {};
     let q = supabase
@@ -386,6 +390,7 @@ const Admin = () => {
     if (f.arq === "none") q = q.is("clientes.arquiteto_id", null);
     else if (f.arq && f.arq !== "none") q = q.eq("clientes.arquiteto_id", f.arq);
     if (f.cli) q = q.eq("cliente_id", f.cli);
+    if (f.colab) q = q.eq("colaborador_id", f.colab);
     if (f.dataDe) q = q.gte("data", f.dataDe);
     if (f.dataAte) q = q.lte("data", f.dataAte);
     if (f.status && f.status !== "all") q = q.eq("status", f.status);
@@ -542,7 +547,20 @@ const Admin = () => {
     dataDeParam,
     dataAteParam,
     statusPedidosParam && statusPedidosParam !== "all" ? statusPedidosParam : null,
+    colabPedidosParam,
+    qPedidosParam && qPedidosParam.trim() ? qPedidosParam : null,
   ].filter(Boolean).length;
+
+  // Busca textual (client-side) sobre a lista já carregada — combina com os filtros server-side.
+  const orcamentosFiltrados = (() => {
+    const term = (qPedidosParam ?? "").trim().toLowerCase();
+    if (!term) return orcamentos;
+    return orcamentos.filter((o: any) =>
+      (o.clientes?.nome ?? "").toLowerCase().includes(term) ||
+      (o.projetos?.nome ?? "").toLowerCase().includes(term) ||
+      (o.colaboradores?.nome ?? "").toLowerCase().includes(term)
+    );
+  })();
 
   const importSubTabs = [
     { key: "master" as const, label: "Master (one-shot)", description: "Sobe planilha master 2026", icon: FileSpreadsheet },
@@ -887,6 +905,29 @@ const Admin = () => {
             <div className="mb-4 space-y-3">
               {/* Desktop: 1 linha com todos os filtros */}
               <div className="hidden sm:flex sm:items-end sm:gap-3 sm:flex-wrap">
+                <div className="w-64">
+                  <Label className="text-xs text-muted-foreground">Buscar</Label>
+                  <Input
+                    placeholder="Cliente, projeto ou colaborador..."
+                    value={qPedidosParam ?? ""}
+                    onChange={(e) => setUrlParam("q_pedidos", e.target.value || null)}
+                  />
+                </div>
+                <div className="w-48">
+                  <Label className="text-xs text-muted-foreground">Colaborador</Label>
+                  <Select
+                    value={colabPedidosParam ?? "all"}
+                    onValueChange={(v) => setUrlParam("colab_pedidos", v === "all" ? null : v)}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {colaboradores.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="w-56">
                   <Label className="text-xs text-muted-foreground">Arquiteto</Label>
                   <ArquitetoAutocomplete
@@ -959,7 +1000,7 @@ const Admin = () => {
                     size="sm"
                     onClick={() => {
                       const p = new URLSearchParams(searchParams);
-                      ["arq_pedidos", "cli_pedidos", "data_de", "data_ate", "status_pedidos"].forEach((k) => p.delete(k));
+                      ["arq_pedidos", "cli_pedidos", "data_de", "data_ate", "status_pedidos", "colab_pedidos", "q_pedidos"].forEach((k) => p.delete(k));
                       setSearchParams(p, { replace: true });
                       setArqPedidosNome("");
                       setCliPedidosNome("");
@@ -1003,6 +1044,29 @@ const Admin = () => {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 space-y-3" align="end">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Buscar</Label>
+                      <Input
+                        placeholder="Cliente, projeto ou colaborador..."
+                        value={qPedidosParam ?? ""}
+                        onChange={(e) => setUrlParam("q_pedidos", e.target.value || null)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Colaborador</Label>
+                      <Select
+                        value={colabPedidosParam ?? "all"}
+                        onValueChange={(v) => setUrlParam("colab_pedidos", v === "all" ? null : v)}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {colaboradores.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Cliente</Label>
                       <ClienteFilterAutocomplete
@@ -1058,7 +1122,7 @@ const Admin = () => {
                         className="w-full"
                         onClick={() => {
                           const p = new URLSearchParams(searchParams);
-                          ["arq_pedidos", "cli_pedidos", "data_de", "data_ate", "status_pedidos"].forEach((k) => p.delete(k));
+                          ["arq_pedidos", "cli_pedidos", "data_de", "data_ate", "status_pedidos", "colab_pedidos", "q_pedidos"].forEach((k) => p.delete(k));
                           setSearchParams(p, { replace: true });
                           setArqPedidosNome("");
                           setCliPedidosNome("");
@@ -1085,7 +1149,7 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orcamentos.map((o) => (
+                  {orcamentosFiltrados.map((o) => (
                     <TableRow
                       key={o.id}
                       role="button"
@@ -1116,7 +1180,7 @@ const Admin = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {orcamentos.length === 0 && (
+                  {orcamentosFiltrados.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         {pedidosFilterCount > 0

@@ -32,6 +32,7 @@ interface OrcamentoFull {
   valor: number;
   status: string;
   tipo: string;
+  projeto_id: string | null;
   ambientes: Ambiente[];
   motivo_perda: string | null;
   fechado_at: string | null;
@@ -57,6 +58,16 @@ interface ExceptionRow {
   preco_minimo: number;
   status: string;
   created_at: string;
+}
+
+interface RevisaoRow {
+  id: string;
+  tipo: string | null;
+  data: string;
+  valor: number;
+  status: string;
+  created_at: string;
+  colaboradores: { nome: string } | null;
 }
 
 const statusLabel = (s: string) => {
@@ -92,6 +103,7 @@ const OrcamentoDetalhe = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [orc, setOrc] = useState<OrcamentoFull | null>(null);
+  const [revisoes, setRevisoes] = useState<RevisaoRow[]>([]);
   const [exceptions, setExceptions] = useState<ExceptionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [logoBase64, setLogoBase64] = useState<string>("");
@@ -104,7 +116,7 @@ const OrcamentoDetalhe = () => {
       const { data, error } = await supabase
         .from("orcamentos")
         .select(`
-          id, data, valor, status, tipo, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
+          id, data, valor, status, tipo, projeto_id, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
           clientes ( nome, email, telefone, contato, cpf_cnpj,
             arquitetos ( nome, contato )
           ),
@@ -126,6 +138,18 @@ const OrcamentoDetalhe = () => {
         : [];
 
       setOrc({ ...(data as unknown as OrcamentoFull), ambientes: ambientesParsed });
+
+      // Histórico de revisões: todos os orçamentos do mesmo projeto (mesma chave projeto_id).
+      if (data.projeto_id) {
+        const { data: revData } = await supabase
+          .from("orcamentos")
+          .select("id, tipo, data, valor, status, created_at, colaboradores ( nome )")
+          .eq("projeto_id", data.projeto_id)
+          .order("created_at", { ascending: true });
+        setRevisoes((revData ?? []) as unknown as RevisaoRow[]);
+      } else {
+        setRevisoes([]);
+      }
 
       const { data: exData } = await supabase
         .from("price_exceptions")
@@ -339,6 +363,67 @@ const OrcamentoDetalhe = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* 1.5 — HISTÓRICO DE REVISÕES (só se o projeto tem mais de uma) */}
+            {revisoes.length > 1 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Histórico de Revisões</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {revisoes.map((rev, i) => {
+                    const isAtual = rev.id === orc.id;
+                    const label =
+                      rev.tipo?.trim() ||
+                      (i === 0 ? "Primeiro Orçamento" : `Revisão ${String(i).padStart(2, "0")}`);
+                    return (
+                      <div
+                        key={rev.id}
+                        role={isAtual ? undefined : "button"}
+                        tabIndex={isAtual ? undefined : 0}
+                        onClick={isAtual ? undefined : () => navigate(`/admin/orcamento/${rev.id}`)}
+                        onKeyDown={
+                          isAtual
+                            ? undefined
+                            : (e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  navigate(`/admin/orcamento/${rev.id}`);
+                                }
+                              }
+                        }
+                        className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          isAtual
+                            ? "border-primary bg-primary/5"
+                            : "cursor-pointer hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{label}</span>
+                          {isAtual && (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary">Atual</Badge>
+                          )}
+                          <span
+                            className={`rounded px-2 py-0.5 text-xs font-medium ${statusClass(rev.status)}`}
+                          >
+                            {statusLabel(rev.status)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>{rev.colaboradores?.nome ?? "—"}</span>
+                          <span>
+                            {rev.data ? format(new Date(rev.data), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatarMoeda(Number(rev.valor) || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
 
             {/* 2 — CLIENTE E ARQUITETO */}
             <Card>

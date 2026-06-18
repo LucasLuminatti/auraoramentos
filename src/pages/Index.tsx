@@ -224,7 +224,7 @@ const Index = () => {
               <FolderOpen className="h-4 w-4 text-primary/70" />
               <span className="font-medium text-foreground">{currentProjetoNome}</span>
             </div>
-            <StepIndicator currentStep={step} steps={STEPS} />
+            <StepIndicator currentStep={step} steps={STEPS} onStepClick={(s) => setStep(s)} />
             <div className="mt-6">
               {step === 1 && (
                 <Step1DadosOrcamento dados={dados} onChange={setDados} onNext={() => setStep(2)} />

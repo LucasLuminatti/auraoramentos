@@ -35,6 +35,7 @@ interface ClienteListProps {
 const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
   const [clientes, setClientes] = useState<ClienteWithProjetos[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [expandedCliente, setExpandedCliente] = useState<string | null>(null);
   const [expandedProjeto, setExpandedProjeto] = useState<string | null>(null);
 
@@ -152,6 +153,15 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
     }
   };
 
+  const term = search.trim().toLowerCase();
+  const clientesFiltrados = term
+    ? clientes.filter(
+        (c) =>
+          c.nome.toLowerCase().includes(term) ||
+          c.projetos.some((p) => p.nome.toLowerCase().includes(term))
+      )
+    : clientes;
+
   return (
     <>
       <div className="space-y-3">
@@ -159,8 +169,19 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
           <Users className="h-5 w-5 text-primary" />
           Clientes
         </h2>
+        <Input
+          placeholder="Buscar cliente ou projeto..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
         <div className="space-y-2">
-          {clientes.map((cliente) => {
+          {clientesFiltrados.length === 0 && (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Nenhum cliente ou projeto encontrado para "{search}".
+            </p>
+          )}
+          {clientesFiltrados.map((cliente) => {
             const isExpanded = expandedCliente === cliente.id;
             const totalOrcamentos = cliente.projetos.reduce((sum, p) => sum + p.orcamentos.length, 0);
             return (
