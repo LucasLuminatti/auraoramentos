@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { Loader2, X, ListFilter } from "lucide-react";
+import { Loader2, X, ListFilter, Plus } from "lucide-react";
+import ArquitetoDialog from "@/components/ArquitetoDialog";
 
 export interface ArquitetoOption {
   id: string;
@@ -32,6 +33,7 @@ const ArquitetoAutocomplete = ({
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<ArquitetoOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setQuery(value); }, [value]);
@@ -120,7 +122,32 @@ const ArquitetoAutocomplete = ({
               <span className="font-medium text-foreground">{a.nome}</span>
             </button>
           ))}
+          {/* Criar novo arquiteto inline — apenas em modo 'select' e fora do loading (Feature 4) */}
+          {m === 'select' && !loading && (
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center gap-2 rounded-md border-t px-3 py-2 text-left text-sm text-primary hover:bg-accent transition-colors"
+              onClick={() => { setOpen(false); setCreateOpen(true); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {query.trim().length > 0 ? `Criar "${query.trim()}"` : "Criar novo arquiteto"}
+            </button>
+          )}
         </div>
+      )}
+      {m === 'select' && (
+        <ArquitetoDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          mode="create"
+          defaultNome={query.trim()}
+          onSuccess={(saved) => {
+            if (saved) {
+              onSelect({ id: saved.id, nome: saved.nome }, 'arquiteto');
+              setQuery(saved.nome);
+            }
+          }}
+        />
       )}
     </div>
   );

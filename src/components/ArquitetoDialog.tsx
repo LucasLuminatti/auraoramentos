@@ -25,10 +25,13 @@ interface ArquitetoDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
   arquiteto?: ArquitetoRow | null;
-  onSuccess: () => void;
+  /** Nome pré-preenchido em modo create (ex: texto digitado no autocomplete). */
+  defaultNome?: string;
+  /** Recebe a row criada/editada (id + nome) quando disponível — usado para auto-selecionar em criação inline. */
+  onSuccess: (saved?: { id: string; nome: string }) => void;
 }
 
-const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: ArquitetoDialogProps) => {
+const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, defaultNome, onSuccess }: ArquitetoDialogProps) => {
   const [nome, setNome] = useState("");
   const [contato, setContato] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
@@ -43,7 +46,7 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
   useEffect(() => {
     if (open) {
       const a = mode === "edit" ? arquiteto : null;
-      setNome(a?.nome ?? "");
+      setNome(a?.nome ?? defaultNome ?? "");
       setContato(a?.contato ?? "");
       setDataNascimento(a?.data_nascimento ?? "");
       setEndereco(a?.endereco ?? "");
@@ -53,10 +56,13 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
       setTipoConta(a?.tipo_conta ?? "");
       setPix(a?.pix ?? "");
     }
-  }, [open, mode, arquiteto]);
+  }, [open, mode, arquiteto, defaultNome]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Impede que o submit borbulhe pela árvore React (portal) até um <form> pai
+    // — ex: ArquitetoDialog aberto inline dentro do form do ClienteDialog/ProdutoEditDialog.
+    e.stopPropagation();
     if (!nome.trim()) {
       toast.error("Nome é obrigatório");
       return;
@@ -74,6 +80,7 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
       pix: pix.trim() || null,
     };
     let error;
+    let saved: { id: string; nome: string } | undefined;
     if (mode === "create") {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
@@ -81,11 +88,17 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
         toast.error("Sessão expirada, faça login novamente");
         return;
       }
-      const res = await supabase.from("arquitetos").insert({ ...payload, user_id: userData.user.id });
+      const res = await supabase
+        .from("arquitetos")
+        .insert({ ...payload, user_id: userData.user.id })
+        .select("id, nome")
+        .single();
       error = res.error;
+      if (res.data) saved = { id: res.data.id, nome: res.data.nome };
     } else if (mode === "edit" && arquiteto) {
       const res = await supabase.from("arquitetos").update(payload).eq("id", arquiteto.id);
       error = res.error;
+      if (!res.error) saved = { id: arquiteto.id, nome: payload.nome };
     }
     setSaving(false);
     if (error) {
@@ -94,12 +107,16 @@ const ArquitetoDialog = ({ open, onOpenChange, mode, arquiteto, onSuccess }: Arq
     }
     toast.success(mode === "create" ? "Arquiteto criado!" : "Arquiteto atualizado!");
     onOpenChange(false);
-    onSuccess();
+    onSuccess(saved);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        onEscapeKeyDown={(e) => e.stopPropagation()}
+        onInteractOutside={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Novo Arquiteto" : "Editar Arquiteto"}</DialogTitle>
         </DialogHeader>
