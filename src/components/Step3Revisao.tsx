@@ -39,6 +39,8 @@ interface Step3Props {
   onUpdateAmbientes: (ambientes: Ambiente[]) => void;
   /** Phase 10 WIZ-03 (D-08): inicializa orcamentoId state quando o wizard é reaberto a partir de um rascunho — evita duplicate INSERT. */
   initialOrcamentoId?: string;
+  /** BUG-22: o orçamento virou registro no banco — a rede de segurança local pode sair. */
+  onOrcamentoSalvo?: (orcamentoId: string) => void;
 }
 
 interface Violacao {
@@ -111,7 +113,7 @@ async function imageToBase64(src: string): Promise<string> {
   });
 }
 
-const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes, initialOrcamentoId }: Step3Props) => {
+const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes, initialOrcamentoId, onOrcamentoSalvo }: Step3Props) => {
   const { dados, ambientes, categorias } = orcamento;
   const { user } = useAuth();
   const { colaborador } = useColaborador();
@@ -482,6 +484,8 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
           ({ error } = await supabase.from("orcamentos").update(base).eq("id", orcamentoId));
         }
         if (error) throw error;
+        // BUG-22: atualização também encerra a necessidade do espelho local.
+        onOrcamentoSalvo?.(orcamentoId);
         return orcamentoId;
       }
       // RULE-072: o teto de revisões por projeto tem que valer no ponto de GRAVAÇÃO —
@@ -521,6 +525,8 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
       }
       if (error) throw error;
       setOrcamentoId(data.id);
+      // BUG-22: gravado no banco = o espelho local não é mais necessário.
+      onOrcamentoSalvo?.(data.id);
       return data.id;
     } catch (err) {
       console.error("Erro ao salvar orçamento:", err);

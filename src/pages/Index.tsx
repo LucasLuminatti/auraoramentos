@@ -6,6 +6,7 @@ import Step2Categorias from "@/components/Step2Categorias";
 import Step2Ambientes from "@/components/Step2Ambientes";
 import Step3Revisao from "@/components/Step3Revisao";
 import ClienteList from "@/components/ClienteList";
+import { salvarRascunho, lerRascunho, limparRascunho, rascunhoTemConteudo, resumirRascunho, descreverIdade, type RascunhoWizard } from "@/lib/rascunhoLocal";
 import type { DadosOrcamento, Ambiente, Orcamento, CategoriaFita } from "@/types/orcamento";
 import { LIMITE_ORCAMENTOS_POR_PROJETO, rotuloUltimaRevisao } from "@/types/orcamento";
 import { useAuth } from "@/hooks/useAuth";
@@ -72,6 +73,62 @@ const Index = () => {
   const [currentProjetoNome, setCurrentProjetoNome] = useState("");
   const [confirmVoltarOpen, setConfirmVoltarOpen] = useState(false);
   const [reopenedOrcamentoId, setReopenedOrcamentoId] = useState<string | null>(null);
+  // BUG-22: rascunho local encontrado ao abrir a página (oferta de restauração).
+  const [rascunhoOferecido, setRascunhoOferecido] = useState<RascunhoWizard | null>(null);
+
+  // ─── BUG-22: espelho local do wizard ───
+  // Grava a cada mudança enquanto o wizard está aberto; some quando o orçamento é salvo
+  // ou descartado. Não toca no banco (autosave em `orcamentos` criaria rascunho fantasma
+  // a cada tentativa abandonada).
+  const userId = colaborador?.user_id ?? colaborador?.id ?? null;
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    salvarRascunho(userId, {
+      step,
+      dados,
+      ambientes,
+      categorias,
+      clienteId: currentClienteId,
+      clienteNome: currentClienteNome,
+      projetoId: currentProjetoId,
+      projetoNome: currentProjetoNome,
+      orcamentoId: reopenedOrcamentoId,
+    });
+  }, [mode, step, dados, ambientes, categorias, currentClienteId, currentClienteNome, currentProjetoId, currentProjetoNome, reopenedOrcamentoId, userId]);
+
+  // Oferta de restauração: só na lista, só uma vez, e nunca quando já se está
+  // reabrindo/duplicando um orçamento por link (o state da navegação manda).
+  useEffect(() => {
+    if (mode !== "list" || rascunhoOferecido) return;
+    if ((location.state as { orcamentoId?: string; duplicarDe?: string } | null)?.orcamentoId) return;
+    if ((location.state as { duplicarDe?: string } | null)?.duplicarDe) return;
+    const r = lerRascunho(userId);
+    if (r && rascunhoTemConteudo(r)) setRascunhoOferecido(r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, userId]);
+
+  const restaurarRascunho = () => {
+    const r = rascunhoOferecido;
+    if (!r) return;
+    setDados(r.dados);
+    setAmbientes(r.ambientes);
+    setCategorias(r.categorias);
+    setCurrentClienteId(r.clienteId);
+    setCurrentClienteNome(r.clienteNome);
+    setCurrentProjetoId(r.projetoId);
+    setCurrentProjetoNome(r.projetoNome);
+    setReopenedOrcamentoId(r.orcamentoId);
+    setStep(r.step || 1);
+    setMode("create");
+    setRascunhoOferecido(null);
+    toast.success("Orçamento em andamento restaurado.");
+  };
+
+  const descartarRascunho = () => {
+    limparRascunho(userId);
+    setRascunhoOferecido(null);
+  };
 
   // WIZ-03 (D-09): detecta location.state.orcamentoId para reabrir rascunho
   const orcamentoParaReabrir = (location.state as { orcamentoId?: string } | null)?.orcamentoId ?? null;
@@ -273,6 +330,10 @@ const Index = () => {
     setCurrentProjetoNome("");
     setReopenedOrcamentoId(null);
     setConfirmVoltarOpen(false);
+    // BUG-22: sair pelo logo é abandono explícito — o rascunho local vai junto,
+    // senão a próxima visita ofereceria de volta o que a pessoa acabou de descartar.
+    limparRascunho(userId);
+    setRascunhoOferecido(null);
     sairParaLista();
   };
 
@@ -322,6 +383,23 @@ const Index = () => {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6">
+        {/* BUG-22: rascunho local encontrado — restauração é OFERECIDA, nunca automática. */}
+        {mode === "list" && rascunhoOferecido && (
+          <div className="mb-4 rounded-lg border border-amber-400/50 bg-amber-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm text-amber-900">
+              <strong>Você tinha um orçamento em andamento</strong>
+              {rascunhoOferecido.clienteNome ? ` — ${rascunhoOferecido.clienteNome}` : ""}
+              {rascunhoOferecido.projetoNome ? ` / ${rascunhoOferecido.projetoNome}` : ""}.
+              <span className="text-amber-800">
+                {" "}({resumirRascunho(rascunhoOferecido)}, salvo {descreverIdade(rascunhoOferecido.salvoEm)})
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={restaurarRascunho}>Retomar</Button>
+              <Button size="sm" variant="ghost" onClick={descartarRascunho}>Descartar</Button>
+            </div>
+          </div>
+        )}
         {mode === "list" && <ClienteList key={listKey} onNovoOrcamento={handleNovoOrcamento} />}
 
         {mode === "create" && (
@@ -354,7 +432,7 @@ const Index = () => {
                 <Step2Ambientes ambientes={ambientes} categorias={categorias} onChange={setAmbientes} onNext={() => setStep(4)} onPrev={() => setStep(2)} />
               )}
               {step === 4 && (
-                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(3)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} initialOrcamentoId={reopenedOrcamentoId ?? undefined} />
+                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(3)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} initialOrcamentoId={reopenedOrcamentoId ?? undefined} onOrcamentoSalvo={() => limparRascunho(userId)} />
               )}
             </div>
           </>
