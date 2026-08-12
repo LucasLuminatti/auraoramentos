@@ -99,7 +99,11 @@ export function reconcile(
         tensao: m.tensao,
         watts_por_metro: m.watts_por_metro,
         potencia_watts: m.potencia_watts,
-        largura_mm: m.largura_mm,
+        // largura_mm só entra no patch quando a master REALMENTE traz valor.
+        // A planilha não tem essa coluna (productAttributes devolve sempre null), então
+        // mandar null aqui apagava a largura de todo o catálogo a cada import — e a largura
+        // é o que sustenta a validação perfil×fita (RULE-011/013).
+        ...(m.largura_mm != null ? { largura_mm: m.largura_mm } : {}),
         cor: m.cor,
         origem: "master",
         // intencionalmente fora do patch:
@@ -107,6 +111,7 @@ export function reconcile(
         //   preco_tabela (preserva DB)
         //   preco_minimo (preserva DB)
         //   editado_manualmente (não muda — só ProdutoEditDialog seta)
+        //   tamanho_rolo_m (preserva DB — master não traz; é o que precifica os rolos, RULE-005)
       },
     });
   }

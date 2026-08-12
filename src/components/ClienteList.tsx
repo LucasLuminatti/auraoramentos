@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight, FileText, Users, FolderOpen, Plus, Pencil, Copy, Trash2, Paperclip } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Users, FolderOpen, Plus, Pencil, Copy, Trash2, Paperclip, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ interface ProjetoWithOrcamentos {
 interface ClienteWithProjetos {
   id: string;
   nome: string;
+  /** RULE-087 — escritório/arquiteto que originou o cliente, exibido junto ao nome. */
+  arquiteto: string | null;
   projetos: ProjetoWithOrcamentos[];
 }
 
@@ -67,9 +69,10 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
   const [renameNome, setRenameNome] = useState("");
 
   const fetchData = async () => {
+    // RULE-087 / BUG-05: o escritório vem embutido pela FK clientes.arquiteto_id
     const { data: clientesData } = await supabase
       .from("clientes")
-      .select("id, nome")
+      .select("id, nome, arquitetos(nome)")
       .order("nome");
 
     const { data: projetosData } = await supabase
@@ -84,7 +87,9 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
 
     if (clientesData) {
       const mapped: ClienteWithProjetos[] = clientesData.map((c) => ({
-        ...c,
+        id: c.id,
+        nome: c.nome,
+        arquiteto: c.arquitetos?.nome ?? null,
         projetos: (projetosData || [])
           .filter((p) => p.cliente_id === c.id)
           .map((p) => ({
@@ -224,6 +229,8 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
     ? clientes.filter(
         (c) =>
           c.nome.toLowerCase().includes(term) ||
+          // RULE-087: o escritório desambigua projetos homônimos, então também busca por ele
+          (c.arquiteto ?? "").toLowerCase().includes(term) ||
           c.projetos.some((p) => p.nome.toLowerCase().includes(term))
       )
     : clientes;
@@ -236,7 +243,7 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
           Clientes
         </h2>
         <Input
-          placeholder="Buscar cliente ou projeto..."
+          placeholder="Buscar cliente, escritório ou projeto..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
@@ -258,6 +265,11 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                 >
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-foreground">{cliente.nome}</span>
+                    {cliente.arquiteto && (
+                      <span className="text-xs text-muted-foreground" title="Escritório / arquiteto">
+                        {cliente.arquiteto}
+                      </span>
+                    )}
                     <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                       {cliente.projetos.length} projeto{cliente.projetos.length !== 1 ? "s" : ""}
                     </span>
@@ -342,6 +354,21 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                                           currentStatus={orc.status}
                                           onStatusChange={handleStatusChangeOrcamento}
                                         />
+                                        {/* RULE-074: rascunho reabre no wizard para edição;
+                                            orçamento fechado abre em modo visualização. */}
+                                        <button
+                                          className="p-1.5 rounded hover:bg-muted transition-colors"
+                                          title={orc.status === "rascunho" ? "Retomar rascunho" : "Visualizar orçamento"}
+                                          onClick={() =>
+                                            orc.status === "rascunho"
+                                              ? navigate("/", { state: { orcamentoId: orc.id } })
+                                              : navigate(`/orcamento/${orc.id}`)
+                                          }
+                                        >
+                                          {orc.status === "rascunho"
+                                            ? <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                            : <Eye className="h-3.5 w-3.5 text-muted-foreground" />}
+                                        </button>
                                         <button
                                           className={`p-1.5 rounded hover:bg-muted transition-colors ${anexosOpen ? "bg-muted" : ""}`}
                                           title="Anexos desta revisão"

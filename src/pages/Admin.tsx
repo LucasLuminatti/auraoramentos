@@ -56,6 +56,24 @@ const STATUS_OPTIONS = [
   { value: "perdido", label: "Perdido" },
 ] as const;
 
+// RULE-084 — a tabela `colaboradores` não tem FK com `arquitetos.user_id`/`clientes.user_id`
+// (ambos apontam para auth.users), então o PostgREST não consegue embutir o nome via join.
+// O tipo local só acrescenta a coluna crua para resolver o nome client-side.
+type ArquitetoAdminRow = ArquitetoRow & { user_id?: string | null };
+
+/**
+ * RULE-089 — busca client-side por nome nas listagens de cadastro.
+ * Case-insensitive, substring simples (sem normalização de acento), aplicada
+ * sobre a lista já carregada — mesmo padrão da busca de Pedidos (`q_pedidos`).
+ */
+export function filtrarPorTexto<T>(itens: T[], termo: string, campos: (keyof T)[]): T[] {
+  const t = (termo ?? "").trim().toLowerCase();
+  if (!t) return itens;
+  return itens.filter((item) =>
+    campos.some((campo) => String(item[campo] ?? "").toLowerCase().includes(t))
+  );
+}
+
 // Backward-compat: tabs antigas → novo (?tab=X&sub=Y)
 const LEGACY_TAB_MAP: Record<string, { tab: TopTab; sub?: string }> = {
   dashboard: { tab: "inicio" },
@@ -120,6 +138,15 @@ const Admin = () => {
   //      ?arq_clientes=none    → filtra clientes.arquiteto_id IS NULL
   //      (ausente)             → sem filtro (Todos)
   const arqClientesParam = searchParams.get("arq_clientes"); // null | "none" | "<uuid>"
+
+  // RULE-086 — filtro por colaborador em Cadastros > Clientes.
+  // URL: ?colab_clientes=<auth.users.id>  → filtra clientes.user_id (dono do cadastro).
+  // Guarda o user_id (não o colaboradores.id) porque é ele que a coluna referencia.
+  const colabClientesParam = searchParams.get("colab_clientes");
+
+  // RULE-089 — busca por nome (client-side) nas sub-abas Arquitetos e Clientes.
+  const qArquitetosParam = searchParams.get("q_arquitetos");
+  const qClientesParam = searchParams.get("q_clientes");
 
   const setArqClientesParam = (next: string | null) => {
     const params = new URLSearchParams(searchParams);
@@ -191,7 +218,7 @@ const Admin = () => {
   const [arqClientesNome, setArqClientesNome] = useState("");
 
   // Arquitetos tab
-  const [arquitetos, setArquitetos] = useState<ArquitetoRow[]>([]);
+  const [arquitetos, setArquitetos] = useState<ArquitetoAdminRow[]>([]);
   const [arquitetosMap, setArquitetosMap] = useState<Record<string, string>>({});
   const [arquitetoDialogOpen, setArquitetoDialogOpen] = useState(false);
   const [arquitetoDialogMode, setArquitetoDialogMode] = useState<"create" | "edit">("create");
@@ -208,10 +235,10 @@ const Admin = () => {
     // fetchOrcamentos é disparado por effect dedicado abaixo (reage aos 5 params Pedidos)
   }, []);
 
-  // Refetch clientes quando o filtro arquiteto muda (ou no mount inicial, com param vazio)
+  // Refetch clientes quando os filtros arquiteto/colaborador mudam (ou no mount inicial, com params vazios)
   useEffect(() => {
-    fetchClientes(arqClientesParam);
-  }, [arqClientesParam]);
+    fetchClientes(arqClientesParam, colabClientesParam);
+  }, [arqClientesParam, colabClientesParam]);
 
   // Sincroniza o nome exibido no input do autocomplete com o param da URL
   useEffect(() => {
@@ -343,14 +370,18 @@ const Admin = () => {
     setOrcamentos(data || []);
   };
 
-  const fetchClientes = async (arqFilter?: string | null) => {
+  const fetchClientes = async (arqFilter?: string | null, colabFilter?: string | null) => {
     let q = supabase
       .from("clientes")
-      .select("id, nome, email, telefone, contato, cpf_cnpj, arquiteto_id, data_nascimento");
+      .select("id, nome, email, telefone, contato, cpf_cnpj, arquiteto_id, data_nascimento, user_id");
     if (arqFilter === "none") {
       q = q.is("arquiteto_id", null);
     } else if (arqFilter && arqFilter !== "none") {
       q = q.eq("arquiteto_id", arqFilter);
+    }
+    // RULE-086 — filtro por colaborador dono do cadastro (AND com o filtro de arquiteto)
+    if (colabFilter) {
+      q = q.eq("user_id", colabFilter);
     }
     const { data, error } = await q.order("nome");
     if (error) {
@@ -363,13 +394,14 @@ const Admin = () => {
   const fetchArquitetos = async () => {
     const { data, error } = await supabase
       .from("arquitetos")
-      .select("id, nome, contato, data_nascimento, endereco, banco, agencia, conta, tipo_conta, pix")
+      // user_id: RULE-084 — coluna do criador, resolvida para nome via colaboradores
+      .select("id, nome, contato, data_nascimento, endereco, banco, agencia, conta, tipo_conta, pix, user_id")
       .order("nome", { ascending: true });
     if (error) {
       toast.error("Erro ao carregar arquitetos");
       return;
     }
-    setArquitetos((data || []) as ArquitetoRow[]);
+    setArquitetos((data || []) as ArquitetoAdminRow[]);
     const map: Record<string, string> = {};
     for (const a of data || []) map[a.id] = a.nome;
     setArquitetosMap(map);
@@ -402,20 +434,23 @@ const Admin = () => {
 
   const handleDeleteCliente = async () => {
     if (!deleteTarget) return;
-    // Guard: não cascatear exclusão de venda fechada (registro de venda concretizada).
+    // RULE-088 — Guard: não cascatear exclusão de venda concretizada.
     // A FK orcamentos.cliente_id é ON DELETE CASCADE, então sem esse bloqueio um
-    // orçamento "fechado" seria apagado silenciosamente junto com o cliente.
-    const { count: fechados, error: countError } = await supabase
+    // orçamento aprovado seria apagado silenciosamente junto com o cliente.
+    // O status legado 'fechado' foi migrado in-place para 'aprovado'
+    // (20260511000003_orcamentos_status_enum.sql) e não existe mais no CHECK
+    // {rascunho, aprovado, perdido, pendente} — contar 'fechado' nunca bloqueava nada.
+    const { count: aprovados, error: countError } = await supabase
       .from("orcamentos")
       .select("id", { count: "exact", head: true })
       .eq("cliente_id", deleteTarget.id)
-      .eq("status", "fechado");
+      .eq("status", "aprovado");
     if (countError) {
       toast.error("Erro ao verificar orçamentos do cliente: " + countError.message);
       return;
     }
-    if (fechados && fechados > 0) {
-      toast.error(`Cliente possui ${fechados} orçamento(s) fechado(s) — não é possível excluir. Arquive ou remova esses orçamentos primeiro.`);
+    if (aprovados && aprovados > 0) {
+      toast.error(`Cliente possui ${aprovados} orçamento(s) aprovado(s) — não é possível excluir. Arquive ou remova esses orçamentos primeiro.`);
       return;
     }
     const { error } = await supabase.from("clientes").delete().eq("id", deleteTarget.id);
@@ -426,7 +461,7 @@ const Admin = () => {
     toast.success("Cliente excluído!");
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
-    fetchClientes(arqClientesParam);
+    fetchClientes(arqClientesParam, colabClientesParam);
   };
 
   const handleDeleteColaborador = async (id: string) => {
@@ -502,6 +537,17 @@ const Admin = () => {
       (o.colaboradores?.nome ?? "").toLowerCase().includes(term)
     );
   })();
+
+  // RULE-084 — mapa auth.users.id → nome do colaborador, montado a partir da lista já
+  // carregada em fetchColaboradores (não há FK para o PostgREST embutir o join).
+  const colaboradorNomePorUserId: Record<string, string> = {};
+  for (const c of colaboradores) {
+    if (c.user_id) colaboradorNomePorUserId[c.user_id] = c.nome;
+  }
+
+  // RULE-089 — busca client-side sobre as listas já carregadas (combina com os filtros server-side)
+  const arquitetosFiltrados = filtrarPorTexto(arquitetos, qArquitetosParam ?? "", ["nome", "contato"]);
+  const clientesFiltrados = filtrarPorTexto(clientes, qClientesParam ?? "", ["nome", "email", "telefone"]);
 
   const importSubTabs = [
     { key: "master" as const, label: "Master (one-shot)", description: "Sobe planilha master 2026", icon: FileSpreadsheet },
@@ -684,20 +730,31 @@ const Admin = () => {
                       <Plus className="h-4 w-4" /> Novo Arquiteto
                     </Button>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar arquiteto por nome..."
+                      value={qArquitetosParam ?? ""}
+                      onChange={(e) => setUrlParam("q_arquitetos", e.target.value || null)}
+                      className="max-w-sm"
+                    />
+                  </div>
                   <div className="rounded-xl border overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Nome</TableHead>
                           <TableHead>Contato</TableHead>
+                          <TableHead>Criado por</TableHead>
                           <TableHead className="w-28 text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {arquitetos.map((a) => (
+                        {arquitetosFiltrados.map((a) => (
                           <TableRow key={a.id}>
                             <TableCell className="font-medium">{a.nome}</TableCell>
                             <TableCell>{a.contato || "—"}</TableCell>
+                            <TableCell>{(a.user_id && colaboradorNomePorUserId[a.user_id]) || "—"}</TableCell>
                             <TableCell className="text-right">
                               <Button variant="ghost" size="sm" onClick={() => openEditArquiteto(a)}>
                                 <Pencil className="h-4 w-4" />
@@ -713,10 +770,12 @@ const Admin = () => {
                             </TableCell>
                           </TableRow>
                         ))}
-                        {arquitetos.length === 0 && (
+                        {arquitetosFiltrados.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                              Nenhum arquiteto cadastrado
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                              {qArquitetosParam?.trim()
+                                ? "Nenhum arquiteto encontrado para a busca"
+                                : "Nenhum arquiteto cadastrado"}
                             </TableCell>
                           </TableRow>
                         )}
@@ -729,8 +788,35 @@ const Admin = () => {
               {/* CADASTROS > CLIENTES */}
               <TabsContent value="clientes">
                 <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                     <div className="w-full sm:max-w-xs">
+                      <Label className="text-xs text-muted-foreground">Buscar</Label>
+                      <Input
+                        placeholder="Buscar cliente por nome..."
+                        value={qClientesParam ?? ""}
+                        onChange={(e) => setUrlParam("q_clientes", e.target.value || null)}
+                      />
+                    </div>
+                    {/* RULE-086 — filtro por colaborador dono do cadastro (clientes.user_id) */}
+                    <div className="w-full sm:w-56">
+                      <Label className="text-xs text-muted-foreground">Colaborador</Label>
+                      <Select
+                        value={colabClientesParam ?? "all"}
+                        onValueChange={(v) => setUrlParam("colab_clientes", v === "all" ? null : v)}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {colaboradores
+                            .filter((c) => !!c.user_id)
+                            .map((c) => (
+                              <SelectItem key={c.id} value={c.user_id}>{c.nome}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-full sm:max-w-xs">
+                      <Label className="text-xs text-muted-foreground">Arquiteto</Label>
                       <ArquitetoAutocomplete
                         mode="filter"
                         value={arqClientesNome}
@@ -749,7 +835,7 @@ const Admin = () => {
                         placeholder="Filtrar por arquiteto..."
                       />
                     </div>
-                    <Button size="sm" onClick={() => setClienteCreateOpen(true)} className="gap-1.5">
+                    <Button size="sm" onClick={() => setClienteCreateOpen(true)} className="gap-1.5 sm:ml-auto">
                       <Plus className="h-4 w-4" /> Novo Cliente
                     </Button>
                   </div>
@@ -765,7 +851,7 @@ const Admin = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {clientes.map((c) => (
+                        {clientesFiltrados.map((c) => (
                           <TableRow key={c.id}>
                             <TableCell className="font-medium">{c.nome}</TableCell>
                             <TableCell>{c.email || "—"}</TableCell>
@@ -788,14 +874,18 @@ const Admin = () => {
                             </TableCell>
                           </TableRow>
                         ))}
-                        {clientes.length === 0 && (
+                        {clientesFiltrados.length === 0 && (
                           <TableRow>
                             <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                              {arqClientesParam
-                                ? (arqClientesParam === "none"
-                                    ? "Nenhum cliente sem arquiteto"
-                                    : "Nenhum cliente vinculado a este arquiteto")
-                                : "Nenhum cliente cadastrado"}
+                              {qClientesParam?.trim()
+                                ? "Nenhum cliente encontrado para a busca"
+                                : colabClientesParam
+                                  ? "Nenhum cliente cadastrado por este colaborador"
+                                  : arqClientesParam
+                                    ? (arqClientesParam === "none"
+                                        ? "Nenhum cliente sem arquiteto"
+                                        : "Nenhum cliente vinculado a este arquiteto")
+                                    : "Nenhum cliente cadastrado"}
                             </TableCell>
                           </TableRow>
                         )}
@@ -1210,7 +1300,7 @@ const Admin = () => {
         open={clienteCreateOpen}
         onOpenChange={setClienteCreateOpen}
         mode="create"
-        onSuccess={() => fetchClientes(arqClientesParam)}
+        onSuccess={() => fetchClientes(arqClientesParam, colabClientesParam)}
       />
 
       <ClienteDialog
@@ -1218,7 +1308,7 @@ const Admin = () => {
         onOpenChange={setClienteEditOpen}
         mode="edit"
         cliente={clienteEditTarget}
-        onSuccess={() => fetchClientes(arqClientesParam)}
+        onSuccess={() => fetchClientes(arqClientesParam, colabClientesParam)}
       />
 
       <ProdutoEditDialog

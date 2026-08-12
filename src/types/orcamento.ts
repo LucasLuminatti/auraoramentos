@@ -19,6 +19,14 @@ export interface Produto {
   somente_baby?: boolean | null;
   tipo_produto?: string | null;
   subtipo?: string | null;
+  /** Largura da fita em mm (RULE-013) — usada na validação perfil×fita da edge. */
+  largura_mm?: number | null;
+  /** Tamanho do rolo da fita em metros (RULE-005) — catálogo real: 5/10/25/50. */
+  tamanho_rolo_m?: number | null;
+  /** Cor do produto no catálogo: 'preto' | 'branco' | 'dourado' | null (RULE-054/055/110). */
+  cor?: string | null;
+  /** Fator multiplicador de lâmpadas do spot: 1=simples, 2=duplo, 3=triplo, 4=quádruplo (RULE-111). */
+  fator_spot?: number | null;
 }
 export interface ItemLuminaria {
   id: string;
@@ -54,6 +62,10 @@ export interface ItemComposicao {
   comprimento?: number;
   /** Potência individual em watts do módulo (auto-load magnético deriva carga total). Phase 20. */
   potenciaW?: number;
+  /** W/m da fita (só em `papel: 'fita_modular'`). Guardado para o consumo do SYSTEM MOLD poder
+   *  ser recalculado a cada render — sem ele, o aviso de driver alojado congelava no valor
+   *  da última busca e não acompanhava a remoção de módulos. Opcional (snapshots antigos). */
+  wm?: number;
 }
 
 export interface ItemPerfil {
@@ -81,11 +93,17 @@ export interface ItemFitaLED {
   descricao: string;
   wm: number;
   voltagem?: 12 | 24 | 48;
-  metragemRolo: 5 | 10 | 15;
+  /** Tamanho do rolo em metros (RULE-005): vem do catálogo (`produtos.tamanho_rolo_m`)
+   *  no add-time — catálogo real tem 5/10/25/50 m. Fallback 5 quando o produto não tem
+   *  o campo preenchido. Snapshots antigos carregam 5/10/15 e continuam válidos. */
+  metragemRolo: number;
   precoUnitario: number;
   precoMinimo: number;
   imagemUrl?: string;
   is_baby?: boolean | null;
+  /** Largura da fita em mm (RULE-013). Snapshot do catálogo no add-time.
+   *  Opcional — snapshots antigos têm undefined; payload da edge envia null e a validação é pulada. */
+  largura_mm?: number | null;
 }
 
 export interface ItemDriver {
@@ -110,6 +128,14 @@ export interface SistemaIluminacao {
   passadasManual: 1 | 2 | 3;       // usado quando perfil = null
   /** Sub-ambiente / agrupamento opcional (ex: "Sanca", "Rasgo", "Pé-direito"). Phase 5 / PDF-01. */
   local?: string | null;
+  /** Override manual da quantidade de drivers cobrada (RULE-001 — tudo editável).
+   *  Opcional — null/undefined = usar o cálculo automático (retrocompatível com snapshots antigos). */
+  qtdDriversManual?: number | null;
+  /** Categoria de fita à qual este sistema está vinculado (RULE-016).
+   *  Ao vincular, a fita da categoria é copiada para `fita` (snapshot) e a metragem deste
+   *  sistema passa a somar na fita da categoria. Opcional — sistema sem categoria continua
+   *  consolidando por código de fita (retrocompatível). */
+  categoriaId?: string | null;
 }
 
 /** @deprecated Use SistemaIluminacao */
@@ -124,12 +150,28 @@ export interface Ambiente {
 
 export interface DadosOrcamento {
   colaborador: string;
-  tipo: 'Primeiro Orçamento' | 'Revisão 01' | 'Revisão 02' | 'Revisão 03' | 'Revisão 04' | 'Revisão 05' | '';
+  /** RULE-069/072: "Primeiro Orçamento" é a revisão inicial (exibida como R00); até 10 por
+   *  projeto (R00…R09). O valor gravado no banco não muda para não invalidar histórico. */
+  tipo: 'Primeiro Orçamento' | 'Revisão 01' | 'Revisão 02' | 'Revisão 03' | 'Revisão 04' | 'Revisão 05'
+      | 'Revisão 06' | 'Revisão 07' | 'Revisão 08' | 'Revisão 09' | '';
+}
+
+/** Categoria de fita (RULE-014/015): nome livre dado pelo colaborador (ex.: "sanca quente",
+ *  "marcenaria") + a fita que a categoria carrega. NÃO tem perfil — o perfil é escolhido caso a
+ *  caso no ambiente e vinculado à categoria (RULE-016).
+ *  Escopo: por orçamento, sem padrões globais (RULE-019 / CONF-11). */
+export interface CategoriaFita {
+  id: string;
+  nome: string;
+  fita: ItemFitaLED;
 }
 
 export interface Orcamento {
   dados: DadosOrcamento;
   ambientes: Ambiente[];
+  /** Categorias de fita do orçamento (RULE-014). Opcional — orçamentos anteriores ao
+   *  modelo de categorias não têm o campo e continuam agrupando a fita por código. */
+  categorias?: CategoriaFita[];
 }
 
 // Status do orçamento — alinhado com CHECK constraint da Phase 7 (D-25)
@@ -139,9 +181,30 @@ export type StatusOrcamento = 'rascunho' | 'aprovado' | 'perdido' | 'pendente';
 
 /**
  * Margem de segurança aplicada sobre a potência consumida ao dimensionar drivers.
- * Mantém paridade com a edge function `validar-sistema-orcamento` (fator 1.05).
+ * RULE-026 — decisão da equipe (Luis/Paolla, 2026-08-12): folga de 20%.
+ * Mantém paridade com a edge function `validar-sistema-orcamento` e as RPCs SQL
+ * (`calcular_driver_recomendado`/`validar_sistema_iluminacao`) — mudar aqui exige
+ * espelhar nas outras duas camadas no MESMO deploy.
  */
-export const MARGEM_SEGURANCA_DRIVER = 1.05;
+export const MARGEM_SEGURANCA_DRIVER = 1.20;
+
+/**
+ * Sobra (perda) de fita considerada POR ROLO ao converter demanda em rolos.
+ * RULE-006 — decisão da equipe (Luis/Paolla, 2026-08-12): 5% sobre cada rolo,
+ * i.e. de um rolo de 5 m consideram-se ~4,75 m aproveitáveis.
+ * Paridade com a edge `validar-sistema-orcamento` (otimizarRolos) e a RPC SQL
+ * `otimizar_rolos_fita` — mudar aqui exige espelhar nas outras duas camadas.
+ */
+export const SOBRA_ROLO_FITA = 0.05;
+
+/** RULE-072 — teto de revisões por projeto (R00 … R09). Vale no ponto de gravação, para
+ *  cobrir também o caminho "Duplicar como nova revisão". */
+export const LIMITE_ORCAMENTOS_POR_PROJETO = 10;
+
+/** Tamanhos de rolo praticados no catálogo (RULE-005, conferido em 2026-08-12:
+ *  186 fitas com `tamanho_rolo_m` → 5 m, 10 m, 25 m e 50 m).
+ *  Usado só como opções do seletor manual — o valor real vem do produto. */
+export const TAMANHOS_ROLO_CATALOGO = [5, 10, 25, 50];
 
 /** Regras de conector/kit obrigatório por família de sistema composto (Phase 19 / D-07).
  *  Vive no código (3 famílias fixas, regra estrutural estável), NÃO na tabela produto_composicao.
@@ -166,7 +229,7 @@ export const REGRAS_COMPOSICAO: Record<string, {
 
 // ─── Helpers product-first Phase 20 ───
 
-export type TipoAncora = 'luminaria' | 'fita' | 'magneto_48v' | 'tiny_magneto' | 'modular';
+export type TipoAncora = 'luminaria' | 'fita' | 'perfil' | 'magneto_48v' | 'tiny_magneto' | 'modular';
 
 /** Roteamento product-first (Phase 20 / D-02). Detecta o fluxo a partir do produto âncora.
  *  Prioridade: 'fita' ANTES do fallback (fita tem sistema_magnetico null — Pitfall 1). */
@@ -175,6 +238,11 @@ export function detectarTipoAncora(produto: Produto): TipoAncora {
   if (produto.sistema_magnetico === 'magneto_48v') return 'magneto_48v';
   if (produto.sistema_magnetico === 'tiny_magneto') return 'tiny_magneto';
   if (produto.sistema_magnetico === 's_mode') return 'modular';
+  // RULE-062 / BUG-09: perfil é um SISTEMA (perfil + fita + driver), não um item avulso.
+  // Sem esta linha, buscar um perfil na busca do ambiente criava uma linha solta — e as
+  // validações perfil×fita (largura, Baby, IP) nunca chegavam a rodar.
+  // Vem DEPOIS dos magnéticos: trilho magnético cadastrado como perfil abre composição.
+  if (produto.tipo_produto === 'perfil') return 'perfil';
   return 'luminaria'; // fallback gracioso D-03 — nunca interrompe
 }
 
@@ -204,6 +272,95 @@ export function parsearComprimentoModulo(descricao: string): number | undefined 
   const mtMatch = descricao.match(/FITA LED\s+(\d+(?:[,.]\d+)?)\s*MT/i);
   if (mtMatch) return parseFloat(mtMatch[1].replace(',', '.'));
   return undefined;
+}
+
+// ─── Capacidade do trilho e tampa cega (WP-B: RULE-056/099 + RULE-037/038) ───
+
+/** Parse GENÉRICO do comprimento (m) na descrição de trilho/perfil/tampa/módulo.
+ *  Ordem de tentativa (da mais específica para a mais genérica):
+ *  1. "FITA LED 132MM" / "FITA LED 1MT" — difusos (parsearComprimentoModulo);
+ *  2. token de metros: "TAMANHO 2M", "TAM: 1M", "PT 2M - MAX. 48V", "1MT BRANCO",
+ *     "0,50M PRETO", "2 METROS" — trilhos âncora e tampas cegas;
+ *  3. token ÚNICO de milímetros: "300MM PT" (módulos magnéticos/concentrados).
+ *     Com mais de um token MM (ex.: "LARGURA 26,2MM ALTURA 46MM") a medida é
+ *     ambígua → undefined (fica fora da soma — RULE-056).
+ *  Retorna undefined quando nada é parseável. */
+export function parsearComprimentoDescricao(descricao: string): number | undefined {
+  const d = descricao ?? '';
+  const viaModulo = parsearComprimentoModulo(d);
+  if (viaModulo != null) return viaModulo;
+  // "1MT" / "2 METROS" primeiro; depois "2M" isolado (M\b não casa dentro de "46MM")
+  const metros = d.match(/(\d+(?:[,.]\d+)?)\s*(?:MT|METROS?)\b/i) ?? d.match(/(\d+(?:[,.]\d+)?)M\b/i);
+  if (metros) return parseFloat(metros[1].replace(',', '.'));
+  const mms = d.match(/\d+(?:[,.]\d+)?\s*MM\b/gi);
+  if (mms?.length === 1) {
+    const mm = mms[0].match(/(\d+(?:[,.]\d+)?)/);
+    if (mm) return parseFloat(mm[1].replace(',', '.')) / 1000;
+  }
+  return undefined;
+}
+
+/** Detecta tampa cega pela descrição (RULE-099: tampa cega "passa sempre"). */
+export function ehTampaCega(descricao: string): boolean {
+  return /TAMPA\s+CEGA/i.test(descricao ?? '');
+}
+
+export interface OcupacaoTrilho {
+  /** Capacidade total do trilho âncora: comprimento parseado × quantidade do item. */
+  trilhoM: number;
+  /** Σ (comprimento × qtd) dos componentes que ocupam o trilho, INCLUINDO tampas
+   *  cegas — base do AVISO de capacidade (RULE-056). RULE-099 resolvida pela
+   *  equipe em 2026-08-12: tampa cega que excede AVISA mesmo assim. */
+  ocupadoM: number;
+  /** Σ (comprimento × qtd) incluindo tampas cegas — base da sobra para a sugestão
+   *  de tampa cega por subtração (RULE-037). Hoje idêntico a ocupadoM; mantido
+   *  separado caso a isenção volte. */
+  ocupadoComTampasM: number;
+}
+
+/** Ocupação do trilho âncora de um sistema composto (RULE-056 / RULE-037).
+ *  Somam apenas componentes que fisicamente ocupam o trilho (papel 'modulo' e
+ *  'acessorio_opcional'); driver/conector/kit/fita_modular ficam fora.
+ *  Comprimento do componente: snapshot `comprimento` ou parse da descrição;
+ *  componentes sem comprimento parseável ficam fora da soma.
+ *  Retorna null quando o comprimento do trilho âncora não é parseável
+ *  (snapshots antigos/descrições sem medida → nenhum aviso, zero quebra). */
+export function calcularOcupacaoTrilho(item: ItemLuminaria): OcupacaoTrilho | null {
+  const trilhoUnitario = parsearComprimentoDescricao(item.descricao);
+  if (trilhoUnitario == null || trilhoUnitario <= 0) return null;
+  const trilhoM = trilhoUnitario * Math.max(1, item.quantidade || 1);
+  let ocupadoM = 0;
+  let ocupadoComTampasM = 0;
+  for (const c of item.composicao ?? []) {
+    if (c.papel !== 'modulo' && c.papel !== 'acessorio_opcional') continue;
+    const comp = c.comprimento ?? parsearComprimentoDescricao(c.descricao);
+    if (comp == null || comp <= 0) continue; // sem comprimento parseável: fora da soma
+    const total = comp * Math.max(1, c.quantidade || 1);
+    ocupadoComTampasM += total;
+    ocupadoM += total; // tampa cega conta no aviso (decisão da equipe 2026-08-12, RULE-099)
+  }
+  return { trilhoM, ocupadoM, ocupadoComTampasM };
+}
+
+/** Escolhe a tampa cega para cobrir uma sobra (RULE-038): a MENOR com
+ *  comprimento >= sobra; se nenhuma
+ *  cobre, a MAIOR disponível (`cobre: false` → chamador avisa).
+ *  Empates de comprimento preservam a ordem de entrada (permite pré-ordenar
+ *  candidatas por preferência, ex.: cor do trilho). */
+export function escolherTampaCega<T extends { comprimentoM: number }>(
+  tampas: T[],
+  sobraM: number,
+): { tampa: T; cobre: boolean } | null {
+  if (!tampas.length) return null;
+  let melhor: T | null = null;
+  let maior: T = tampas[0];
+  for (const t of tampas) {
+    if (t.comprimentoM > maior.comprimentoM) maior = t;
+    if (t.comprimentoM >= sobraM - 1e-9 && (melhor == null || t.comprimentoM < melhor.comprimentoM)) {
+      melhor = t;
+    }
+  }
+  return melhor ? { tampa: melhor, cobre: true } : { tampa: maior, cobre: false };
 }
 
 export type RecomendacaoDriver48V =
@@ -353,8 +510,19 @@ export function calcularSubtotalPerfilSistema(sistema: SistemaIluminacao): numbe
   return sistema.perfil.precoUnitario * sistema.perfil.quantidade;
 }
 
+/** Quantidade EFETIVA de drivers do sistema (RULE-001): override manual quando
+ *  presente e válido (inteiro ≥ 0), senão fallback no cálculo automático.
+ *  Snapshots antigos sem qtdDriversManual caem sempre no cálculo. */
+export function calcularQtdDriversEfetiva(sistema: SistemaIluminacao): number {
+  const manual = sistema.qtdDriversManual;
+  if (manual != null && Number.isFinite(manual) && manual >= 0) {
+    return Math.floor(manual);
+  }
+  return calcularQtdDrivers(sistema);
+}
+
 export function calcularSubtotalDriverSistema(sistema: SistemaIluminacao): number {
-  const qtd = calcularQtdDrivers(sistema);
+  const qtd = calcularQtdDriversEfetiva(sistema);
   return sistema.driver.precoUnitario * qtd;
 }
 
@@ -487,7 +655,8 @@ export interface GrupoFita {
   codigo: string;
   descricao: string;
   demandaTotal: number;
-  metragemRolo: 5 | 10 | 15;
+  /** Tamanho do rolo do grupo (RULE-005) — vem do snapshot da fita; fallback 5. */
+  metragemRolo: number;
   precoUnitario: number;
   precoMinimo: number;
   rolos: { tamanho: number; quantidade: number }[];
@@ -497,13 +666,29 @@ export interface GrupoFita {
   localBreakdown?: LocalBreakdown[];
   /** NOVO (Phase 17 / RES-01 D-08): URL da imagem/thumbnail da fita para o Resumo de Fitas do PDF */
   imagemUrl?: string;
+  /** Categoria que originou o grupo (RULE-017). Ausente em grupos consolidados por código. */
+  categoriaId?: string;
+  /** Nome da categoria — vai na etiqueta da fábrica (RULE-018). */
+  categoriaNome?: string;
 }
 
-export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
+/** Consolida a fita do orçamento inteiro em grupos de compra.
+ *
+ *  Chave do grupo (RULE-017): a CATEGORIA, quando o sistema está vinculado a uma; senão o
+ *  código da fita (comportamento anterior, mantido para orçamentos sem categorias).
+ *  Consolidar por categoria é o que garante as RULE-020 (mesma fita em categorias diferentes
+ *  = grupos separados) e RULE-021 (rolo de uma categoria não é reaproveitado em outra).
+ *
+ *  `categorias` é opcional só para não quebrar chamadores antigos (o template v1 é congelado);
+ *  sem ela, os grupos por categoria ficam sem nome na etiqueta. */
+export function calcularRolosPorGrupo(ambientes: Ambiente[], categorias?: CategoriaFita[]): GrupoFita[] {
+  const nomePorCategoria = new Map((categorias ?? []).map(c => [c.id, c.nome]));
   const grupos = new Map<string, {
+    codigoFita: string;
+    categoriaId?: string;
     descricao: string;
     demanda: number;
-    metragemRolo: 5 | 10 | 15;
+    metragemRolo: number;
     precoUnitario: number;
     precoMinimo: number;
     imagemUrl?: string;
@@ -512,8 +697,12 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
 
   for (const amb of ambientes) {
     for (const sis of amb.sistemas) {
-      const key = sis.fita.codigo;
-      if (!key) continue;
+      if (!sis.fita.codigo) continue;
+      // Categoria removida depois de vinculada deixa `categoriaId` órfão no sistema. Sem este
+      // fallback o grupo fantasma continuaria separado do grupo da mesma fita — dois pedidos
+      // de rolo para a mesma fita, sem nome de categoria em nenhum dos dois.
+      const categoriaValida = sis.categoriaId && (categorias == null || nomePorCategoria.has(sis.categoriaId));
+      const key = categoriaValida ? `cat:${sis.categoriaId}` : sis.fita.codigo;
       const demanda = calcularDemandaFita(sis);
       const label = (sis.local && sis.local.trim())
         ? `${amb.nome} — ${sis.local.trim()}`
@@ -522,8 +711,14 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
       if (existing) {
         existing.demanda += demanda;
         existing.localAcc.set(label, (existing.localAcc.get(label) ?? 0) + demanda);
+        // Mesmo código de fita com tamanhos de rolo divergentes (ex.: sistema de snapshot
+        // antigo + sistema novo do catálogo): fica o MAIOR, senão a ordem dos ambientes
+        // decidiria o preço. O maior é o que veio do catálogo — o menor é o default legado.
+        existing.metragemRolo = Math.max(existing.metragemRolo, sis.fita.metragemRolo || 0);
       } else {
         grupos.set(key, {
+          codigoFita: sis.fita.codigo,
+          categoriaId: categoriaValida ? sis.categoriaId! : undefined,
           descricao: sis.fita.descricao,
           demanda,
           metragemRolo: sis.fita.metragemRolo,
@@ -537,35 +732,21 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[]): GrupoFita[] {
   }
 
   const resultado: GrupoFita[] = [];
-  for (const [codigo, g] of grupos) {
-    const rolos: { tamanho: number; quantidade: number }[] = [];
-    let restante = g.demanda;
-    const tamanhosDisponiveis = [15, 10, 5];
-
-    for (const tam of tamanhosDisponiveis) {
-      if (restante <= 0) break;
-      const qtd = Math.floor(restante / tam);
-      if (qtd > 0) {
-        rolos.push({ tamanho: tam, quantidade: qtd });
-        restante -= qtd * tam;
-      }
-    }
-    if (restante > 0) {
-      const melhorTam = tamanhosDisponiveis.find(t => t >= restante) || 5;
-      const existente = rolos.find(r => r.tamanho === melhorTam);
-      if (existente) {
-        existente.quantidade += 1;
-      } else {
-        rolos.push({ tamanho: melhorTam, quantidade: 1 });
-      }
-    }
-
-    const qtdRolosTotal = rolos.reduce((s, r) => s + r.quantidade, 0);
+  for (const g of grupos.values()) {
+    // RULE-005: rolo único por produto (tamanho do catálogo via snapshot); fallback 5 m.
+    // RULE-006: 5% de sobra POR ROLO — de um rolo de 5 m aproveitam-se ~4,75 m.
+    // Ceil no valor CRU (WR-03); epsilon compensa 5×0.95 ≠ 4.75 em ponto flutuante.
+    const tamanhoRolo = g.metragemRolo > 0 ? g.metragemRolo : 5;
+    const metrosUteisPorRolo = tamanhoRolo * (1 - SOBRA_ROLO_FITA);
+    const qtdRolosTotal = g.demanda > 0 ? Math.ceil(g.demanda / metrosUteisPorRolo - 1e-9) : 0;
+    const rolos = qtdRolosTotal > 0 ? [{ tamanho: tamanhoRolo, quantidade: qtdRolosTotal }] : [];
     resultado.push({
-      codigo,
+      codigo: g.codigoFita,
+      categoriaId: g.categoriaId,
+      categoriaNome: g.categoriaId ? nomePorCategoria.get(g.categoriaId) : undefined,
       descricao: g.descricao,
       demandaTotal: g.demanda,
-      metragemRolo: g.metragemRolo,
+      metragemRolo: tamanhoRolo, // valor EFETIVO (já com fallback) — o mesmo que precifica `rolos`
       precoUnitario: g.precoUnitario,
       precoMinimo: g.precoMinimo,
       rolos,
@@ -663,6 +844,149 @@ export function ambienteTemLampada(amb: Ambiente): boolean {
   return amb.luminarias.some(
     (l) => /l[âa]mpada/i.test(l.descricao ?? '') || (l as any).tipo_produto === 'lampada'
   );
+}
+
+// ─── WP-F: cor, família de perfil e restrições físicas ───
+// RULE-029/031/054/055/100/103/104/110. Helpers PUROS (sem Supabase, sem React) —
+// consumidos por ComposicaoCard/AmbienteCard e espelhados na edge `validar-sistema-orcamento`.
+// Todos aceitam campos ausentes (snapshots antigos): entrada vazia → resposta neutra.
+
+export type CorProduto = 'preto' | 'branco' | 'dourado';
+
+/** Normaliza a cor livre do catálogo (`produtos.cor` vem do master como texto solto:
+ *  "Preto", "BRANCO", "Dourado"...). Retorna null para vazio/desconhecido — nunca lança. */
+export function normalizarCor(raw?: string | null): CorProduto | null {
+  const s = (raw ?? '').trim().toUpperCase();
+  if (!s) return null;
+  if (/^PRET[OA]?$|^PT$/.test(s)) return 'preto';
+  if (/^BRANC[OA]?$|^BC$|^BR$/.test(s)) return 'branco';
+  if (/^DOURAD[OA]?$|^DR$/.test(s)) return 'dourado';
+  return null;
+}
+
+/** RULE-054/110: cor do produto deduzida do CÓDIGO e da DESCRIÇÃO.
+ *  Convenção confirmada na R5: sufixo "PT" = preto (ex.: TINIMAG-PT, LM3168PT);
+ *  "BC"/"BR"/"BRANCO" = branco. Sinais contraditórios (preto E branco no mesmo texto)
+ *  ou ausência de marcador → null (chamador cai no default atual, sem inventar cor). */
+export function corDoProduto(codigo?: string | null, descricao?: string | null): 'preto' | 'branco' | null {
+  const texto = (descricao ?? '').toUpperCase();
+  const cod = (codigo ?? '').toUpperCase();
+
+  let preto = /\bPT\b|\bPRET[OA]\b/.test(texto);
+  let branco = /\bBC\b|\bBR\b|\bBRANC[OA]\b/.test(texto);
+
+  // Sufixo do código só desempata quando a descrição não disse nada
+  if (!preto && !branco) {
+    preto = /PT$/.test(cod);
+    branco = /(BC|BR)$/.test(cod);
+  }
+
+  if (preto === branco) return null; // nenhum marcador OU marcadores conflitantes
+  return preto ? 'preto' : 'branco';
+}
+
+/** Limite físico do driver que fica ALOJADO dentro do trilho/perfil (RULE-029/100):
+ *  acima disso o driver não cabe. Espelhado na edge `validar-sistema-orcamento`
+ *  e no seed `regras_compatibilidade_perfil` (trik/fk/alojamento = 72 W). */
+export const LIMITE_W_DRIVER_ALOJADO = 72;
+
+/** Famílias (coluna `familia_perfil`) cujo driver fica alojado dentro do perfil. */
+const FAMILIAS_DRIVER_ALOJADO = ['trik', 'trick', 'fk', 'alojamento'];
+
+/** RULE-029 + RULE-100: o driver deste sistema fica ALOJADO dentro do perfil/trilho?
+ *  Verdadeiro para as famílias Trick/Alojamento (por `familia_perfil` OU pelo nome do
+ *  produto, que é como o colaborador reconhece a linha) e para o modular de SOBREPOR.
+ *  Sem descrição nem família → false (nada bloqueia em snapshot antigo). */
+export function exigeDriverAlojado(params: {
+  descricao?: string | null;
+  familiaPerfil?: string | null;
+  sistema?: string | null;
+}): boolean {
+  const d = (params.descricao ?? '').toUpperCase();
+  const familia = (params.familiaPerfil ?? '').trim().toLowerCase();
+  if (familia && FAMILIAS_DRIVER_ALOJADO.includes(familia)) return true;
+  if (/\bTRICK\b|\bTRIK\b|\bTRICKY\b|ALOJAMENTO/.test(d)) return true;
+  // Modular (SYSTEM MOLD) de sobrepor: o driver vai escondido dentro do trilho
+  if (params.sistema === 's_mode' && /SOBREPOR/.test(d)) return true;
+  return false;
+}
+
+/** RULE-100: o driver é "Slim"? Três respostas, porque o dado pode faltar:
+ *  - 'slim': `subtipo === 'slim'` OU "SLIM" no nome;
+ *  - 'nao_slim': `subtipo` preenchido com outro valor (contradição explícita → BLOQUEIA);
+ *  - 'indeterminado': sem `subtipo` e sem "SLIM" no nome (→ AVISA, não bloqueia:
+ *    o catálogo ainda não classifica todos os drivers). */
+export function classificarDriverSlim(params: {
+  driverTipo?: string | null;
+  descricao?: string | null;
+}): 'slim' | 'nao_slim' | 'indeterminado' {
+  const tipo = (params.driverTipo ?? '').trim().toLowerCase();
+  if (tipo === 'slim') return 'slim';
+  if (/\bSLIM\b/i.test(params.descricao ?? '')) return 'slim';
+  if (tipo) return 'nao_slim';
+  return 'indeterminado';
+}
+
+/** RULE-100: driver "Slim"? Atalho positivo de `classificarDriverSlim`. */
+export function ehDriverSlim(params: { driverTipo?: string | null; descricao?: string | null }): boolean {
+  return classificarDriverSlim(params) === 'slim';
+}
+
+/** RULE-031: driver de TRILHO (magnético) — não é driver de fita LED.
+ *  Critérios, do mais confiável ao mais frouxo: `sistema` do catálogo
+ *  ('tiny_magneto' | 'magneto_48v' | 'trilha'), `subtipo === 'magnetico'`,
+ *  e por fim o nome ("DRIVER ... TRILHO MAGNETICO", padrão dos LM2343/LM2344). */
+export function ehDriverDeTrilho(params: {
+  sistema?: string | null;
+  subtipo?: string | null;
+  descricao?: string | null;
+}): boolean {
+  const sistema = (params.sistema ?? '').trim().toLowerCase();
+  if (sistema === 'tiny_magneto' || sistema === 'magneto_48v' || sistema === 'trilha') return true;
+  if ((params.subtipo ?? '').trim().toLowerCase() === 'magnetico') return true;
+  const d = (params.descricao ?? '').toUpperCase();
+  return /TRILHO\s+MAGNETIC[OA]|MAGNETIC[OA]\s+TRILHO|TRILHO\s+MAGNETO/.test(d);
+}
+
+/** RULE-103: perfis Light Mini e Ripado só aceitam fita Baby (não cabe outra).
+ *  `somenteBaby` (flag do catálogo) tem precedência; o nome cobre o que ainda não
+ *  está cadastrado. */
+export function perfilSomenteFitaBaby(params: {
+  descricao?: string | null;
+  familiaPerfil?: string | null;
+  somenteBaby?: boolean | null;
+}): boolean {
+  if (params.somenteBaby === true) return true;
+  const familia = (params.familiaPerfil ?? '').trim().toLowerCase();
+  if (familia.startsWith('light_mini') || familia === 'ripado') return true;
+  const d = (params.descricao ?? '').toUpperCase();
+  return /LIGHT\s*MINI|\bRIPAD[OA]\b/.test(d);
+}
+
+/** RULE-104: perfis Nano e Cantoneira não aceitam fita com IP (não cabe). */
+export function perfilRejeitaFitaIP(params: {
+  descricao?: string | null;
+  familiaPerfil?: string | null;
+}): boolean {
+  const familia = (params.familiaPerfil ?? '').trim().toLowerCase();
+  if (familia.includes('nano') || familia.includes('cantoneira')) return true;
+  const d = (params.descricao ?? '').toUpperCase();
+  return /\bNANO\b|CANTONEIRA/.test(d);
+}
+
+/** RULE-104: fita com proteção IP — "vai estar escrito no nome IP65".
+ *  Só conta vedação real (IP44 ou mais): o catálogo escreve "IP20" em 102 das 316 fitas, e
+ *  IP20 é justamente a fita SEM capa — a que cabe no perfil. Tratar IP20 como "fita IP"
+ *  bloquearia um terço do catálogo nos perfis Nano/Cantoneira. */
+export function fitaEhIP(descricao?: string | null): boolean {
+  const m = /\bIP\s?(\d{2})\b/i.exec(descricao ?? '');
+  return m ? Number(m[1]) >= 44 : false;
+}
+
+/** RULE-103: fita Baby — flag do catálogo (`somente_baby`) ou nome. */
+export function fitaEhBaby(params: { descricao?: string | null; isBaby?: boolean | null }): boolean {
+  if (params.isBaby === true) return true;
+  return /\bBABY\b/i.test(params.descricao ?? '');
 }
 
 export interface ChecklistIssue {

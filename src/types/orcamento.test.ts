@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcularDriversPorProjeto, calcularRolosPorGrupo, detectarTipoAncora, calcularCargaComposicao, recomendarDriver48V, calcularDemandaFita, calcularConsumoW, calcularSubtotalSistemaSemFita, calcularMetragemModulosDifusos, parsearComprimentoModulo, clonarItemLuminaria, clonarAmbiente } from '@/types/orcamento';
+import { calcularDriversPorProjeto, calcularRolosPorGrupo, detectarTipoAncora, calcularCargaComposicao, recomendarDriver48V, calcularDemandaFita, calcularConsumoW, calcularSubtotalSistemaSemFita, calcularMetragemModulosDifusos, parsearComprimentoModulo, parsearComprimentoDescricao, calcularOcupacaoTrilho, escolherTampaCega, ehTampaCega, clonarItemLuminaria, clonarAmbiente, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalDriverSistema } from '@/types/orcamento';
 import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver, LocalBreakdown, Produto, ItemComposicao, ItemLuminaria } from '@/types/orcamento';
 
 // ─── Helpers mínimos para montar fixtures ───
@@ -151,7 +151,7 @@ describe('calcularRolosPorGrupo — localBreakdown e imagemUrl (Phase 17 / RES-0
     expect(grupo.localBreakdown![0].demanda).toBe(10);
   });
 
-  it('Teste 4 (backward-compat): qtdRolosTotal e subtotal inalterados', () => {
+  it('Teste 4: rolo do catálogo + 5% de sobra por rolo (RULE-005/006)', () => {
     const fita = makeFitaComImagem('FX4000');
     fita.metragemRolo = 5;
     const ambientes: Ambiente[] = [
@@ -163,10 +163,10 @@ describe('calcularRolosPorGrupo — localBreakdown e imagemUrl (Phase 17 / RES-0
 
     expect(resultado).toHaveLength(1);
     const grupo = resultado[0];
-    // Algoritmo usa rolos 15/10/5: 20m → 1×15 + 1×5 = 2 rolos (mesma lógica anterior, não muda com extensão)
-    expect(grupo.qtdRolosTotal).toBe(2);
+    // 20m de demanda / 4,75m úteis por rolo de 5m = 4,21 → 5 rolos (todos do mesmo tamanho)
+    expect(grupo.qtdRolosTotal).toBe(5);
+    expect(grupo.rolos).toEqual([{ tamanho: 5, quantidade: 5 }]);
     expect(grupo.subtotal).toBe(fita.precoUnitario * grupo.qtdRolosTotal);
-    // demandaTotal deve ser 20 (soma das metragens manuais)
     expect(grupo.demandaTotal).toBe(20);
   });
 
@@ -186,6 +186,166 @@ describe('calcularRolosPorGrupo — localBreakdown e imagemUrl (Phase 17 / RES-0
     const grupoSemImg = resultado.find(g => g.codigo === 'FX5001');
     expect(grupoComImg?.imagemUrl).toBe('https://cdn.example.com/fita.jpg');
     expect(grupoSemImg?.imagemUrl).toBeUndefined();
+  });
+
+  it('RULE-005: cada fita usa o tamanho de rolo do próprio catálogo (5/10/25/50)', () => {
+    const fita50 = makeFitaComImagem('FX50');
+    fita50.metragemRolo = 50;
+    const fita25 = makeFitaComImagem('FX25');
+    fita25.metragemRolo = 25;
+
+    const resultado = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [
+        makeSistemaComLocal(fita50, driverPadrao, 60),
+        makeSistemaComLocal(fita25, driverPadrao, 60),
+      ]),
+    ]);
+
+    // 60m / (50×0,95=47,5) = 1,26 → 2 rolos de 50m
+    expect(resultado.find(g => g.codigo === 'FX50')?.rolos).toEqual([{ tamanho: 50, quantidade: 2 }]);
+    // 60m / (25×0,95=23,75) = 2,52 → 3 rolos de 25m
+    expect(resultado.find(g => g.codigo === 'FX25')?.rolos).toEqual([{ tamanho: 25, quantidade: 3 }]);
+  });
+
+  it('RULE-006: demanda exatamente igual aos metros úteis não estoura para um rolo a mais', () => {
+    const fita = makeFitaComImagem('FX4750');
+    fita.metragemRolo = 5;
+    // 4,75m = exatamente o aproveitável de 1 rolo de 5m (5 × 0,95, sujeito a erro de ponto flutuante)
+    const resultado = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 4.75)]),
+    ]);
+    expect(resultado[0].qtdRolosTotal).toBe(1);
+
+    // Um centímetro acima já exige o segundo rolo
+    const acima = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 4.76)]),
+    ]);
+    expect(acima[0].qtdRolosTotal).toBe(2);
+  });
+
+  it('Mesma fita com rolos divergentes: vale o maior, independente da ordem', () => {
+    const fitaLegado = makeFitaComImagem('FXMIX');   // snapshot antigo: default 5m
+    const fitaCatalogo = makeFitaComImagem('FXMIX'); // adicionada hoje: 50m do catálogo
+    fitaCatalogo.metragemRolo = 50;
+
+    // 60m no total → com rolo de 50m são 2 rolos; se o 5m vencesse seriam 13
+    const ordemA = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [
+        makeSistemaComLocal(fitaLegado, driverPadrao, 30),
+        makeSistemaComLocal(fitaCatalogo, driverPadrao, 30),
+      ]),
+    ]);
+    const ordemB = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [
+        makeSistemaComLocal(fitaCatalogo, driverPadrao, 30),
+        makeSistemaComLocal(fitaLegado, driverPadrao, 30),
+      ]),
+    ]);
+
+    expect(ordemA[0].rolos).toEqual([{ tamanho: 50, quantidade: 2 }]);
+    expect(ordemA[0].qtdRolosTotal).toBe(ordemB[0].qtdRolosTotal);
+    expect(ordemA[0].subtotal).toBe(ordemB[0].subtotal);
+  });
+
+  it('grupo.metragemRolo devolve o tamanho EFETIVO (o mesmo que precifica)', () => {
+    const fita = makeFitaComImagem('FXEFET');
+    (fita as { metragemRolo: number }).metragemRolo = 0;
+    const [grupo] = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 10)]),
+    ]);
+    expect(grupo.metragemRolo).toBe(5);
+    expect(grupo.metragemRolo).toBe(grupo.rolos[0].tamanho);
+  });
+
+  it('Backward-compat: snapshot antigo sem tamanho de rolo válido usa 5m', () => {
+    const fita = makeFitaComImagem('FXLEGADO');
+    // snapshots muito antigos podem carregar 0/undefined no campo
+    (fita as { metragemRolo: number }).metragemRolo = 0;
+    const resultado = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 10)]),
+    ]);
+    // 10m / 4,75 = 2,10 → 3 rolos de 5m
+    expect(resultado[0].rolos).toEqual([{ tamanho: 5, quantidade: 3 }]);
+  });
+
+  it('RULE-017: sistemas de ambientes diferentes na MESMA categoria viram um só grupo', () => {
+    const fita = makeFitaComImagem('FXCAT');
+    const catId = 'cat-sanca';
+    const sisA = makeSistemaComLocal(fita, driverPadrao, 6, 'Sanca');
+    const sisB = makeSistemaComLocal(fita, driverPadrao, 9, 'Sanca');
+    sisA.categoriaId = catId;
+    sisB.categoriaId = catId;
+
+    const resultado = calcularRolosPorGrupo(
+      [makeAmbienteNomeado('Sala', [sisA]), makeAmbienteNomeado('Quarto', [sisB])],
+      [{ id: catId, nome: 'Sanca quente', fita }],
+    );
+
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].demandaTotal).toBe(15);
+    expect(resultado[0].categoriaNome).toBe('Sanca quente'); // RULE-018: etiqueta da fábrica
+    expect(resultado[0].codigo).toBe('FXCAT');
+  });
+
+  it('RULE-020/021: mesma fita em categorias diferentes NÃO compartilha rolo', () => {
+    const fita = makeFitaComImagem('FXTOM');
+    const sisTeto = makeSistemaComLocal(fita, driverPadrao, 3);
+    const sisMarcenaria = makeSistemaComLocal(fita, driverPadrao, 3);
+    sisTeto.categoriaId = 'cat-teto';
+    sisMarcenaria.categoriaId = 'cat-marcenaria';
+
+    const resultado = calcularRolosPorGrupo(
+      [makeAmbienteNomeado('Sala', [sisTeto, sisMarcenaria])],
+      [
+        { id: 'cat-teto', nome: 'Embutido no teto', fita },
+        { id: 'cat-marcenaria', nome: 'Marcenaria', fita },
+      ],
+    );
+
+    // 3m + 3m juntos caberiam em 1 rolo de 5m; separados por categoria são 2 rolos
+    expect(resultado).toHaveLength(2);
+    expect(resultado.every(g => g.qtdRolosTotal === 1)).toBe(true);
+    expect(resultado.map(g => g.categoriaNome).sort()).toEqual(['Embutido no teto', 'Marcenaria']);
+  });
+
+  it('Sistema sem categoria continua consolidando por código (retrocompat)', () => {
+    const fita = makeFitaComImagem('FXSEMCAT');
+    const resultado = calcularRolosPorGrupo([
+      makeAmbienteNomeado('Sala', [makeSistemaComLocal(fita, driverPadrao, 4)]),
+      makeAmbienteNomeado('Quarto', [makeSistemaComLocal(fita, driverPadrao, 4)]),
+    ]);
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].demandaTotal).toBe(8);
+    expect(resultado[0].categoriaId).toBeUndefined();
+    expect(resultado[0].categoriaNome).toBeUndefined();
+  });
+
+  it('Categoria sem nome resolvido (lista não passada) ainda agrupa por categoria', () => {
+    const fita = makeFitaComImagem('FXORFA');
+    const sis = makeSistemaComLocal(fita, driverPadrao, 5);
+    sis.categoriaId = 'cat-x';
+    const [grupo] = calcularRolosPorGrupo([makeAmbienteNomeado('Sala', [sis])]);
+    expect(grupo.categoriaId).toBe('cat-x');
+    expect(grupo.categoriaNome).toBeUndefined();
+    expect(grupo.codigo).toBe('FXORFA');
+  });
+
+  it('Categoria removida: sistema órfão volta a consolidar pelo código da fita', () => {
+    const fita = makeFitaComImagem('FXORF');
+    const sisOrfao = makeSistemaComLocal(fita, driverPadrao, 2);
+    sisOrfao.categoriaId = 'cat-removida';
+    const sisLivre = makeSistemaComLocal(fita, driverPadrao, 2);
+
+    // A lista de categorias existe, mas não contém mais a categoria apontada pelo sistema
+    const resultado = calcularRolosPorGrupo(
+      [makeAmbienteNomeado('Sala', [sisOrfao, sisLivre])],
+      [{ id: 'cat-outra', nome: 'Outra', fita }],
+    );
+
+    // 2m + 2m = 4m → 1 rolo. Sem o fallback seriam 2 grupos = 2 rolos cobrados.
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].qtdRolosTotal).toBe(1);
+    expect(resultado[0].categoriaId).toBeUndefined();
   });
 
   it('Invariante: soma do localBreakdown === demandaTotal', () => {
@@ -344,6 +504,16 @@ describe('detectarTipoAncora — roteamento product-first (Phase 20 / D-02)', ()
     expect(detectarTipoAncora(produto)).toBe('modular');
   });
 
+  it('RULE-062/BUG-09: tipo_produto=perfil → "perfil" (abre sistema, não item avulso)', () => {
+    const produto = makeProduto({ tipo_produto: 'perfil', sistema_magnetico: null });
+    expect(detectarTipoAncora(produto)).toBe('perfil');
+  });
+
+  it('perfil de sistema magnético continua roteando pelo sistema (magneto vence)', () => {
+    const produto = makeProduto({ tipo_produto: 'perfil', sistema_magnetico: 'magneto_48v' });
+    expect(detectarTipoAncora(produto)).toBe('magneto_48v');
+  });
+
   it('produto sem sistema_magnetico e tipo_produto=spot → fallback "luminaria"', () => {
     const produto = makeProduto({ tipo_produto: 'spot', sistema_magnetico: null });
     expect(detectarTipoAncora(produto)).toBe('luminaria');
@@ -399,7 +569,7 @@ describe('calcularCargaComposicao — carga derivada dos módulos (Phase 20 / D-
 
 // ─── Testes: recomendarDriver48V (Phase 20 / D-07/D-08) ───
 
-describe('recomendarDriver48V — buckets 48V com margem ×1.05 (Phase 20 / D-07/D-08)', () => {
+describe('recomendarDriver48V — buckets 48V com margem ×1.20 (RULE-026, decisão 2026-08-12)', () => {
   it('carga 0 → estado sem_carga', () => {
     const resultado = recomendarDriver48V(0);
     expect(resultado.estado).toBe('sem_carga');
@@ -410,8 +580,8 @@ describe('recomendarDriver48V — buckets 48V com margem ×1.05 (Phase 20 / D-07
     expect(resultado.estado).toBe('sem_carga');
   });
 
-  it('carga 90W → bucket LM2343 (90×1.05=94.5 ≤ 100)', () => {
-    const resultado = recomendarDriver48V(90);
+  it('carga 80W → bucket LM2343 (80×1.20=96 ≤ 100)', () => {
+    const resultado = recomendarDriver48V(80);
     expect(resultado.estado).toBe('recomendado');
     if (resultado.estado === 'recomendado') {
       expect(resultado.sku).toBe('LM2343');
@@ -419,19 +589,18 @@ describe('recomendarDriver48V — buckets 48V com margem ×1.05 (Phase 20 / D-07
     }
   });
 
-  it('carga 95.23W → bucket LM2343 (95.23×1.05=99.99 ≤ 100, fronteira real)', () => {
-    // 95.23 × 1.05 = 99.9915 <= 100 → 100W basta
-    const resultado = recomendarDriver48V(95.23);
+  it('carga 83.33W → bucket LM2343 (83.33×1.20=99.996 ≤ 100, fronteira real)', () => {
+    const resultado = recomendarDriver48V(83.33);
     expect(resultado.estado).toBe('recomendado');
     if (resultado.estado === 'recomendado') {
       expect(resultado.sku).toBe('LM2343');
     }
   });
 
-  it('carga 95.24W → bucket LM2344 (95.24×1.05=100.002 > 100 — WR-03: bucket no valor cru)', () => {
-    // Regressão WR-03: 95.24 × 1.05 = 100.002W. Arredondar (→100.00) escondia que
-    // a carga real excede 100W e atribuía um driver subdimensionado. Deve ser LM2344.
-    const resultado = recomendarDriver48V(95.24);
+  it('carga 83.34W → bucket LM2344 (83.34×1.20=100.008 > 100 — WR-03: bucket no valor cru)', () => {
+    // Regressão WR-03: arredondar (→100.01→100.0) escondia que a carga real
+    // excede 100W e atribuía um driver subdimensionado. Deve ser LM2344.
+    const resultado = recomendarDriver48V(83.34);
     expect(resultado.estado).toBe('recomendado');
     if (resultado.estado === 'recomendado') {
       expect(resultado.sku).toBe('LM2344');
@@ -439,7 +608,7 @@ describe('recomendarDriver48V — buckets 48V com margem ×1.05 (Phase 20 / D-07
     }
   });
 
-  it('carga 150W → bucket LM2344 (150×1.05=157.5 ≤ 200)', () => {
+  it('carga 150W → bucket LM2344 (150×1.20=180 ≤ 200)', () => {
     const resultado = recomendarDriver48V(150);
     expect(resultado.estado).toBe('recomendado');
     if (resultado.estado === 'recomendado') {
@@ -448,23 +617,23 @@ describe('recomendarDriver48V — buckets 48V com margem ×1.05 (Phase 20 / D-07
     }
   });
 
-  it('carga 100W → bucket LM2344 (100×1.05=105 > 100, mas ≤ 200)', () => {
-    const resultado = recomendarDriver48V(100);
+  it('carga 90W → bucket LM2344 (90×1.20=108 > 100, mas ≤ 200) — caso que MUDOU com a folga 20%', () => {
+    const resultado = recomendarDriver48V(90);
     expect(resultado.estado).toBe('recomendado');
     if (resultado.estado === 'recomendado') {
       expect(resultado.sku).toBe('LM2344');
     }
   });
 
-  it('carga 250W → estado excede_200w (250×1.05=262.5 > 200) — D-08: não auto-divide', () => {
-    const resultado = recomendarDriver48V(250);
+  it('carga 170W → estado excede_200w (170×1.20=204 > 200) — D-08: não auto-divide', () => {
+    const resultado = recomendarDriver48V(170);
     expect(resultado.estado).toBe('excede_200w');
   });
 
-  it('potenciaSeguraW exposta e correto quando recomendado', () => {
+  it('potenciaSeguraW exposta e correta quando recomendado', () => {
     const resultado = recomendarDriver48V(90);
     if (resultado.estado === 'recomendado') {
-      expect(resultado.potenciaSeguraW).toBeCloseTo(94.5, 1);
+      expect(resultado.potenciaSeguraW).toBeCloseTo(108, 1);
     }
   });
 });
@@ -500,6 +669,57 @@ describe('Guard: 5 calc sites de Fita Padrão — assinaturas inalteradas (Phase
     };
     expect(typeof calcularSubtotalSistemaSemFita).toBe('function');
     expect(typeof calcularSubtotalSistemaSemFita(sistema)).toBe('number');
+  });
+});
+
+// ─── Testes RULE-001: qtdDriversManual — override opcional da qtd de drivers ───
+
+describe('calcularQtdDriversEfetiva / calcularSubtotalDriverSistema — override manual (RULE-001)', () => {
+  // Fixture: fita 10W/m × 5m = 50W; driver 100W/24V → calcularQtdDrivers = 1
+  function makeSistemaBase(): SistemaIluminacao {
+    return makeSistema(makeDriver('DR001', 24, 100), makeFita(10), 5);
+  }
+
+  it('sem override (undefined) → fallback no cálculo automático (retrocompat snapshots antigos)', () => {
+    const sis = makeSistemaBase();
+    expect(sis.qtdDriversManual).toBeUndefined();
+    expect(calcularQtdDriversEfetiva(sis)).toBe(calcularQtdDrivers(sis));
+    expect(calcularSubtotalDriverSistema(sis)).toBe(sis.driver.precoUnitario * calcularQtdDrivers(sis));
+  });
+
+  it('override null → fallback no cálculo automático (input limpo pelo usuário)', () => {
+    const sis: SistemaIluminacao = { ...makeSistemaBase(), qtdDriversManual: null };
+    expect(calcularQtdDriversEfetiva(sis)).toBe(calcularQtdDrivers(sis));
+  });
+
+  it('override = 3 → qtd efetiva 3 e subtotal = preço × 3', () => {
+    const sis: SistemaIluminacao = { ...makeSistemaBase(), qtdDriversManual: 3 };
+    expect(calcularQtdDriversEfetiva(sis)).toBe(3);
+    expect(calcularSubtotalDriverSistema(sis)).toBe(sis.driver.precoUnitario * 3);
+  });
+
+  it('override = 0 → qtd efetiva 0 e subtotal 0 (RULE-001: tudo editável, inclusive zerar)', () => {
+    const sis: SistemaIluminacao = { ...makeSistemaBase(), qtdDriversManual: 0 };
+    expect(calcularQtdDriversEfetiva(sis)).toBe(0);
+    expect(calcularSubtotalDriverSistema(sis)).toBe(0);
+  });
+
+  it('override negativo (inválido) → fallback no cálculo automático', () => {
+    const sis: SistemaIluminacao = { ...makeSistemaBase(), qtdDriversManual: -2 };
+    expect(calcularQtdDriversEfetiva(sis)).toBe(calcularQtdDrivers(sis));
+  });
+
+  it('override fracionário → floor (drivers são unidades inteiras)', () => {
+    const sis: SistemaIluminacao = { ...makeSistemaBase(), qtdDriversManual: 2.7 };
+    expect(calcularQtdDriversEfetiva(sis)).toBe(2);
+  });
+
+  it('override menor que o calculado também vale (usuário manda — RULE-001)', () => {
+    // Consumo 30m × 10W/m = 300W com driver 100W → cálculo daria ≥3; manual = 1 prevalece
+    const sis: SistemaIluminacao = { ...makeSistema(makeDriver('DR001', 24, 100), makeFita(10), 30), qtdDriversManual: 1 };
+    expect(calcularQtdDrivers(sis)).toBeGreaterThan(1);
+    expect(calcularQtdDriversEfetiva(sis)).toBe(1);
+    expect(calcularSubtotalDriverSistema(sis)).toBe(sis.driver.precoUnitario * 1);
   });
 });
 
@@ -679,5 +899,223 @@ describe('clonarAmbiente — deep-clona composicao[] sem compartilhar referênci
     // Mutating clone should not affect original
     clone.luminarias[0].composicao![0].quantidade = 99;
     expect(original.luminarias[0].composicao![0].quantidade).toBe(2);
+  });
+});
+
+// ─── Testes WP-B: parsearComprimentoDescricao (RULE-056/037) ───
+
+describe('parsearComprimentoDescricao — parse genérico de comprimento (WP-B / RULE-056)', () => {
+  it('trilho magneto "PT 2M - MAX. 48V" → 2', () => {
+    expect(parsearComprimentoDescricao('MAGNETO22 TRILHO DE EMBUTIR MAGNETICO PT 2M - MAX. 48V')).toBeCloseTo(2, 5);
+  });
+
+  it('trilho TINY "BC 3M MAX. 24V" → 3', () => {
+    expect(parsearComprimentoDescricao('TINY MAG TRILHO DE SOBREPOR MAGNETICO BC 3M MAX. 24V')).toBeCloseTo(3, 5);
+  });
+
+  it('perfil modular "TAMANHO 1M" (ignora LARGURA/ALTURA em MM) → 1', () => {
+    expect(parsearComprimentoDescricao('SYSTEM MOLD 22 PERFIL NOFRAME MODULAR LARGURA 26,2MM ALTURA 46MM TAMANHO 1M BRANCO')).toBeCloseTo(1, 5);
+  });
+
+  it('perfil modular "TAM: 2M" → 2', () => {
+    expect(parsearComprimentoDescricao('SYSTEM MOLD 22 PERFIL DE EMBUTIR MODULAR LARGURA 33,8MM ALTURA 48,9MM TAM: 2M BRANCO')).toBeCloseTo(2, 5);
+  });
+
+  it('tampa cega "0,50M BRANCO" (decimal pt-BR) → 0.5', () => {
+    expect(parsearComprimentoDescricao('SYSTEM MOLD 22 TAMPA CEGA SISTEMA PERFIL MODULAR 0,50M BRANCO')).toBeCloseTo(0.5, 5);
+  });
+
+  it('tampa cega "0,133M PRETO" → 0.133', () => {
+    expect(parsearComprimentoDescricao('SYSTEM MOLD 22 TAMPA CEGA SISTEMA PERFIL MODULAR 0,133M PRETO')).toBeCloseTo(0.133, 5);
+  });
+
+  it('tampa DINAMIC "30MM 1MT BRANCO" → 1 (MT vence o MM de largura)', () => {
+    expect(parsearComprimentoDescricao('TAMPA CEGA SISTEMA PERFIL EMB/SOBR 30MM 1MT BRANCO')).toBeCloseTo(1, 5);
+  });
+
+  it('difuso "FITA LED 264MM" → 0.264 (delega ao parsearComprimentoModulo)', () => {
+    expect(parsearComprimentoDescricao('SYSTEM MOLD 22 MODULO DIFUSO PARA FITA LED 264MM PARA USO NO PERFIL MODULAR BRANCO')).toBeCloseTo(0.264, 5);
+  });
+
+  it('módulo magnético com token MM único "222MM PT" → 0.222', () => {
+    expect(parsearComprimentoDescricao('MAGNETO22 MODULO CONCENTRADO MAGNETICO 12W 2700K 48V 222MM PT PARA USO NO TRILHO MAGNETICO')).toBeCloseTo(0.222, 5);
+  });
+
+  it('módulo concentrado modular "132MM PT" → 0.132', () => {
+    expect(parsearComprimentoDescricao('SYSTEM MOLD 22 MODULO CONCENTRADO 5W 100LM 2700K 132MM PT PARA USO NO PERFIL MODULAR')).toBeCloseTo(0.132, 5);
+  });
+
+  it('mais de um token MM sem token de metros → undefined (medida ambígua)', () => {
+    expect(parsearComprimentoDescricao('CONECTOR LARGURA 26,2MM ALTURA 46MM')).toBeUndefined();
+  });
+
+  it('sem medida → undefined', () => {
+    expect(parsearComprimentoDescricao('MAGNETO22 DRIVER PARA TRILHO MAGNETICO 100W AC127-220V DC48V')).toBeUndefined();
+  });
+
+  it('string vazia/undefined-like → undefined', () => {
+    expect(parsearComprimentoDescricao('')).toBeUndefined();
+  });
+});
+
+// ─── Testes WP-B: calcularOcupacaoTrilho (RULE-056/099/037) ───
+
+describe('calcularOcupacaoTrilho — capacidade do trilho âncora (WP-B / RULE-056)', () => {
+  function makeComposto(overrides: Partial<ItemLuminaria> = {}): ItemLuminaria {
+    return makeItemLuminaria({
+      descricao: 'SYSTEM MOLD 22 PERFIL NOFRAME MODULAR LARGURA 26,2MM ALTURA 46MM TAMANHO 2M BRANCO',
+      quantidade: 1,
+      composicao: [],
+      ...overrides,
+    });
+  }
+
+  it('trilho sem comprimento parseável → null (retrocompat: nenhum aviso)', () => {
+    const item = makeComposto({ descricao: 'TRILHO MAGNETICO SEM MEDIDA' });
+    expect(calcularOcupacaoTrilho(item)).toBeNull();
+  });
+
+  it('soma comprimento × qtd dos módulos contra o trilho', () => {
+    const item = makeComposto({
+      composicao: [
+        { id: '1', codigo: 'LM2270', descricao: 'DIFUSO 264MM', quantidade: 2, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false, comprimento: 0.264 },
+        { id: '2', codigo: 'LM2274', descricao: 'DIFUSO 1MT', quantidade: 1, precoUnitario: 120, precoMinimo: 96, papel: 'modulo', obrigatorio: false, comprimento: 1.0 },
+      ],
+    });
+    const r = calcularOcupacaoTrilho(item)!;
+    expect(r.trilhoM).toBeCloseTo(2, 5);
+    expect(r.ocupadoM).toBeCloseTo(1.528, 5);
+    expect(r.ocupadoComTampasM).toBeCloseTo(1.528, 5);
+  });
+
+  it('quantidade do trilho âncora multiplica a capacidade', () => {
+    const item = makeComposto({
+      quantidade: 2,
+      composicao: [
+        { id: '1', codigo: 'LM2274', descricao: 'DIFUSO 1MT', quantidade: 3, precoUnitario: 120, precoMinimo: 96, papel: 'modulo', obrigatorio: false, comprimento: 1.0 },
+      ],
+    });
+    const r = calcularOcupacaoTrilho(item)!;
+    expect(r.trilhoM).toBeCloseTo(4, 5); // 2M × 2
+    expect(r.ocupadoM).toBeCloseTo(3, 5);
+  });
+
+  it('driver/conector/kit/fita_modular NÃO ocupam o trilho', () => {
+    const item = makeComposto({
+      composicao: [
+        { id: '1', codigo: 'LM2270', descricao: 'DIFUSO 264MM', quantidade: 1, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false, comprimento: 0.264 },
+        { id: '2', codigo: 'DR001', descricao: 'DRIVER 24V 2M', quantidade: 1, precoUnitario: 200, precoMinimo: 160, papel: 'driver_recomendado', obrigatorio: false, comprimento: 2 },
+        { id: '3', codigo: 'CONN1', descricao: 'CONECTOR COMP:130MM', quantidade: 1, precoUnitario: 50, precoMinimo: 40, papel: 'conector_energia', obrigatorio: true },
+        { id: '4', codigo: 'KIT1', descricao: 'KIT PENDENTE CABO: 2M', quantidade: 1, precoUnitario: 50, precoMinimo: 40, papel: 'kit_fixacao', obrigatorio: true },
+        { id: '5', codigo: 'FT1', descricao: 'FITA LED 24V', quantidade: 1, precoUnitario: 50, precoMinimo: 40, papel: 'fita_modular', obrigatorio: false, comprimento: 1.5 },
+      ],
+    });
+    const r = calcularOcupacaoTrilho(item)!;
+    expect(r.ocupadoM).toBeCloseTo(0.264, 5);
+    expect(r.ocupadoComTampasM).toBeCloseTo(0.264, 5);
+  });
+
+  it('componente sem comprimento parseável fica fora da soma', () => {
+    const item = makeComposto({
+      composicao: [
+        { id: '1', codigo: 'LM2270', descricao: 'DIFUSO 264MM FITA LED 264MM', quantidade: 1, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false, comprimento: 0.264 },
+        { id: '2', codigo: 'X1', descricao: 'MODULO SEM MEDIDA', quantidade: 5, precoUnitario: 10, precoMinimo: 8, papel: 'modulo', obrigatorio: false },
+      ],
+    });
+    expect(calcularOcupacaoTrilho(item)!.ocupadoM).toBeCloseTo(0.264, 5);
+  });
+
+  it('módulo magnético sem snapshot de comprimento parseia da descrição (222MM)', () => {
+    const item = makeComposto({
+      descricao: 'MAGNETO22 TRILHO DE EMBUTIR MAGNETICO PT 2M - MAX. 48V',
+      composicao: [
+        { id: '1', codigo: 'LM2812', descricao: 'MAGNETO22 MODULO CONCENTRADO MAGNETICO 12W 2700K 48V 222MM PT PARA USO NO TRILHO MAGNETICO', quantidade: 4, precoUnitario: 100, precoMinimo: 80, papel: 'modulo', obrigatorio: false },
+      ],
+    });
+    const r = calcularOcupacaoTrilho(item)!;
+    expect(r.trilhoM).toBeCloseTo(2, 5);
+    expect(r.ocupadoM).toBeCloseTo(0.888, 5);
+  });
+
+  it('RULE-099 (resolvida 2026-08-12): tampa cega CONTA em ocupadoM — excedeu, avisa mesmo assim', () => {
+    const item = makeComposto({
+      composicao: [
+        { id: '1', codigo: 'LM2274', descricao: 'DIFUSO 1MT', quantidade: 1, precoUnitario: 120, precoMinimo: 96, papel: 'modulo', obrigatorio: false, comprimento: 1.0 },
+        { id: '2', codigo: 'LM2005', descricao: 'SYSTEM MOLD 22 TAMPA CEGA SISTEMA PERFIL MODULAR 1M BRANCO', quantidade: 2, precoUnitario: 30, precoMinimo: 24, papel: 'acessorio_opcional', obrigatorio: false, comprimento: 1.0 },
+      ],
+    });
+    const r = calcularOcupacaoTrilho(item)!;
+    expect(r.ocupadoM).toBeCloseTo(3.0, 5);          // difuso 1m + tampas 2×1m — tudo conta no aviso
+    expect(r.ocupadoComTampasM).toBeCloseTo(3.0, 5); // base da sobra idem
+  });
+
+  it('acessório opcional que NÃO é tampa cega conta no aviso', () => {
+    const item = makeComposto({
+      composicao: [
+        { id: '1', codigo: 'AC1', descricao: 'ACESSORIO QUALQUER 0,50M', quantidade: 1, precoUnitario: 10, precoMinimo: 8, papel: 'acessorio_opcional', obrigatorio: false, comprimento: 0.5 },
+      ],
+    });
+    const r = calcularOcupacaoTrilho(item)!;
+    expect(r.ocupadoM).toBeCloseTo(0.5, 5);
+  });
+});
+
+// ─── Testes WP-B: escolherTampaCega (RULE-038) ───
+
+describe('escolherTampaCega — menor tampa que cobre a sobra (WP-B / RULE-038)', () => {
+  const tampas = [
+    { codigo: 'T053', comprimentoM: 0.053 },
+    { codigo: 'T100', comprimentoM: 0.1 },
+    { codigo: 'T133', comprimentoM: 0.133 },
+    { codigo: 'T050', comprimentoM: 0.5 },
+    { codigo: 'T1', comprimentoM: 1 },
+    { codigo: 'T2', comprimentoM: 2 },
+  ];
+
+  it('escolhe a MENOR tampa com comprimento >= sobra', () => {
+    const r = escolherTampaCega(tampas, 0.4)!;
+    expect(r.tampa.codigo).toBe('T050');
+    expect(r.cobre).toBe(true);
+  });
+
+  it('sobra exatamente igual a uma medida comercial → essa medida', () => {
+    const r = escolherTampaCega(tampas, 0.5)!;
+    expect(r.tampa.codigo).toBe('T050');
+    expect(r.cobre).toBe(true);
+  });
+
+  it('nenhuma cobre → a MAIOR disponível com cobre=false', () => {
+    const r = escolherTampaCega(tampas, 3)!;
+    expect(r.tampa.codigo).toBe('T2');
+    expect(r.cobre).toBe(false);
+  });
+
+  it('lista vazia → null', () => {
+    expect(escolherTampaCega([], 1)).toBeNull();
+  });
+
+  it('empate de comprimento preserva a ordem de entrada (preferência de cor)', () => {
+    const r = escolherTampaCega(
+      [
+        { codigo: 'PRETA-1M', comprimentoM: 1 },
+        { codigo: 'BRANCA-1M', comprimentoM: 1 },
+      ],
+      0.8,
+    )!;
+    expect(r.tampa.codigo).toBe('PRETA-1M');
+  });
+});
+
+// ─── Testes WP-B: ehTampaCega ───
+
+describe('ehTampaCega — detecção por descrição (RULE-099)', () => {
+  it('detecta "TAMPA CEGA" case-insensitive', () => {
+    expect(ehTampaCega('SYSTEM MOLD 22 TAMPA CEGA SISTEMA PERFIL MODULAR 1M BRANCO')).toBe(true);
+    expect(ehTampaCega('tampa cega dinamic')).toBe(true);
+  });
+
+  it('não confunde com outros produtos', () => {
+    expect(ehTampaCega('MODULO DIFUSO PARA FITA LED 264MM')).toBe(false);
+    expect(ehTampaCega('')).toBe(false);
   });
 });

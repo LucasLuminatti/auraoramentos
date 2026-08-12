@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Check, AlertCircle, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ProdutoAutocomplete from "@/components/ProdutoAutocomplete";
 import type { ItemLuminaria, ItemComposicao, Produto } from "@/types/orcamento";
@@ -16,7 +17,19 @@ import {
   REGRAS_COMPOSICAO,
   calcularMetragemModulosDifusos,
   parsearComprimentoModulo,
+  parsearComprimentoDescricao,
+  calcularOcupacaoTrilho,
+  escolherTampaCega,
+  corDoProduto,
+  normalizarCor,
+  exigeDriverAlojado,
+  classificarDriverSlim,
+  ehDriverDeTrilho,
+  LIMITE_W_DRIVER_ALOJADO,
 } from "@/types/orcamento";
+
+/** Formata metros pt-BR com 2 casas ("1,53"). */
+const formatarM = (v: number) => v.toFixed(2).replace(".", ",");
 
 // ─── PrecoInput local (equivalente ao do AmbienteCard) ───
 
@@ -64,6 +77,10 @@ interface Sugestao24V {
   potenciaW: number;
   precoTabela: number;
   precoMinimo: number;
+  /** RULE-031: true quando não foi possível confirmar que o driver é de TRILHO
+   *  (o catálogo não marcou `sistema`/`subtipo` nem o nome traz "TRILHO MAGNETICO").
+   *  Vira aviso no painel — nunca some com a sugestão. */
+  tipoIncerto?: boolean;
 }
 
 // ─── ComposicaoCard ───
@@ -93,6 +110,30 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   const [sugestao24v, setSugestao24v] = useState<Sugestao24V | null>(null);
   const [buscando24v, setBuscando24v] = useState(false);
   const [sem24v, setSem24v] = useState(false);
+  // Consumo (com a folga de segurança) da última busca de driver do modular —
+  // no SYSTEM MOLD a carga vem de W/m × metragem da fita, que só existe no async.
+  const [consumoModularW, setConsumoModularW] = useState(0);
+
+  // Estado local da sugestão de tampa cega (RULE-037/038)
+  const [buscandoTampa, setBuscandoTampa] = useState(false);
+  // Buffer local do input "m:" dos acessórios (id → texto em edição) — flush no blur,
+  // mesmo padrão do input "Qtd drivers" do AmbienteCard (evita repintar no meio da digitação)
+  const [comprimentoDraft, setComprimentoDraft] = useState<Record<string, string>>({});
+  // Buffer local dos inputs de QUANTIDADE de módulos/acessórios (mesmo motivo:
+  // limpar repintava "1" e digitar 15 virava "115" — quantidade é cobrada)
+  const [qtdDraft, setQtdDraft] = useState<Record<string, string>>({});
+
+  const qtdInputProps = (c: ItemComposicao) => ({
+    value: qtdDraft[c.id] ?? String(c.quantidade),
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.value;
+      setQtdDraft((d) => ({ ...d, [c.id]: raw }));
+      if (raw !== "") atualizarComposicaoItem(c.id, { quantidade: Math.max(1, parseInt(raw) || 1) });
+    },
+    onBlur: () => {
+      setQtdDraft((d) => { const { [c.id]: _, ...rest } = d; return rest; });
+    },
+  });
 
   // Invalida buscas de driver em voo — a mais recente sempre vence (evita advisory obsoleto)
   const driverReqId = useRef(0);
@@ -107,8 +148,116 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   const metragemDerivada = isModular ? calcularMetragemModulosDifusos(item.composicao) : 0;
   const fitaModular = composicao.find((c) => c.papel === "fita_modular");
 
+  // Ocupação do trilho âncora (RULE-056 aviso / RULE-037 sobra) — recalcula a cada render
+  const acessorios = composicao.filter((c) => c.papel === "acessorio_opcional");
+  const ocupacao = calcularOcupacaoTrilho(item);
+  const EPS_TRILHO = 0.005; // meio centímetro — ruído de float/parse não gera aviso
+  const excedeTrilho = !!ocupacao && ocupacao.ocupadoM > ocupacao.trilhoM + EPS_TRILHO;
+  const sobraTrilho = ocupacao ? ocupacao.trilhoM - ocupacao.ocupadoComTampasM : 0;
+
   // Recomendação 48V (pura, sem side-effect)
   const rec48v = is48V ? recomendarDriver48V(cargaTotalW) : null;
+
+  // RULE-029 + RULE-100: driver ALOJADO dentro do trilho/perfil (Trick/Alojamento e
+  // modular de SOBREPOR) só aceita Slim de até 72 W — incompatibilidade física, BLOQUEIA.
+  const driverAlojado = exigeDriverAlojado({ descricao: item.descricao, sistema: item.sistema });
+  // RULE-054/110: cor do produto âncora — o acessório sugerido sai na mesma cor.
+  const corAncora = corDoProduto(item.codigo, item.descricao);
+
+  // Carga (já com a folga de segurança) usada no aviso de driver alojado.
+  // No magnético vem dos módulos; no modular é W/m da fita × metragem dos difusos — derivado
+  // a cada render, não guardado: preso em state, o aviso continuava mostrando a carga antiga
+  // depois de remover módulos (a busca de driver só roda ao selecionar a fita).
+  const consumoSeguro24v = isModular
+    ? (fitaModular?.wm != null
+        ? fitaModular.wm * metragemDerivada * MARGEM_SEGURANCA_DRIVER
+        : consumoModularW) // snapshot antigo sem W/m: mantém o valor da última busca
+    : cargaTotalW * MARGEM_SEGURANCA_DRIVER;
+  const excedeDriverAlojado =
+    driverAlojado && consumoSeguro24v > LIMITE_W_DRIVER_ALOJADO;
+
+  /** Busca o driver recomendado (menor potência suficiente) para os sistemas 24V.
+   *  - `somenteTrilho` (RULE-031): tenta primeiro os drivers de TRILHO; se o catálogo não
+   *    marcar nenhum (`sistema`/`subtipo`/nome), refaz sem o filtro e devolve `tipoIncerto`
+   *    — melhor sugerir com ressalva do que esconder o painel.
+   *  - `tetoW` (RULE-029/100): teto físico do driver alojado dentro do trilho/perfil;
+   *    drivers explicitamente NÃO-Slim ficam de fora. */
+  const buscarDriver24V = async (opts: {
+    consumoSeguroW: number;
+    voltagem?: number;
+    somenteTrilho?: boolean;
+    tetoW?: number | null;
+  }): Promise<Sugestao24V | null> => {
+    type LinhaDriver = {
+      codigo: string;
+      descricao: string;
+      driver_potencia_w: number | null;
+      preco_tabela: number;
+      preco_minimo: number;
+      driver_tipo: string | null;
+      sistema_magnetico: string | null;
+    };
+
+    const consultar = async (restringirTrilho: boolean): Promise<LinhaDriver[]> => {
+      let q = supabase
+        .from("produtos")
+        .select(
+          "id, codigo, descricao, preco_tabela, preco_minimo, " +
+          "driver_potencia_w:potencia_watts, driver_tipo:subtipo, sistema_magnetico:sistema"
+        )
+        .eq("tipo_produto", "driver")
+        .eq("tensao", opts.voltagem ?? 24)
+        .gte("potencia_watts", opts.consumoSeguroW)
+        .not("descricao", "ilike", "%DESCONTINUAR%");
+      if (opts.tetoW != null) q = q.lte("potencia_watts", opts.tetoW);
+      if (restringirTrilho) {
+        q = q.or(
+          "sistema.in.(tiny_magneto,magneto_48v,trilha),subtipo.eq.magnetico,descricao.ilike.%TRILHO%"
+        );
+      }
+      const { data } = await q.order("potencia_watts", { ascending: true }).limit(10);
+      return (data ?? []) as LinhaDriver[];
+    };
+
+    // RULE-100: com teto, drivers declaradamente NÃO-Slim são descartados (bloqueio);
+    // os sem classificação no catálogo entram, porque o dado ainda não existe para todos.
+    const escolher = (linhas: LinhaDriver[]): LinhaDriver | null => {
+      if (opts.tetoW == null) return linhas[0] ?? null;
+      const classificar = (l: LinhaDriver) =>
+        classificarDriverSlim({ driverTipo: l.driver_tipo, descricao: l.descricao });
+      const possiveis = linhas.filter((l) => classificar(l) !== "nao_slim");
+      const slim = possiveis.filter((l) => classificar(l) === "slim");
+      return (slim[0] ?? possiveis[0]) ?? null;
+    };
+
+    let linhas = opts.somenteTrilho ? await consultar(true) : await consultar(false);
+    let usouFallback = false;
+    if (opts.somenteTrilho && linhas.length === 0) {
+      linhas = await consultar(false);
+      usouFallback = true;
+    }
+
+    const row = escolher(linhas);
+    if (!row) return null;
+
+    const tipoIncerto =
+      !!opts.somenteTrilho &&
+      (usouFallback ||
+        !ehDriverDeTrilho({
+          sistema: row.sistema_magnetico,
+          subtipo: row.driver_tipo,
+          descricao: row.descricao,
+        }));
+
+    return {
+      sku: row.codigo,
+      descricao: row.descricao,
+      potenciaW: row.driver_potencia_w ?? 0,
+      precoTabela: Math.round((row.preco_tabela || 0) * 100) / 100,
+      precoMinimo: Math.round((row.preco_minimo || 0) * 100) / 100,
+      tipoIncerto,
+    };
+  };
 
   // Busca de driver 24V quando carga muda
   useEffect(() => {
@@ -128,32 +277,19 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     setSem24v(false);
 
     (async () => {
-      const { data } = await supabase
-        .from("produtos")
-        .select(
-          "id, codigo, descricao, preco_tabela, preco_minimo, driver_potencia_w:potencia_watts"
-        )
-        .eq("tipo_produto", "driver")
-        .eq("tensao", 24)
-        .gte("potencia_watts", cargaTotalW * MARGEM_SEGURANCA_DRIVER)
-        .not("descricao", "ilike", "%DESCONTINUAR%")
-        .order("potencia_watts", { ascending: true })
-        .limit(1);
+      // RULE-031: no TINY 24V o driver é de TRILHO — driver de fita LED não serve.
+      // Primeira tentativa restrita a drivers de trilho; se o catálogo não permitir
+      // identificá-los, cai na busca genérica e marca a sugestão como incerta.
+      const escolha = await buscarDriver24V({
+        consumoSeguroW: cargaTotalW * MARGEM_SEGURANCA_DRIVER,
+        somenteTrilho: true,
+        tetoW: driverAlojado ? LIMITE_W_DRIVER_ALOJADO : null,
+      });
 
       if (cancelled) return;
 
-      const row = data?.[0] as
-        | { codigo: string; descricao: string; driver_potencia_w: number | null; preco_tabela: number; preco_minimo: number }
-        | undefined;
-
-      if (row) {
-        setSugestao24v({
-          sku: row.codigo,
-          descricao: row.descricao,
-          potenciaW: row.driver_potencia_w ?? 0,
-          precoTabela: Math.round((row.preco_tabela || 0) * 100) / 100,
-          precoMinimo: Math.round((row.preco_minimo || 0) * 100) / 100,
-        });
+      if (escolha) {
+        setSugestao24v(escolha);
         setSem24v(false);
       } else {
         setSugestao24v(null);
@@ -165,7 +301,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     return () => {
       cancelled = true;
     };
-  }, [is24V, cargaTotalW, driverAplicado]);
+  }, [is24V, cargaTotalW, driverAplicado, driverAlojado]);
 
   // ─── Helpers de mutação ───
 
@@ -283,6 +419,20 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
 
   // Seleciona módulo da busca escopada
   const handleSelecionarModulo = (produto: Produto) => {
+    // RULE-055 — AVISO não bloqueante: módulo de cor diferente do trilho âncora.
+    // Erro recorrente e caro; a cor vem da coluna `cor` do catálogo e, na falta dela,
+    // do código/descrição. Cor desconhecida em qualquer um dos dois → nada é dito.
+    // Dourado é universal (mesma leitura da edge) — nunca gera aviso.
+    const corCatalogo = normalizarCor(produto.cor);
+    const corModulo =
+      corCatalogo === "dourado" ? null : (corCatalogo ?? corDoProduto(produto.codigo, produto.descricao));
+    if (corAncora && corModulo && corModulo !== corAncora) {
+      toast.warning(
+        `⚠ Cor divergente: o módulo ${produto.codigo} é ${corModulo} e o trilho âncora é ${corAncora}. Confirme se é isso mesmo.`,
+        { duration: 8000 }
+      );
+    }
+
     // Para SYSTEM MOLD, grava comprimento como snapshot via parsearComprimentoModulo
     const comprimento = isModular ? parsearComprimentoModulo(produto.descricao) : undefined;
     const novoModulo: ItemComposicao = {
@@ -317,6 +467,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       papel: 'fita_modular',
       obrigatorio: false,
       comprimento: metragem,  // metragem pré-preenchida (D-01)
+      wm: produto.wm ?? 0,    // W/m: permite recalcular o consumo quando os módulos mudam
     };
     const nova = [...(itemRef.current.composicao ?? []), novaFita];
     onChange({ ...itemRef.current, composicao: nova });
@@ -329,6 +480,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   const buscarDriverModular = async (voltagem: number, wm: number, metragem: number) => {
     const metragemEf = metragem > 0 ? metragem : 5;
     const consumo = wm * metragemEf * MARGEM_SEGURANCA_DRIVER;
+    setConsumoModularW(consumo);
     if (consumo <= 0) return;
 
     // Request-id: uma busca mais nova invalida as anteriores (resolução fora de ordem)
@@ -337,30 +489,18 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     setSem24v(false);
 
     try {
-      const { data } = await supabase
-        .from("produtos")
-        .select("id, codigo, descricao, preco_tabela, preco_minimo, driver_potencia_w:potencia_watts")
-        .eq("tipo_produto", "driver")
-        .eq("tensao", voltagem)
-        .gte("potencia_watts", consumo)
-        .not("descricao", "ilike", "%DESCONTINUAR%")
-        .order("potencia_watts", { ascending: true })
-        .limit(1);
+      // RULE-029/100: no modular de sobrepor (driver alojado no trilho) o teto é 72 W
+      // e o driver precisa ser Slim — acima disso não cabe fisicamente.
+      const escolha = await buscarDriver24V({
+        consumoSeguroW: consumo,
+        voltagem,
+        tetoW: driverAlojado ? LIMITE_W_DRIVER_ALOJADO : null,
+      });
 
       if (reqId !== driverReqId.current) return; // superada por uma busca mais recente
 
-      const row = data?.[0] as
-        | { codigo: string; descricao: string; driver_potencia_w: number | null; preco_tabela: number; preco_minimo: number }
-        | undefined;
-
-      if (row) {
-        setSugestao24v({
-          sku: row.codigo,
-          descricao: row.descricao,
-          potenciaW: row.driver_potencia_w ?? 0,
-          precoTabela: Math.round((row.preco_tabela || 0) * 100) / 100,
-          precoMinimo: Math.round((row.preco_minimo || 0) * 100) / 100,
-        });
+      if (escolha) {
+        setSugestao24v(escolha);
         setSem24v(false);
       } else {
         setSugestao24v(null);
@@ -374,6 +514,33 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
 
   // Seleciona driver manual (busca de autocomplete no modo "Alterar")
   const handleSelecionarDriverManual = (produto: Produto) => {
+    // RULE-029/100 — BLOQUEIO na origem: driver alojado dentro do trilho/perfil
+    // só cabe Slim até 72 W (CONF-01: incompatibilidade física bloqueia).
+    if (driverAlojado) {
+      const potencia = produto.driver_potencia_w ?? 0;
+      if (potencia > LIMITE_W_DRIVER_ALOJADO) {
+        toast.error(
+          `🚫 Driver de ${potencia}W não cabe alojado neste perfil/trilho. Máximo: ${LIMITE_W_DRIVER_ALOJADO}W (driver Slim).`,
+          { duration: 7000 }
+        );
+        return;
+      }
+      const classe = classificarDriverSlim({ driverTipo: produto.driver_tipo, descricao: produto.descricao });
+      if (classe === "nao_slim") {
+        toast.error(
+          `🚫 Este perfil/trilho aceita SOMENTE driver Slim (até ${LIMITE_W_DRIVER_ALOJADO}W) — o driver selecionado não cabe dentro dele.`,
+          { duration: 7000 }
+        );
+        return;
+      }
+      if (classe === "indeterminado") {
+        toast.warning(
+          `⚠ Não foi possível confirmar no catálogo que ${produto.codigo} é um driver Slim — confira antes de fechar (o driver fica alojado dentro do perfil).`,
+          { duration: 7000 }
+        );
+      }
+    }
+
     const driverItem: ItemComposicao = {
       id: crypto.randomUUID(),
       codigo: produto.codigo,
@@ -393,6 +560,69 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     setMostrarBuscaDriver(false);
   };
 
+  // Sugere e insere a tampa cega da sobra do trilho (RULE-037/038/040).
+  // RULE-038: MENOR tampa comercial com comprimento >= sobra; se nenhuma cobre,
+  // a MAIOR disponível + aviso. Sempre editável depois (RULE-001).
+  const adicionarTampaCega = async () => {
+    if (buscandoTampa || sobraTrilho <= EPS_TRILHO) return;
+    setBuscandoTampa(true);
+    try {
+      const { data } = await supabase
+        .from("produtos")
+        .select("id, codigo, descricao, preco_tabela, preco_minimo, imagem_url")
+        .ilike("descricao", "%TAMPA CEGA%")
+        .not("descricao", "ilike", "%COM FURO%")     // RULE-039 (tampa de spot) fora do escopo
+        .not("descricao", "ilike", "%DESCONTINUAR%")
+        .limit(100);
+
+      const rows = (data ?? []) as Array<{
+        codigo: string; descricao: string; preco_tabela: number; preco_minimo: number; imagem_url: string | null;
+      }>;
+
+      // RULE-054/110: acessório sai na COR do produto âncora — empates de tamanho
+      // preferem a tampa da mesma cor (helper puro compartilhado).
+      const corAlvo = corDoProduto(itemRef.current.codigo, itemRef.current.descricao);
+      const casaCor = (codigo: string, desc: string) =>
+        corAlvo && corDoProduto(codigo, desc) === corAlvo ? 1 : 0;
+
+      const candidatas = rows
+        // s_mode usa as tampas do PERFIL MODULAR (SYSTEM MOLD); demais famílias ficam de fora
+        .filter((p) => !isModular || /MODULAR/i.test(p.descricao ?? ""))
+        .map((p) => ({ ...p, comprimentoM: parsearComprimentoDescricao(p.descricao ?? "") ?? 0 }))
+        .filter((p) => p.comprimentoM > 0)
+        // sort estável: cor certa primeiro
+        .sort((a, b) => casaCor(b.codigo, b.descricao) - casaCor(a.codigo, a.descricao));
+
+      const escolha = escolherTampaCega(candidatas, sobraTrilho);
+      if (!escolha) {
+        toast.warning("Nenhuma tampa cega com medida cadastrada foi encontrada no catálogo — adicione manualmente.");
+        return;
+      }
+      if (!escolha.cobre) {
+        toast.warning(
+          `Nenhuma tampa cega cobre a sobra de ${formatarM(sobraTrilho)}m — adicionada a maior disponível (${formatarM(escolha.tampa.comprimentoM)}m).`
+        );
+      }
+
+      const nova: ItemComposicao = {
+        id: crypto.randomUUID(),
+        codigo: escolha.tampa.codigo,
+        descricao: escolha.tampa.descricao,
+        quantidade: 1,
+        precoUnitario: Math.round((escolha.tampa.preco_tabela || 0) * 100) / 100,
+        precoMinimo: Math.round((escolha.tampa.preco_minimo || 0) * 100) / 100,
+        imagemUrl: escolha.tampa.imagem_url || undefined,
+        papel: "acessorio_opcional",
+        obrigatorio: false,
+        comprimento: escolha.tampa.comprimentoM,
+      };
+      const base = itemRef.current;
+      onChange({ ...base, composicao: [...(base.composicao ?? []), nova] });
+    } finally {
+      setBuscandoTampa(false);
+    }
+  };
+
   // ─── Checklist ───
 
   const regras = REGRAS_COMPOSICAO[item.sistema ?? ""] ?? null;
@@ -408,8 +638,14 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     ? composicao.some((c) => c.codigo === regras.kitFixacaoEmbutir)
     : false;
 
-  // SKU default do conector por família (D-10)
-  const skuConectorDefault = is48V ? "LM2338" : "LM3168";
+  // SKU default do conector por família (D-10) — RULE-054/110: no TINY 24V o conector
+  // sai na COR do trilho âncora (LM3168 preto / LM3169 branco). Cor indefinida mantém
+  // o default histórico (preto), sem inventar.
+  const skuConectorDefault = is48V
+    ? "LM2338"
+    : corAncora === "branco"
+      ? "LM3169"
+      : "LM3168";
 
   // ─── Painel de driver — estado 48V ───
 
@@ -448,7 +684,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
             Driver recomendado: {rec48v.sku} ({rec48v.potenciaW}W) — 1 unidade
           </p>
           <p>
-            Carga: {cargaTotalW}W × 1,05 = {rec48v.potenciaSeguraW}W calculados
+            Carga: {cargaTotalW}W × {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} = {rec48v.potenciaSeguraW}W calculados
           </p>
           <Button
             size="sm"
@@ -637,9 +873,16 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
             Driver recomendado: {sugestao24v.sku} ({sugestao24v.potenciaW}W) — 1 unidade
           </p>
           <p>
-            Carga: {cargaTotalW}W × 1,05 ={" "}
+            Carga: {cargaTotalW}W × {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} ={" "}
             {Math.round(cargaTotalW * MARGEM_SEGURANCA_DRIVER * 100) / 100}W calculados
           </p>
+          {/* RULE-031: driver de trilho ≠ driver de fita. Sem marcação no catálogo,
+              sugerimos assim mesmo, mas com a ressalva explícita. */}
+          {sugestao24v.tipoIncerto && (
+            <p className="text-amber-900">
+              ⚠ Não foi possível confirmar no catálogo que é um driver de TRILHO — confira antes de aplicar.
+            </p>
+          )}
           <Button
             size="sm"
             variant="default"
@@ -788,17 +1031,17 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
                   <Input
                     type="number"
                     min={1}
-                    value={m.quantidade}
-                    onChange={(e) =>
-                      atualizarComposicaoItem(m.id, {
-                        quantidade: parseInt(e.target.value) || 1,
-                      })
-                    }
+                    {...qtdInputProps(m)}
                     className="w-20 h-8"
                   />
-                  <Badge variant="outline" className="text-xs whitespace-nowrap">
-                    {m.potenciaW != null ? m.potenciaW + "W" : "?W"}
-                  </Badge>
+                  {/* RULE-066: badge de potência removido (redundante com a descrição) — o preço
+                      unitário já aparece no PrecoInput ao lado. Exceção: módulo SEM potência
+                      cadastrada mantém o alerta "?W" (entra como 0W no cálculo do driver). */}
+                  {m.potenciaW == null && (
+                    <Badge variant="outline" className="text-xs whitespace-nowrap border-amber-400/60 bg-amber-50 text-amber-900">
+                      ?W
+                    </Badge>
+                  )}
                   <PrecoInput
                     value={m.precoUnitario}
                     min={m.precoMinimo}
@@ -806,6 +1049,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
                       atualizarComposicaoItem(m.id, { precoUnitario: v })
                     }
                   />
+                  {/* RULE-066: valor total da linha (qtd × unitário) em tempo real */}
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                    Total: {formatarMoeda(m.precoUnitario * m.quantidade)}
+                  </Badge>
                   <Button
                     size="icon"
                     variant="ghost"
@@ -817,6 +1064,85 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Acessórios inseridos na composição (ex.: tampa cega — RULE-037). Editáveis (RULE-001). */}
+        {acessorios.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+              Acessórios
+            </p>
+            <div className="space-y-1.5">
+              {acessorios.map((a) => (
+                <div key={a.id} className="flex items-center gap-2 flex-wrap">
+                  <Input
+                    value={a.codigo}
+                    readOnly
+                    className="bg-muted/50 w-28 h-8"
+                  />
+                  <Input
+                    value={a.descricao}
+                    readOnly
+                    className="bg-muted/50 flex-1 h-8 min-w-0"
+                  />
+                  <Input
+                    type="number"
+                    min={1}
+                    {...qtdInputProps(a)}
+                    className="w-20 h-8"
+                  />
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">m:</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={comprimentoDraft[a.id] ?? String(a.comprimento ?? parsearComprimentoDescricao(a.descricao) ?? "")}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setComprimentoDraft((d) => ({ ...d, [a.id]: raw }));
+                        if (raw !== "") atualizarComposicaoItem(a.id, { comprimento: parseFloat(raw) || 0 });
+                      }}
+                      onBlur={() => {
+                        const raw = comprimentoDraft[a.id];
+                        // Limpar volta ao comprimento da descrição (o cálculo da sobra usa esse
+                        // fallback — exibir o mesmo valor evita display ≠ cálculo)
+                        if (raw === "") atualizarComposicaoItem(a.id, { comprimento: undefined });
+                        setComprimentoDraft((d) => { const { [a.id]: _, ...rest } = d; return rest; });
+                      }}
+                      className="w-20 h-8"
+                    />
+                  </div>
+                  <PrecoInput
+                    value={a.precoUnitario}
+                    min={a.precoMinimo}
+                    onChange={(v) =>
+                      atualizarComposicaoItem(a.id, { precoUnitario: v })
+                    }
+                  />
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                    Total: {formatarMoeda(a.precoUnitario * a.quantidade)}
+                  </Badge>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => removerComposicaoItem(a.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Aviso NÃO bloqueante de capacidade do trilho (RULE-056 / BUG-19).
+            Tampa cega fica fora da soma — "passa sempre" (RULE-099). */}
+        {excedeTrilho && ocupacao && (
+          <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            ⚠ Os componentes somam {formatarM(ocupacao.ocupadoM)}m e o trilho tem {formatarM(ocupacao.trilhoM)}m — vai passar um pouquinho.
           </div>
         )}
 
@@ -936,12 +1262,51 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
           </div>
         )}
 
+        {/* Sugestão de tampa cega por subtração (RULE-037/038) — só s_mode.
+            Recalcula dinamicamente conforme componentes entram/saem; some quando sobra ≤ 0.
+            Só aparece com ao menos 1 componente no trilho (espelha a regra #26 da edge). */}
+        {isModular && ocupacao && sobraTrilho > EPS_TRILHO && (modulos.length > 0 || acessorios.length > 0) && (
+          <div className="rounded-md border border-sky-300/50 bg-sky-50/50 px-3 py-2 space-y-2">
+            <p className="text-xs font-semibold text-sky-900">
+              Sobra no trilho: {formatarM(sobraTrilho)} m — adicionar tampa cega?
+              <span className="font-normal text-sky-700">
+                {" "}(trilho {formatarM(ocupacao.trilhoM)}m − componentes {formatarM(ocupacao.ocupadoComTampasM)}m)
+              </span>
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1"
+              disabled={buscandoTampa}
+              onClick={adicionarTampaCega}
+            >
+              <Plus className="h-3 w-3" />
+              {buscandoTampa ? "Buscando tampa..." : "Adicionar tampa cega"}
+            </Button>
+          </div>
+        )}
+
         {/* Painel de driver */}
         {(is48V || is24V || isModular) && (
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
               Driver
             </p>
+            {/* RULE-029/100: driver alojado dentro do perfil/trilho não passa de 72 W —
+                acima disso, dividir em circuitos (mesmo padrão do aviso de 200W do 48V). */}
+            {excedeDriverAlojado && (
+              <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1 mb-2">
+                <p>
+                  Atenção: a carga com folga ({Math.round(consumoSeguro24v * 10) / 10}W) excede os{" "}
+                  {LIMITE_W_DRIVER_ALOJADO}W do driver Slim que cabe alojado dentro do perfil/trilho.
+                </p>
+                <p>
+                  Recomendado dividir em {Math.ceil(consumoSeguro24v / LIMITE_W_DRIVER_ALOJADO)} circuitos
+                  com um driver Slim de até {LIMITE_W_DRIVER_ALOJADO}W cada.
+                </p>
+                <p>A divisão é decisão de projeto — adicione os drivers manualmente.</p>
+              </div>
+            )}
             {is48V && renderPainelDriver48V()}
             {(is24V || isModular) && renderPainelDriver24V()}
           </div>

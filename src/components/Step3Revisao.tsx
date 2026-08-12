@@ -7,16 +7,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { ArrowLeft, FileDown, AlertTriangle, MessageSquare, ChevronDown, CheckCircle2 } from "lucide-react";
-import type { Orcamento, Ambiente, SistemaIluminacao, GrupoFita, StatusOrcamento } from "@/types/orcamento";
+import type { Orcamento, Ambiente, SistemaIluminacao, ItemComposicao, GrupoFita, StatusOrcamento } from "@/types/orcamento";
 import type { Json } from "@/integrations/supabase/types";
 import { construirDescricaoRica } from "@/lib/produtoDescricao";
 import {
-  calcularDemandaFita, calcularConsumoW, calcularQtdDrivers,
+  calcularDemandaFita, calcularConsumoW, calcularQtdDriversEfetiva,
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
   calcularSubtotalSistemaSemFita, calcularTotalAmbienteSemFita, calcularRolosPorGrupo,
   calcularDriversPorProjeto, calcularTotalGeral, formatarMoeda,
-  detectarChecklistIssues
+  detectarChecklistIssues, LIMITE_ORCAMENTOS_POR_PROJETO
 } from "@/types/orcamento";
+import { ordenarComponentes, labelPapel } from "@/lib/pdfTemplates/v3";
 import type { ChecklistIssue } from "@/types/orcamento";
 import { cn } from "@/lib/utils";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -43,7 +44,7 @@ interface Step3Props {
 interface Violacao {
   ambienteId: string;
   ambienteNome: string;
-  tipo: "luminaria" | "perfil" | "fita" | "driver";
+  tipo: "luminaria" | "perfil" | "fita" | "driver" | "composicao";
   itemId: string;
   codigo: string;
   descricao: string;
@@ -111,7 +112,7 @@ async function imageToBase64(src: string): Promise<string> {
 }
 
 const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes, initialOrcamentoId }: Step3Props) => {
-  const { dados, ambientes } = orcamento;
+  const { dados, ambientes, categorias } = orcamento;
   const { user } = useAuth();
   const { colaborador } = useColaborador();
   const [approvedExceptions, setApprovedExceptions] = useState<Set<string>>(new Set());
@@ -132,7 +133,24 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
   const [savingOrcamento, setSavingOrcamento] = useState(false);
   const pdfInFlightRef = useRef(false);
 
-  const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes), [ambientes]);
+  // RULE-064/065: o cabeçalho do PDF mostra o "Parceiro" (escritório/arquiteto do cliente).
+  // No banco a entidade se chama `arquitetos` — "Parceiro" é só o vocabulário comercial.
+  const [parceiro, setParceiro] = useState<string | null>(null);
+  useEffect(() => {
+    if (!clienteId) { setParceiro(null); return; }
+    let cancelado = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("clientes")
+        .select("arquitetos:arquiteto_id(nome)")
+        .eq("id", clienteId)
+        .maybeSingle();
+      if (!cancelado) setParceiro((data?.arquitetos as { nome?: string } | null)?.nome ?? null);
+    })();
+    return () => { cancelado = true; };
+  }, [clienteId]);
+
+  const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes, categorias), [ambientes, categorias]);
   const resumoDrivers = useMemo(() => calcularDriversPorProjeto(ambientes), [ambientes]);
   const totalGeral = useMemo(() => calcularTotalGeral(ambientes), [ambientes]);
 
@@ -144,7 +162,11 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
   const allCodigos = useMemo(() => {
     const set = new Set<string>();
     for (const amb of ambientes) {
-      for (const l of amb.luminarias) if (l.codigo) set.add(l.codigo);
+      for (const l of amb.luminarias) {
+        if (l.codigo) set.add(l.codigo);
+        // RULE-067: sub-itens de composicao[] agora aparecem na tabela — incluir no batch lookup
+        for (const c of l.composicao ?? []) if (c.codigo) set.add(c.codigo);
+      }
       for (const sis of amb.sistemas) {
         if (sis.fita?.codigo) set.add(sis.fita.codigo);
         if (sis.driver?.codigo) set.add(sis.driver.codigo);
@@ -198,6 +220,13 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         if (item.precoMinimo > 0 && item.precoUnitario < item.precoMinimo) {
           v.push({ ambienteId: amb.id, ambienteNome: amb.nome, tipo: "luminaria", itemId: item.id, codigo: item.codigo, descricao: item.descricao, precoUnitario: item.precoUnitario, precoMinimo: item.precoMinimo });
         }
+        // Sub-itens de composicao[] (risco financeiro #5 do GAPS / RULE-066/067):
+        // mesmo predicado — sem isso, sub-item abaixo do mínimo passava sem exceção.
+        (item.composicao ?? []).forEach((c) => {
+          if (c.precoMinimo > 0 && c.precoUnitario < c.precoMinimo) {
+            v.push({ ambienteId: amb.id, ambienteNome: amb.nome, tipo: "composicao", itemId: c.id, codigo: c.codigo, descricao: c.descricao, precoUnitario: c.precoUnitario, precoMinimo: c.precoMinimo });
+          }
+        });
       });
       amb.sistemas.forEach((sis) => {
         if (sis.perfil && sis.perfil.precoMinimo > 0 && sis.perfil.precoUnitario < sis.perfil.precoMinimo) {
@@ -265,6 +294,16 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
       if (v.tipo === "luminaria") {
         return { ...amb, luminarias: amb.luminarias.map((l) => l.id === v.itemId ? { ...l, precoUnitario: l.precoMinimo } : l) };
       }
+      if (v.tipo === "composicao") {
+        return {
+          ...amb,
+          luminarias: amb.luminarias.map((l) =>
+            l.composicao?.some((c) => c.id === v.itemId)
+              ? { ...l, composicao: l.composicao.map((c) => c.id === v.itemId ? { ...c, precoUnitario: c.precoMinimo } : c) }
+              : l
+          ),
+        };
+      }
       return {
         ...amb,
         sistemas: amb.sistemas.map((sis) => {
@@ -302,6 +341,26 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         luminarias: amb.luminarias.map((l) =>
           l.id === itemId ? { ...l, precoUnitario: Math.max(0, novo) } : l
         ),
+      };
+    });
+    onUpdateAmbientes(updated);
+  };
+
+  // RULE-067/BUG-24 — Edita preço unitário de um sub-item de composicao[] (análogo a handleEditPrecoLuminaria)
+  const handleEditPrecoComposicao = (ambienteId: string, luminariaId: string, compId: string, novo: number) => {
+    const updated = ambientes.map((amb) => {
+      if (amb.id !== ambienteId) return amb;
+      return {
+        ...amb,
+        luminarias: amb.luminarias.map((l) => {
+          if (l.id !== luminariaId || !l.composicao) return l;
+          return {
+            ...l,
+            composicao: l.composicao.map((c) =>
+              c.id === compId ? { ...c, precoUnitario: Math.max(0, novo) } : c
+            ),
+          };
+        }),
       };
     });
     onUpdateAmbientes(updated);
@@ -388,36 +447,71 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
     setSavingOrcamento(true);
     // Supabase column is jsonb; Ambiente[] is JSON-serializable so this cast is safe.
     const ambientesJson = ambientes as unknown as Json;
+    // RULE-014: categorias vivem em coluna própria (jsonb) — o snapshot do orçamento precisa
+    // delas para reabrir/duplicar com os vínculos intactos.
+    const categoriasJson = (categorias ?? []) as unknown as Json;
     // Phase 22: resolver versão do template uma vez para consistência writer↔persist.
     const templateVersion = resolverTemplateVersion(ambientes);
+    // A coluna `categorias` é nova (migration 20260812000004) e o front sobe no push, antes de
+    // a migration ser aplicada à mão: se ela ainda não existe, salvamos sem as categorias em
+    // vez de perder o orçamento inteiro. `colunaAusente` reconhece o 42703 do PostgREST.
+    const colunaAusente = (e: { code?: string; message?: string } | null) =>
+      e?.code === "42703" || /categorias/i.test(e?.message ?? "");
+
     try {
       if (orcamentoId) {
-        const { error } = await supabase
-          .from("orcamentos")
-          .update({
-            tipo: dados.tipo || null,
-            ambientes: ambientesJson,
-            valor: totalGeral,
-            pdf_template_version: templateVersion,
-          })
-          .eq("id", orcamentoId);
-        if (error) throw error;
-        return orcamentoId;
-      }
-      const { data, error } = await supabase
-        .from("orcamentos")
-        .insert({
-          cliente_id: clienteId,
-          colaborador_id: colaborador.id,
-          projeto_id: projetoId || null,
+        const base = {
           tipo: dados.tipo || null,
           ambientes: ambientesJson,
           valor: totalGeral,
-          status: "rascunho" satisfies StatusOrcamento,
           pdf_template_version: templateVersion,
-        })
+        };
+        let { error } = await supabase
+          .from("orcamentos")
+          .update({ ...base, categorias: categoriasJson })
+          .eq("id", orcamentoId);
+        if (error && colunaAusente(error)) {
+          console.warn("Coluna 'categorias' ausente — salvando sem ela (migration 20260812000004 pendente).");
+          ({ error } = await supabase.from("orcamentos").update(base).eq("id", orcamentoId));
+        }
+        if (error) throw error;
+        return orcamentoId;
+      }
+      // RULE-072: o teto de 10 revisões por projeto tem que valer no ponto de GRAVAÇÃO —
+      // checar só no botão "Novo Orçamento" deixava o caminho "Duplicar como nova revisão"
+      // criar a 11ª sem passar por nenhuma validação.
+      if (projetoId) {
+        const { count } = await supabase
+          .from("orcamentos")
+          .select("id", { count: "exact", head: true })
+          .eq("projeto_id", projetoId);
+        if ((count ?? 0) >= LIMITE_ORCAMENTOS_POR_PROJETO) {
+          toast.error(
+            `Este projeto já tem ${LIMITE_ORCAMENTOS_POR_PROJETO} revisões (R00 a R09).`,
+            { description: "Crie um novo projeto para salvar esta." },
+          );
+          return null;
+        }
+      }
+      const base = {
+        cliente_id: clienteId,
+        colaborador_id: colaborador.id,
+        projeto_id: projetoId || null,
+        tipo: dados.tipo || null,
+        ambientes: ambientesJson,
+        valor: totalGeral,
+        status: "rascunho" satisfies StatusOrcamento,
+        pdf_template_version: templateVersion,
+      };
+      let { data, error } = await supabase
+        .from("orcamentos")
+        .insert({ ...base, categorias: categoriasJson })
         .select("id")
         .single();
+      if (error && colunaAusente(error)) {
+        console.warn("Coluna 'categorias' ausente — salvando sem ela (migration 20260812000004 pendente).");
+        ({ data, error } = await supabase.from("orcamentos").insert(base).select("id").single());
+      }
       if (error) throw error;
       setOrcamentoId(data.id);
       return data.id;
@@ -465,6 +559,8 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         tipo: dados.tipo,
         ambientes: ambientesInline,
         logoBase64,
+        categorias, // RULE-018: nome da categoria no Resumo de Fitas
+        parceiro,   // RULE-064/065: escritório do cliente no cabeçalho
         templateVersion: resolverTemplateVersion(ambientesInline),
       });
 
@@ -625,30 +721,56 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                   </TableHeader>
                   <TableBody>
                     {amb.luminarias.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-mono">{item.codigo}</TableCell>
-                        <TableCell>{descricaoRica(item.codigo, item.descricao, (item as any).potencia_watts)}</TableCell>
-                        <TableCell className="text-right">
-                          <EditableNumericCell
-                            value={item.quantidade}
-                            onCommit={(v) => handleEditQuantidade(amb.id, item.id, v)}
-                            mode="integer"
-                            ariaLabel={`Quantidade ${item.codigo}`}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
+                      <React.Fragment key={item.id}>
+                        <TableRow>
+                          <TableCell className="font-mono">{item.codigo}</TableCell>
+                          <TableCell>{descricaoRica(item.codigo, item.descricao, (item as any).potencia_watts)}</TableCell>
+                          <TableCell className="text-right">
                             <EditableNumericCell
-                              value={item.precoUnitario}
-                              onCommit={(v) => handleEditPrecoLuminaria(amb.id, item.id, v)}
-                              mode="decimal"
-                              ariaLabel={`Preço unitário ${item.codigo}`}
+                              value={item.quantidade}
+                              onCommit={(v) => handleEditQuantidade(amb.id, item.id, v)}
+                              mode="integer"
+                              ariaLabel={`Quantidade ${item.codigo}`}
                             />
-                            {violacaoIndicator(item.codigo, item.precoUnitario, item.precoMinimo)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalLuminaria(item))}</TableCell>
-                      </TableRow>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <EditableNumericCell
+                                value={item.precoUnitario}
+                                onCommit={(v) => handleEditPrecoLuminaria(amb.id, item.id, v)}
+                                mode="decimal"
+                                ariaLabel={`Preço unitário ${item.codigo}`}
+                              />
+                              {violacaoIndicator(item.codigo, item.precoUnitario, item.precoMinimo)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalLuminaria(item))}</TableCell>
+                        </TableRow>
+                        {/* RULE-067/BUG-24: sub-linhas de composicao[] — Step 3 espelha o PDF
+                            (mesmo ordenamento de pdfTemplates/v3.ts) com preço editável */}
+                        {(item.composicao?.length ?? 0) > 0 && ordenarComponentes(item.composicao!).map((c) => (
+                          <TableRow key={c.id} className="bg-muted/20">
+                            <TableCell className="font-mono pl-6 text-muted-foreground">↳ {c.codigo}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs mr-2">{labelPapel(c.papel)}</Badge>
+                              {descricaoRica(c.codigo, c.descricao)}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">{c.quantidade}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <EditableNumericCell
+                                  value={c.precoUnitario}
+                                  onCommit={(v) => handleEditPrecoComposicao(amb.id, item.id, c.id, v)}
+                                  mode="decimal"
+                                  ariaLabel={`Preço unitário ${c.codigo}`}
+                                />
+                                {violacaoIndicator(c.codigo, c.precoUnitario, c.precoMinimo)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">{formatarMoeda(c.precoUnitario * c.quantidade)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -674,7 +796,8 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                     {amb.sistemas.map((sis, si) => {
                       const demanda = calcularDemandaFita(sis);
                       const consumo = calcularConsumoW(sis);
-                      const qtdDrv = calcularQtdDrivers(sis);
+                      // RULE-001: quantidade efetiva (override manual, fallback cálculo) — casa com o subtotal cobrado
+                      const qtdDrv = calcularQtdDriversEfetiva(sis);
                       return (
                         <React.Fragment key={sis.id}>
                           {si > 0 && <TableRow><TableCell colSpan={6} className="py-1 bg-muted/30" /></TableRow>}
@@ -773,9 +896,13 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
               </TableHeader>
               <TableBody>
                 {gruposFita.map((g) => (
-                  <TableRow key={g.codigo}>
+                  <TableRow key={g.categoriaId ?? g.codigo}>
                     <TableCell className="font-mono">{g.codigo}</TableCell>
                     <TableCell>
+                      {/* RULE-018: o nome da categoria é o que vai na etiqueta da fábrica */}
+                      {g.categoriaNome && (
+                        <div className="text-xs font-semibold text-primary uppercase tracking-wide">{g.categoriaNome}</div>
+                      )}
                       <div>{g.descricao}</div>
                       {g.localBreakdown && g.localBreakdown.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">

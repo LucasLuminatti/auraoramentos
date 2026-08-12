@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import logo from "@/assets/logo.png";
 import StepIndicator from "@/components/StepIndicator";
 import Step1DadosOrcamento from "@/components/Step1DadosOrcamento";
+import Step2Categorias from "@/components/Step2Categorias";
 import Step2Ambientes from "@/components/Step2Ambientes";
 import Step3Revisao from "@/components/Step3Revisao";
 import ClienteList from "@/components/ClienteList";
-import type { DadosOrcamento, Ambiente, Orcamento } from "@/types/orcamento";
+import type { DadosOrcamento, Ambiente, Orcamento, CategoriaFita } from "@/types/orcamento";
+import { LIMITE_ORCAMENTOS_POR_PROJETO } from "@/types/orcamento";
 import { useAuth } from "@/hooks/useAuth";
 import { useColaborador } from "@/hooks/useColaborador";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -19,7 +21,37 @@ import ClienteDialog from "@/components/ClienteDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const STEPS = ["Dados", "Ambientes", "Revisão"];
+// RULE-014: "Categorias" fica ANTES de "Ambientes" — as categorias de fita são criadas no
+// começo do projeto e depois vinculadas aos perfis de cada ambiente.
+const STEPS = ["Dados", "Categorias", "Ambientes", "Revisão"];
+
+const COLUNAS_ORCAMENTO =
+  "id, cliente_id, colaborador_id, projeto_id, tipo, ambientes, status, clientes:cliente_id(id, nome), projetos:projeto_id(id, nome)";
+
+/** Carrega um orçamento para reabrir/duplicar tolerando a ausência da coluna `categorias`
+ *  (migration 20260812000004). O front sobe no push e a migration é aplicada à mão: sem esse
+ *  fallback, a janela entre os dois deixaria o colaborador sem conseguir abrir orçamento
+ *  nenhum. Quando a coluna não existe, o orçamento carrega sem categorias — que é exatamente
+ *  o que ele tem. */
+async function carregarOrcamento(id: string, motivo: "reabrir" | "duplicar") {
+  const comCategorias = await supabase
+    .from("orcamentos")
+    .select(`${COLUNAS_ORCAMENTO}, categorias`)
+    .eq("id", id)
+    .maybeSingle();
+  if (!comCategorias.error) return comCategorias;
+
+  const semCategorias = await supabase
+    .from("orcamentos")
+    .select(COLUNAS_ORCAMENTO)
+    .eq("id", id)
+    .maybeSingle();
+  if (!semCategorias.error && semCategorias.data) {
+    console.warn(`[${motivo}] coluna 'categorias' ausente — migration 20260812000004 pendente.`);
+    return { ...semCategorias, data: { ...semCategorias.data, categorias: [] } };
+  }
+  return semCategorias.error ? semCategorias : comCategorias;
+}
 
 const Index = () => {
   const { signOut } = useAuth();
@@ -31,6 +63,7 @@ const Index = () => {
   const [step, setStep] = useState(1);
   const [dados, setDados] = useState<DadosOrcamento>({ colaborador: "", tipo: "" });
   const [ambientes, setAmbientes] = useState<Ambiente[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaFita[]>([]);
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [listKey, setListKey] = useState(0);
   const [currentProjetoId, setCurrentProjetoId] = useState<string | null>(null);
@@ -51,11 +84,7 @@ const Index = () => {
 
     async function reabrir() {
       try {
-        const { data, error } = await supabase
-          .from("orcamentos")
-          .select("id, cliente_id, colaborador_id, projeto_id, tipo, ambientes, status, clientes:cliente_id(id, nome), projetos:projeto_id(id, nome)")
-          .eq("id", orcamentoParaReabrir!)
-          .maybeSingle();
+        const { data, error } = await carregarOrcamento(orcamentoParaReabrir!, "reabrir");
 
         if (cancelled) return;
         if (error || !data) {
@@ -74,6 +103,8 @@ const Index = () => {
         // Popula state do wizard
         setDados({ colaborador: colaborador?.nome ?? "", tipo: (data.tipo as DadosOrcamento["tipo"]) ?? "" });
         setAmbientes((data.ambientes as unknown as Ambiente[]) ?? []);
+        // Orçamentos anteriores ao modelo de categorias têm a coluna nula (RULE-014)
+        setCategorias((data.categorias as unknown as CategoriaFita[]) ?? []);
         setCurrentClienteId(data.cliente_id);
         setCurrentClienteNome((data.clientes as any).nome ?? "");
         setCurrentProjetoId(data.projeto_id);
@@ -104,11 +135,7 @@ const Index = () => {
 
     async function duplicar() {
       try {
-        const { data, error } = await supabase
-          .from("orcamentos")
-          .select("cliente_id, projeto_id, tipo, ambientes, clientes:cliente_id(id, nome), projetos:projeto_id(id, nome)")
-          .eq("id", orcamentoParaDuplicar!)
-          .maybeSingle();
+        const { data, error } = await carregarOrcamento(orcamentoParaDuplicar!, "duplicar");
 
         if (cancelled) return;
         if (error || !data || !data.clientes) {
@@ -119,6 +146,7 @@ const Index = () => {
 
         setDados({ colaborador: colaborador?.nome ?? "", tipo: (data.tipo as DadosOrcamento["tipo"]) ?? "" });
         setAmbientes((data.ambientes as unknown as Ambiente[]) ?? []);
+        setCategorias((data.categorias as unknown as CategoriaFita[]) ?? []);
         setCurrentClienteId(data.cliente_id);
         setCurrentClienteNome((data.clientes as any).nome ?? "");
         setCurrentProjetoId(data.projeto_id);
@@ -183,11 +211,44 @@ const Index = () => {
     else { setMode("list"); }
   };
 
-  const orcamento: Orcamento = { dados, ambientes };
+  const orcamento: Orcamento = { dados, ambientes, categorias };
 
-  const handleNovoOrcamento = (clienteId: string, projetoId: string, projetoNome: string, clienteNome: string) => {
+  /** Remover uma categoria precisa desvincular os sistemas que apontavam para ela — senão o
+   *  `categoriaId` órfão continua agrupando a fita num grupo separado (RULE-017), e o
+   *  colaborador acaba comprando dois rolos da mesma fita sem entender por quê. */
+  const atualizarCategorias = (novas: CategoriaFita[]) => {
+    setCategorias(novas);
+    const idsVivos = new Set(novas.map((c) => c.id));
+    setAmbientes((prev) => {
+      let mudou = false;
+      const arr = prev.map((amb) => ({
+        ...amb,
+        sistemas: amb.sistemas.map((sis) => {
+          if (!sis.categoriaId || idsVivos.has(sis.categoriaId)) return sis;
+          mudou = true;
+          return { ...sis, categoriaId: null };
+        }),
+      }));
+      return mudou ? arr : prev;
+    });
+  };
+
+  const handleNovoOrcamento = async (clienteId: string, projetoId: string, projetoNome: string, clienteNome: string) => {
+    // RULE-072: no máximo 10 revisões por projeto (R00…R09).
+    const { count, error } = await supabase
+      .from("orcamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("projeto_id", projetoId);
+    if (!error && (count ?? 0) >= LIMITE_ORCAMENTOS_POR_PROJETO) {
+      toast.error(
+        `Este projeto já tem ${LIMITE_ORCAMENTOS_POR_PROJETO} revisões (R00 a R09).`,
+        { description: "Crie um novo projeto para continuar orçando." },
+      );
+      return;
+    }
     setDados({ colaborador: colaborador?.nome || "", tipo: "" });
     setAmbientes([]);
+    setCategorias([]);
     setCurrentProjetoId(projetoId);
     setCurrentClienteId(clienteId);
     setCurrentClienteNome(clienteNome);
@@ -205,6 +266,7 @@ const Index = () => {
     setStep(1);
     setDados({ colaborador: colaborador?.nome || "", tipo: "" });
     setAmbientes([]);
+    setCategorias([]);
     setCurrentProjetoId(null);
     setCurrentClienteId(null);
     setCurrentClienteNome("");
@@ -264,9 +326,18 @@ const Index = () => {
 
         {mode === "create" && (
           <>
+            {/* RULE-091: o cliente no breadcrumb é clicável e volta para a pasta dele
+                (mesma confirmação do logo — sair do wizard descarta o que não foi salvo). */}
             <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-4 py-2.5 text-sm mb-4">
               <User className="h-4 w-4 text-primary" />
-              <span className="font-medium text-foreground">{currentClienteNome}</span>
+              <button
+                type="button"
+                onClick={() => setConfirmVoltarOpen(true)}
+                className="font-medium text-foreground hover:text-primary hover:underline transition-colors"
+                title="Voltar para a lista de clientes"
+              >
+                {currentClienteNome}
+              </button>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <FolderOpen className="h-4 w-4 text-primary/70" />
               <span className="font-medium text-foreground">{currentProjetoNome}</span>
@@ -277,10 +348,13 @@ const Index = () => {
                 <Step1DadosOrcamento dados={dados} onChange={setDados} onNext={() => setStep(2)} />
               )}
               {step === 2 && (
-                <Step2Ambientes ambientes={ambientes} onChange={setAmbientes} onNext={() => setStep(3)} onPrev={() => setStep(1)} />
+                <Step2Categorias categorias={categorias} onChange={atualizarCategorias} onNext={() => setStep(3)} onPrev={() => setStep(1)} />
               )}
               {step === 3 && (
-                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(2)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} initialOrcamentoId={reopenedOrcamentoId ?? undefined} />
+                <Step2Ambientes ambientes={ambientes} categorias={categorias} onChange={setAmbientes} onNext={() => setStep(4)} onPrev={() => setStep(2)} />
+              )}
+              {step === 4 && (
+                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(3)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} initialOrcamentoId={reopenedOrcamentoId ?? undefined} />
               )}
             </div>
           </>

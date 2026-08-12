@@ -353,6 +353,7 @@ export type Database = {
       orcamentos: {
         Row: {
           ambientes: Json
+          categorias: Json
           cliente_id: string
           colaborador_id: string
           created_at: string
@@ -369,6 +370,7 @@ export type Database = {
         }
         Insert: {
           ambientes?: Json
+          categorias?: Json
           cliente_id: string
           colaborador_id: string
           created_at?: string
@@ -385,6 +387,7 @@ export type Database = {
         }
         Update: {
           ambientes?: Json
+          categorias?: Json
           cliente_id?: string
           colaborador_id?: string
           created_at?: string
@@ -892,7 +895,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      otimizar_rolos_fita: { Args: { p_demanda_metros: number }; Returns: Json }
+      otimizar_rolos_fita: { Args: { p_demanda_metros: number; p_tamanho_rolo_m?: number }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"

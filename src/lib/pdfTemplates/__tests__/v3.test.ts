@@ -341,3 +341,66 @@ describe('gerarOrcamentoHtmlV3 — distinção v2 vs v3 para ambiente com compos
     expect(html).toContain('Sistema Composto 2');
   });
 });
+
+/* ──────────────────────────────────────────────────────────────
+   Cabeçalho e Resumo de Fitas — RULE-064/065 (Parceiro/Revisão) e RULE-018 (categoria)
+   ────────────────────────────────────────────────────────────── */
+
+describe('gerarOrcamentoHtmlV3 — cabeçalho e categorias', () => {
+  const fita = {
+    id: 'f-cat', codigo: 'LM9100', descricao: 'Fita LED 10W/m',
+    wm: 10, voltagem: 24 as const, metragemRolo: 5,
+    precoUnitario: 100, precoMinimo: 80,
+  };
+  const driver = {
+    id: 'd-cat', codigo: 'LM8100', descricao: 'Driver 100W',
+    potencia: 100, voltagem: 24 as const, precoUnitario: 90, precoMinimo: 70,
+  };
+  const ambienteComCategoria: Ambiente = {
+    id: 'amb-cat',
+    nome: 'Sala',
+    luminarias: [],
+    sistemas: [{
+      id: 'sis-cat', perfil: null, fita, driver,
+      metragemManual: 4, passadasManual: 1, categoriaId: 'cat-1',
+    }],
+  };
+
+  it('RULE-064/065: imprime "Parceiro" quando o cliente tem escritório vinculado', () => {
+    const html = gerarOrcamentoHtmlV3({
+      ...BASE_PARAMS,
+      ambientes: [makeAmbienteComComposto()],
+      parceiro: 'Estúdio Alfa Arquitetura',
+    });
+    expect(html).toContain('Parceiro:');
+    expect(html).toContain('Estúdio Alfa Arquitetura');
+  });
+
+  it('RULE-064/065: sem parceiro a linha não é impressa, e o rótulo é "Revisão"', () => {
+    const html = gerarOrcamentoHtmlV3({
+      ...BASE_PARAMS,
+      ambientes: [makeAmbienteComComposto()],
+    });
+    expect(html).not.toContain('Parceiro:');
+    expect(html).toContain('Revisão:');
+    expect(html).not.toContain('<strong>Tipo:</strong>');
+  });
+
+  it('RULE-018: o nome da categoria aparece no Resumo de Fitas', () => {
+    const html = gerarOrcamentoHtmlV3({
+      ...BASE_PARAMS,
+      ambientes: [ambienteComCategoria],
+      categorias: [{ id: 'cat-1', nome: 'Sanca quente', fita }],
+    });
+    expect(html).toContain('Sanca quente');
+  });
+
+  it('sem a lista de categorias o resumo ainda sai (sem nome na etiqueta)', () => {
+    const html = gerarOrcamentoHtmlV3({
+      ...BASE_PARAMS,
+      ambientes: [ambienteComCategoria],
+    });
+    expect(html).toContain('RESUMO DE FITAS');
+    expect(html).not.toContain('Sanca quente');
+  });
+});

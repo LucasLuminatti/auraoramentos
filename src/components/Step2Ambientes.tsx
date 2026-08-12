@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
-import type { Ambiente, ItemLuminaria } from "@/types/orcamento";
+import type { Ambiente, ItemLuminaria, CategoriaFita } from "@/types/orcamento";
 import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos, clonarItemLuminaria } from "@/types/orcamento";
 import { toast } from "sonner";
 
@@ -71,6 +71,9 @@ interface Step2Props {
   onChange: (ambientes: Ambiente[]) => void;
   onNext: () => void;
   onPrev: () => void;
+  /** Categorias criadas na etapa anterior (RULE-014) — oferecidas em cada sistema para
+   *  vincular o perfil à fita da categoria (RULE-016). Vazio = fluxo sem categorias. */
+  categorias?: CategoriaFita[];
 }
 
 const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
@@ -83,7 +86,7 @@ const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
   'modular-sem-fita': 'SYSTEM MOLD sem fita adicionada',
 };
 
-const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => {
+const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }: Step2Props) => {
   const [advisoryOpen, setAdvisoryOpen] = useState(false);
   const [advisoryItems, setAdvisoryItems] = useState<AdvisoryItem[]>([]);
 
@@ -247,6 +250,7 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev }: Step2Props) => 
           <AmbienteCard
             key={amb.id}
             ambiente={amb}
+            categorias={categorias}
             onChange={(a) => updateAmbiente(i, a)}
             onRemove={() => removeAmbiente(i)}
             onDuplicate={() => duplicarAmbiente(i)}

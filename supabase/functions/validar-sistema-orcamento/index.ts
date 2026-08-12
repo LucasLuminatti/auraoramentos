@@ -14,22 +14,33 @@ interface SistemaItem {
 
   // Perfil selecionado (para sistemas tipo 'padrao' e 's_mode')
   familia_perfil?: string;
+  /** Nome do perfil — identifica as famílias Light Mini/Ripado/Nano/Cantoneira/Trick/Alojamento
+   *  quando `familia_perfil` não está cadastrada (RULE-100/103/104). Opcional. */
+  descricao_perfil?: string;
   comprimento_perfil_m?: number;
   quantidade_pecas?: number;
   passadas?: number;           // editável pelo usuário; fallback = passadas_padrao do perfil
 
   // Fita selecionada
   codigo_fita?: string;
+  /** Nome da fita — usado para detectar "BABY" e "IP65" (RULE-103/104). Opcional. */
+  descricao_fita?: string;
   tensao_fita?: number;        // 12, 24 ou 48
   watts_por_metro?: number;
   largura_fita_mm?: number;
   subtipo_fita?: string;       // 'baby' | 'padrao'
+  tamanho_rolo_m?: number;     // RULE-005: tamanho do rolo do catálogo (5/10/25/50); default 5
 
   // Driver selecionado
   codigo_driver?: string;
+  /** Nome do driver — fallback para identificar "SLIM" quando `subtipo_driver` está vazio. */
+  descricao_driver?: string;
   tensao_driver?: number;      // 12, 24 ou 48
   potencia_driver_w?: number;
   subtipo_driver?: string;     // 'slim' | 'convencional' | 'pro' | 'dimerizavel' | 'magnetico'
+  /** RULE-029/100: o driver fica ALOJADO dentro do trilho/perfil (Trick/Alojamento,
+   *  modular de sobrepor). Quando ausente, é inferido da família/nome do perfil. */
+  driver_alojado?: boolean;
 
   // Sistema Magneto 48V
   potencia_total_modulos_w?: number;
@@ -74,7 +85,8 @@ function calcularDrivers(
   tensao: number,
 ): number {
   const potenciaTotal = metragemFita * wattsPorMetro;
-  const potenciaSegura = potenciaTotal * 1.05;
+  // RULE-026 (2026-08-12): folga de 20% — paridade com MARGEM_SEGURANCA_DRIVER do front
+  const potenciaSegura = potenciaTotal * 1.20;
   const qtdPorPotencia = Math.ceil(potenciaSegura / potenciaDriver);
 
   const limiteMetros = tensao === 12 ? 5 : tensao === 24 ? 10 : null;
@@ -93,15 +105,155 @@ function calcularMetragemFita(
   return comprimentoM * qtdPecas * passadas;
 }
 
-function otimizarRolos(demandaMetros: number) {
-  let restante = demandaMetros;
-  const rolos15 = Math.floor(restante / 15);
-  restante -= rolos15 * 15;
-  const rolos10 = Math.floor(restante / 10);
-  restante -= rolos10 * 10;
-  const rolos5 = Math.ceil(restante / 5);
-  const totalM = rolos15 * 15 + rolos10 * 10 + rolos5 * 5;
-  return { rolos15, rolos10, rolos5, totalM, sobraM: totalM - demandaMetros };
+// RULE-005/006 (2026-08-12): rolo único por produto (tamanho do catálogo) e 5% de
+// sobra POR ROLO — de um rolo de 5m aproveitam-se ~4,75m. Paridade com
+// SOBRA_ROLO_FITA/calcularRolosPorGrupo do front e a RPC otimizar_rolos_fita.
+const SOBRA_ROLO_FITA = 0.05;
+
+function otimizarRolos(demandaMetros: number, tamanhoRoloM: number | null | undefined) {
+  const tamanhoRolo = tamanhoRoloM != null && tamanhoRoloM > 0 ? tamanhoRoloM : 5;
+  const metrosUteisPorRolo = tamanhoRolo * (1 - SOBRA_ROLO_FITA);
+  // Ceil no valor CRU (WR-03); epsilon compensa 5×0.95 ≠ 4.75 em ponto flutuante.
+  const qtdRolos = demandaMetros > 0 ? Math.ceil(demandaMetros / metrosUteisPorRolo - 1e-9) : 0;
+  const totalM = qtdRolos * tamanhoRolo;
+  return {
+    tamanho_rolo_m: tamanhoRolo,
+    qtd_rolos: qtdRolos,
+    metros_uteis_por_rolo: Math.round(metrosUteisPorRolo * 100) / 100,
+    totalM,
+    sobraM: Math.round((totalM - demandaMetros) * 100) / 100,
+  };
+}
+
+// ─── Restrições físicas (RULE-029/100/103/104) ───────────────────────────────
+// Espelho EXATO dos helpers puros de `src/types/orcamento.ts` (corDoProduto,
+// exigeDriverAlojado, classificarDriverSlim, perfilSomenteFitaBaby,
+// perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby). Mudou lá → mudar aqui no MESMO deploy.
+// Todos os campos usados são opcionais: payload antigo → nenhuma validação nova dispara.
+//
+// `sistemaParaPayload` (src/hooks/useValidarSistemas.ts) envia `descricao_perfil`,
+// `descricao_fita` e `descricao_driver` — é o que permite identificar família/Baby/IP/Slim
+// quando o catálogo não tem o campo cadastrado. `driver_alojado` ainda não é enviado
+// (nenhuma tela sabe se o driver vai DENTRO do perfil): a detecção usa família e nome.
+
+/** RULE-029/100: limite físico do driver alojado dentro do trilho/perfil. */
+const LIMITE_W_DRIVER_ALOJADO = 72;
+
+const FAMILIAS_DRIVER_ALOJADO = ["trik", "trick", "fk", "alojamento"];
+
+function exigeDriverAlojado(item: SistemaItem): boolean {
+  if (item.driver_alojado === true) return true;
+  const familia = (item.familia_perfil ?? "").trim().toLowerCase();
+  if (familia && FAMILIAS_DRIVER_ALOJADO.includes(familia)) return true;
+  const d = (item.descricao_perfil ?? "").toUpperCase();
+  if (/\bTRICK\b|\bTRIK\b|\bTRICKY\b|ALOJAMENTO/.test(d)) return true;
+  // RULE-029: modular de sobrepor — o driver vai escondido dentro do trilho
+  if (item.tipo_sistema === "s_mode" && item.aplicacao_trilho === "sobrepor") return true;
+  return false;
+}
+
+/** 'slim' | 'nao_slim' | 'indeterminado' — só a contradição explícita bloqueia. */
+function classificarDriverSlim(item: SistemaItem): "slim" | "nao_slim" | "indeterminado" {
+  const tipo = (item.subtipo_driver ?? "").trim().toLowerCase();
+  if (tipo === "slim") return "slim";
+  if (/\bSLIM\b/i.test(item.descricao_driver ?? "")) return "slim";
+  if (tipo) return "nao_slim";
+  return "indeterminado";
+}
+
+/** RULE-103: Light Mini e Ripado só aceitam fita Baby. */
+function perfilSomenteFitaBaby(item: SistemaItem, regrasPerfil: Record<string, unknown> | null): boolean {
+  if (regrasPerfil?.somente_baby === true) return true;
+  const familia = (item.familia_perfil ?? "").trim().toLowerCase();
+  if (familia.startsWith("light_mini") || familia === "ripado") return true;
+  return /LIGHT\s*MINI|\bRIPAD[OA]\b/.test((item.descricao_perfil ?? "").toUpperCase());
+}
+
+/** RULE-104: Nano e Cantoneira não aceitam fita com IP. */
+function perfilRejeitaFitaIP(item: SistemaItem): boolean {
+  const familia = (item.familia_perfil ?? "").trim().toLowerCase();
+  if (familia.includes("nano") || familia.includes("cantoneira")) return true;
+  return /\bNANO\b|CANTONEIRA/.test((item.descricao_perfil ?? "").toUpperCase());
+}
+
+/** Só IP44+ conta como fita vedada: "IP20" no nome é a fita SEM capa (102 das 316 fitas do
+ *  catálogo), justamente a que cabe no canal do perfil. Paridade com fitaEhIP do front. */
+function fitaEhIP(descricao?: string): boolean {
+  const m = /\bIP\s?(\d{2})\b/i.exec(descricao ?? "");
+  return m ? Number(m[1]) >= 44 : false;
+}
+
+function fitaEhBaby(item: SistemaItem): boolean {
+  if (item.subtipo_fita === "baby") return true;
+  return /\bBABY\b/i.test(item.descricao_fita ?? "");
+}
+
+/** RULE-029 + RULE-100 (CONF-01: incompatibilidade física BLOQUEIA) — ERRO quando o
+ *  driver escolhido não cabe alojado dentro do trilho/perfil. Vale para qualquer
+ *  tipo de sistema; o teto do cadastro (`driver_max_watts`) tem precedência sobre o
+ *  default de 72 W. Sem driver informado nem família/nome do perfil, nada é validado. */
+function validarDriverAlojado(
+  item: SistemaItem,
+  regrasPerfil: Record<string, unknown> | null,
+  erros: string[],
+) {
+  const alojado = exigeDriverAlojado(item);
+  const maxCadastrado = (regrasPerfil?.driver_max_watts ?? null) as number | null;
+  const exigeSlimCadastro = regrasPerfil?.driver_tipo_aceito === "slim";
+
+  const maxW = maxCadastrado ?? (alojado ? LIMITE_W_DRIVER_ALOJADO : null);
+  const exigeSlim = exigeSlimCadastro || alojado;
+  const ondeCabe = item.familia_perfil ? `no perfil ${item.familia_perfil}` : "alojado dentro do trilho/perfil";
+
+  if (maxW != null && item.potencia_driver_w != null && item.potencia_driver_w > maxW) {
+    erros.push(
+      `Driver de ${item.potencia_driver_w}W não cabe fisicamente ${ondeCabe}. ` +
+      `Use driver Slim com no máximo ${maxW}W.`,
+    );
+  }
+  if (exigeSlim && classificarDriverSlim(item) === "nao_slim") {
+    const alvo = item.familia_perfil
+      ? `Perfil ${item.familia_perfil}`
+      : "O perfil/trilho deste sistema";
+    erros.push(
+      `${alvo} aceita SOMENTE driver Slim. ` +
+      `Drivers Convencionais, PRO ou acima de ${LIMITE_W_DRIVER_ALOJADO}W não cabem fisicamente.`,
+    );
+  }
+}
+
+/** RULE-103 + RULE-104 (BLOQUEIO): compatibilidade física perfil × fita.
+ *  Só dispara com dado suficiente — payload sem descrição/subtipo da fita não gera erro. */
+function validarPerfilFita(
+  item: SistemaItem,
+  regrasPerfil: Record<string, unknown> | null,
+  erros: string[],
+) {
+  const nomePerfil = item.familia_perfil ?? item.descricao_perfil ?? "selecionado";
+
+  // RULE-103 — Light Mini / Ripado (e qualquer perfil marcado somente_baby).
+  // `validarSistemaPadrao` já cobre o caso com regra cadastrada — não duplicar a mensagem.
+  // Só valida com fita REALMENTE escolhida: `codigo_fita` é o único campo que distingue
+  // "fita ainda não selecionada" de "fita comum" (subtipo_fita/descricao vêm preenchidos
+  // com valores neutros durante a montagem do sistema).
+  const temFita = !!(item.codigo_fita ?? "").trim();
+  const jaAvisouBaby = erros.some((e) => /SOMENTE fita Baby/i.test(e));
+  if (!jaAvisouBaby && temFita && perfilSomenteFitaBaby(item, regrasPerfil)) {
+    if (!fitaEhBaby(item)) {
+      erros.push(
+        `Perfil ${nomePerfil} aceita SOMENTE fita Baby — outra fita não cabe no canal. ` +
+        `Selecione uma fita Baby.`,
+      );
+    }
+  }
+
+  // RULE-104 — Nano / Cantoneira não aceitam fita com IP
+  if (temFita && perfilRejeitaFitaIP(item) && fitaEhIP(item.descricao_fita)) {
+    erros.push(
+      `Perfil ${nomePerfil} não aceita fita com IP (${item.codigo_fita ?? item.descricao_fita}) — ` +
+      `não cabe no canal. Selecione uma fita sem IP.`,
+    );
+  }
 }
 
 function calcularConectoresEmenda(qtdPerfis: number, qtdCantos: number) {
@@ -124,7 +276,7 @@ function validarSistemaPadrao(
   const {
     tensao_fita, tensao_driver,
     largura_fita_mm, subtipo_fita,
-    subtipo_driver, potencia_driver_w,
+    potencia_driver_w,
     comprimento_perfil_m, quantidade_pecas, passadas,
     watts_por_metro, familia_perfil,
   } = item;
@@ -140,8 +292,6 @@ function validarSistemaPadrao(
   if (regrasPerfil) {
     const larguraMaxCanal = regrasPerfil.largura_max_fita_mm as number | null;
     const somenteBaby = regrasPerfil.somente_baby as boolean;
-    const driverMaxW = regrasPerfil.driver_max_watts as number | null;
-    const driverTipoAceito = regrasPerfil.driver_tipo_aceito as string;
 
     // Regra #6 — Largura da fita vs canal do perfil (CRÍTICO)
     if (larguraMaxCanal != null && largura_fita_mm != null && largura_fita_mm > larguraMaxCanal) {
@@ -151,27 +301,19 @@ function validarSistemaPadrao(
       );
     }
 
-    // Regras #15, #16, #17 — Somente Baby (CRÍTICO)
-    if (somenteBaby && subtipo_fita !== "baby") {
+    // Regras #15, #16, #17 / RULE-103 — Somente Baby (CRÍTICO).
+    // O caso "sem regra cadastrada" (família detectada pelo nome) é coberto por
+    // `validarPerfilFita`, chamado transversalmente no handler.
+    if (somenteBaby && subtipo_fita !== "baby" && !fitaEhBaby(item)) {
       erros.push(
         `Perfil ${familia_perfil} aceita SOMENTE fita Baby. ` +
         `Selecione uma fita Baby (largura ≤ ${larguraMaxCanal}mm).`,
       );
     }
 
-    // Regras #18, #19 — Driver máximo em Trik/FK/Alojamento (CRÍTICO)
-    if (driverMaxW != null && potencia_driver_w != null && potencia_driver_w > driverMaxW) {
-      erros.push(
-        `Driver de ${potencia_driver_w}W não cabe fisicamente no perfil ${familia_perfil}. ` +
-        `Use driver Slim com no máximo ${driverMaxW}W.`,
-      );
-    }
-    if (driverTipoAceito === "slim" && subtipo_driver && subtipo_driver !== "slim") {
-      erros.push(
-        `Perfil ${familia_perfil} aceita SOMENTE driver Slim. ` +
-        `Drivers Convencionais, PRO ou acima de 72W não cabem fisicamente.`,
-      );
-    }
+    // Regras #18, #19 / RULE-029/100 — driver máximo e "somente Slim" em
+    // Trik/FK/Alojamento: agora em `validarDriverAlojado` (transversal), que também
+    // cobre o caso sem regra cadastrada e os sistemas fora de validarSistemaPadrao.
   }
 
   // Regra #2 — Cálculo automático de drivers (CRÍTICO — sugestão)
@@ -185,12 +327,12 @@ function validarSistemaPadrao(
   ) {
     const metragem = calcularMetragemFita(comprimento_perfil_m, quantidade_pecas, passadas);
     const qtdDrivers = calcularDrivers(metragem, watts_por_metro, potencia_driver_w, tensao_fita);
-    const rolos = otimizarRolos(metragem);
+    const rolos = otimizarRolos(metragem, item.tamanho_rolo_m);
 
     sugestoes.drivers = {
       metragem_fita_m: metragem,
       potencia_total_w: metragem * watts_por_metro,
-      potencia_segura_w: metragem * watts_por_metro * 1.05,
+      potencia_segura_w: metragem * watts_por_metro * 1.20, // RULE-026: folga 20%
       qtd_drivers_sugerida: qtdDrivers,
     };
     sugestoes.rolos_fita = rolos;
@@ -199,7 +341,7 @@ function validarSistemaPadrao(
     const limiteM = tensao_fita === 12 ? 5 : tensao_fita === 24 ? 10 : null;
     if (limiteM != null && metragem > limiteM) {
       const qtdPorExtensao = Math.ceil(metragem / limiteM);
-      const qtdPorPotencia = Math.ceil((metragem * watts_por_metro * 1.05) / potencia_driver_w);
+      const qtdPorPotencia = Math.ceil((metragem * watts_por_metro * 1.20) / potencia_driver_w); // RULE-026
       if (qtdPorExtensao > qtdPorPotencia) {
         alertas.push(
           `Extensão de fita (${metragem}m) excede o limite de ${limiteM}m por driver para ${tensao_fita}V. ` +
@@ -268,7 +410,7 @@ function validarMagneto48V(
 ) {
   // Regra #11 — Driver próprio 48V com cálculo automático (CRÍTICO)
   if (item.potencia_total_modulos_w != null) {
-    const potSegura = item.potencia_total_modulos_w * 1.05;
+    const potSegura = item.potencia_total_modulos_w * 1.20; // RULE-026: folga 20%
     const drivers100 = Math.ceil(potSegura / 100);
     const drivers200 = Math.ceil(potSegura / 200);
     sugestoes.drivers_magneto_48v = {
@@ -479,6 +621,9 @@ serve(async (req) => {
       }
 
       // Validações transversais (aplicam a qualquer sistema)
+      // RULE-029/100 e RULE-103/104 — incompatibilidades FÍSICAS: sempre ERRO (CONF-01).
+      validarDriverAlojado(item, regrasPerfil, erros);
+      validarPerfilFita(item, regrasPerfil, erros);
       validarKitPendente(item, erros);
       validarFitaFlexivel(item, alertas, sugestoes);
 

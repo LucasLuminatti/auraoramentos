@@ -55,6 +55,10 @@ const App = () => (
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/admin/upload-imagens" element={<AdminRoute><AdminUploadImagens /></AdminRoute>} />
           <Route path="/admin/orcamento/:id" element={<AdminRoute><OrcamentoDetalhe /></AdminRoute>} />
+          {/* RULE-074 / BUG-02: o colaborador também precisa VISUALIZAR um orçamento já
+              fechado (rascunho ele reabre no wizard). Mesma tela, sem exigir admin — o RLS
+              continua decidindo o que cada um enxerga. */}
+          <Route path="/orcamento/:id" element={<ProtectedRoute><OrcamentoDetalhe /></ProtectedRoute>} />
           <Route path="/drive" element={<ProtectedRoute><Drive /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

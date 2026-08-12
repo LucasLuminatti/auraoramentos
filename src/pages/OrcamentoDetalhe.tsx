@@ -27,9 +27,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import OrcamentoArquivos from "@/components/OrcamentoArquivos";
+import { useUserRole } from "@/hooks/useUserRole";
 import { gerarOrcamentoHtml, type PdfParams } from "@/lib/gerarPdfHtml";
 import logo from "@/assets/logo.png";
-import type { Ambiente } from "@/types/orcamento";
+import type { Ambiente, CategoriaFita } from "@/types/orcamento";
 import {
   calcularTotalGeral,
   calcularTotalAmbienteSemFita,
@@ -46,6 +47,8 @@ interface OrcamentoFull {
   projeto_id: string | null;
   cliente_id: string | null;
   ambientes: Ambiente[];
+  /** RULE-014 — pode vir ausente em orçamento salvo antes da migration 20260812000004. */
+  categorias?: CategoriaFita[] | null;
   motivo_perda: string | null;
   fechado_at: string | null;
   created_at: string;
@@ -114,6 +117,10 @@ const exceptionStatusClass = (s: string) => {
 const OrcamentoDetalhe = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // RULE-074: a mesma tela atende admin (via /admin/orcamento/:id) e colaborador
+  // (via /orcamento/:id). O destino do "Voltar" muda conforme quem está olhando.
+  const { isAdmin } = useUserRole();
+  const voltarPara = isAdmin ? "/admin?tab=pedidos" : "/";
   const [orc, setOrc] = useState<OrcamentoFull | null>(null);
   const [revisoes, setRevisoes] = useState<RevisaoRow[]>([]);
   const [exceptions, setExceptions] = useState<ExceptionRow[]>([]);
@@ -146,25 +153,31 @@ const OrcamentoDetalhe = () => {
       return;
     }
     toast.success("Orçamento excluído!");
-    navigate("/admin?tab=pedidos");
+    navigate(voltarPara);
   };
 
   useEffect(() => {
     if (!id) return;
     const load = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("orcamentos")
-        .select(`
+      // A coluna `categorias` é nova (migration 20260812000004): se ela ainda não existe no
+      // banco, carregamos sem ela em vez de deixar a tela de detalhe inacessível.
+      const COLUNAS = `
           id, data, valor, status, tipo, projeto_id, cliente_id, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
           clientes ( nome, email, telefone, contato, cpf_cnpj,
             arquitetos ( nome, contato )
           ),
           colaboradores ( nome ),
           projetos ( nome )
-        `)
+        `;
+      let { data, error } = await supabase
+        .from("orcamentos")
+        .select(`${COLUNAS}, categorias`)
         .eq("id", id)
         .single();
+      if (error) {
+        ({ data, error } = await supabase.from("orcamentos").select(COLUNAS).eq("id", id).single());
+      }
 
       if (error || !data) {
         toast.error("Erro ao carregar orçamento");
@@ -241,6 +254,10 @@ const OrcamentoDetalhe = () => {
         tipo: orc.tipo,
         ambientes: ambientesInline,
         logoBase64: logoBase64 || undefined,
+        // O PDF re-emitido tem que sair igual ao original: categorias (RULE-018) e o
+        // parceiro no cabeçalho (RULE-064) vêm do próprio snapshot do orçamento.
+        categorias: orc.categorias ?? undefined,
+        parceiro: orc.clientes?.arquitetos?.nome ?? null,
         // PDF-05: rows criadas antes da Phase 5 têm pdf_template_version NULL — coage para 1 (legacy).
         // Rows criadas pela Phase 5 em diante têm 2 explicitamente persistido em Step3Revisao.
         templateVersion: orc.pdf_template_version ?? 1,
@@ -309,7 +326,7 @@ const OrcamentoDetalhe = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate("/admin?tab=pedidos")}
+              onClick={() => navigate(voltarPara)}
               className="gap-1.5"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -334,16 +351,20 @@ const OrcamentoDetalhe = () => {
               {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
               Re-emitir PDF
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteOpen(true)}
-              disabled={!orc}
-              className="gap-1.5 text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-              Excluir
-            </Button>
+            {/* RULE-088: excluir orçamento é ação de admin — o RLS já barra, mas o botão
+                não deve nem aparecer para o colaborador que só está visualizando. */}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteOpen(true)}
+                disabled={!orc}
+                className="gap-1.5 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </Button>
+            )}
           </div>
         </div>
       </header>

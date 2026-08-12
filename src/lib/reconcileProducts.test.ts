@@ -118,8 +118,16 @@ describe("reconcile", () => {
     expect(patch.watts_por_metro).toBe(8);
     expect(patch.potencia_watts).toBeNull();
     expect(patch.cor).toBe("Branco");
-    expect(patch.largura_mm).toBeNull();
+    // largura_mm null (master não traz a coluna) fica FORA do patch — mandar null
+    // apagaria a largura já cadastrada no catálogo (RULE-011/013).
+    expect("largura_mm" in patch).toBe(false);
     expect(patch.origem).toBe("master");
+  });
+
+  it("largura_mm com valor na master entra no patch normalmente", () => {
+    const master = [masterRow("LM002", { largura_mm: 10 })];
+    const report = reconcile(master, [dbRow("LM002")]);
+    expect(report.updates[0].patch.largura_mm).toBe(10);
   });
 
   it("mixed scenario: 1 create + 1 update + 1 skipped + 1 legado", () => {

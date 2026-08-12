@@ -4,15 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Trash2, Plus, Pencil, Check, ArrowDown, Link, Unlink, Copy } from "lucide-react";
+import { ChevronDown, Trash2, Plus, Pencil, Check, ArrowDown, Link, Unlink, Copy, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
-import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora } from "@/types/orcamento";
+import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto, CategoriaFita } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO } from "@/types/orcamento";
 import ComposicaoCard from "./ComposicaoCard";
 
 interface AmbienteCardProps {
@@ -21,6 +21,8 @@ interface AmbienteCardProps {
   onRemove: () => void;
   onDuplicate?: () => void;
   onDuplicarComposto?: (item: ItemLuminaria) => void;   // Phase 21 / DUP-01 (D-05)
+  /** Categorias de fita do orçamento (RULE-014) para vincular ao sistema (RULE-016). */
+  categorias?: CategoriaFita[];
 }
 
 function PrecoInput({ value, min, onChange }: { value: number; min: number; onChange: (v: number) => void }) {
@@ -41,10 +43,17 @@ function PrecoInput({ value, min, onChange }: { value: number; min: number; onCh
   );
 }
 
-const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarComposto }: AmbienteCardProps) => {
+const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarComposto, categorias = [] }: AmbienteCardProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(ambiente.nome);
+  // Buffer local do input "Qtd drivers" por sistema (id → texto em edição).
+  // Sem ele, limpar o campo repinta o valor calculado na hora e os dígitos
+  // seguintes concatenam com ele (ex.: calc 2, digitar 15 → "215").
+  const [qtdDriversDraft, setQtdDriversDraft] = useState<Record<string, string>>({});
+  // RULE-011 / BUG-26: sugestões de fitas compatíveis por sistema (id → painel).
+  // Só SUGERE (RULE-010 proíbe auto-escolher); painel fechável (RULE-002).
+  const [fitasSugeridas, setFitasSugeridas] = useState<Record<string, { larguraMax: number; fitas: Produto[] } | undefined>>({});
 
   const uid = () => crypto.randomUUID();
   const { validacoes } = useValidarSistemas(ambiente.sistemas);
@@ -145,19 +154,113 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
 
   // D-02a: menor potência suficiente entre drivers de mesma voltagem com tensao preenchida.
   // Consumo estimado = metragem real (se já houver) * wm, senão 5m fallback; margem 1.05.
-  const buscarDriverSugerido = async (voltagem: number, wm: number, metragemReal: number): Promise<Produto | null> => {
+  // RULE-029/100: quando o driver fica ALOJADO dentro do perfil (Trick/Alojamento),
+  // a sugestão respeita o teto físico (72 W) e prefere Slim — o que não cabe não é sugerido.
+  const buscarDriverSugerido = async (
+    voltagem: number,
+    wm: number,
+    metragemReal: number,
+    restricao?: { tetoW?: number | null; exigeSlim?: boolean },
+  ): Promise<Produto | null> => {
     const metragem = metragemReal > 0 ? metragemReal : 5;
     const consumoEstimado = wm * metragem * MARGEM_SEGURANCA_DRIVER;
-    const { data } = await supabase
+    let query = supabase
       .from('produtos')
       .select('id, codigo, descricao, preco_tabela, preco_minimo, voltagem:tensao, driver_potencia_w:potencia_watts, driver_tipo:subtipo')
       .eq('tipo_produto', 'driver')
       .eq('tensao', voltagem)
       .gte('potencia_watts', consumoEstimado)
-      .not('descricao', 'ilike', '%DESCONTINUAR%')
+      .not('descricao', 'ilike', '%DESCONTINUAR%');
+    if (restricao?.tetoW != null) query = query.lte('potencia_watts', restricao.tetoW);
+    const { data } = await query
       .order('potencia_watts', { ascending: true })
+      .limit(restricao?.exigeSlim ? 10 : 1);
+
+    const linhas = (data ?? []) as Produto[];
+    if (!linhas.length) return null;
+    if (!restricao?.exigeSlim) return linhas[0];
+    // Descarta o que o catálogo marca como NÃO-Slim; prefere o Slim confirmado.
+    const classificar = (p: Produto) => classificarDriverSlim({ driverTipo: p.driver_tipo, descricao: p.descricao });
+    const possiveis = linhas.filter((p) => classificar(p) !== 'nao_slim');
+    const slim = possiveis.filter((p) => classificar(p) === 'slim');
+    return slim[0] ?? possiveis[0] ?? null;
+  };
+
+  /** RULE-029/100: restrição de driver imposta pelo perfil do sistema.
+   *  Usa os campos do catálogo quando existem e cai na família/nome do perfil
+   *  (Trick/Alojamento) quando o cadastro ainda não tem a restrição. */
+  const restricaoDriverDoPerfil = (perfil: ItemPerfil | null) => {
+    const alojado = exigeDriverAlojado({
+      descricao: perfil?.descricao,
+      familiaPerfil: perfil?.familia_perfil,
+    });
+    return {
+      alojado,
+      tetoW: perfil?.driver_restr_max_w ?? (alojado ? LIMITE_W_DRIVER_ALOJADO : null),
+      exigeSlim: perfil?.driver_restr_tipo === 'slim' || alojado,
+    };
+  };
+
+  // RULE-011 / BUG-26: ao escolher o perfil, buscar fitas COMPATÍVEIS com a família
+  // (largura_mm <= largura_max_fita_mm em regras_compatibilidade_perfil) e SUGERIR.
+  // Família sem regra cadastrada (ou sem limite) → não mostra nada, sem erro.
+  const buscarFitasCompativeis = async (perfilProduto: Produto, sistemaId: string) => {
+    // Perfil trocado: descarta sugestão anterior do sistema
+    setFitasSugeridas((prev) => ({ ...prev, [sistemaId]: undefined }));
+    const familia = perfilProduto.familia_perfil;
+    if (!familia) return;
+
+    const { data: regras } = await supabase
+      .from('regras_compatibilidade_perfil')
+      .select('largura_max_fita_mm')
+      .eq('familia_perfil', familia)
       .limit(1);
-    return (data?.[0] as Produto) ?? null;
+    const larguraMax = regras?.[0]?.largura_max_fita_mm;
+    if (larguraMax == null) return;
+
+    let query = supabase
+      .from('produtos')
+      .select(
+        'id, codigo, descricao, preco_tabela, preco_minimo, imagem_url, ' +
+        'voltagem:tensao, wm:watts_por_metro, is_baby:somente_baby, somente_baby, largura_mm, tamanho_rolo_m, tipo_produto'
+      )
+      .eq('tipo_produto', 'fita')
+      .lte('largura_mm', larguraMax)
+      .not('descricao', 'ilike', '%DESCONTINUAR%')
+      .order('largura_mm', { ascending: true })
+      .order('codigo');
+    // Perfil Baby-only: só fitas Baby são fisicamente compatíveis (REGRA #12/#13 / RULE-103)
+    const soBaby = perfilSomenteFitaBaby({
+      descricao: perfilProduto.descricao,
+      familiaPerfil: familia,
+      somenteBaby: perfilProduto.somente_baby,
+    });
+    if (soBaby) query = query.eq('somente_baby', true);
+    const { data: fitas } = await query.limit(12);
+
+    // Reconciliação pós-await: só exibe se o sistema ainda existir com ESTE perfil
+    const alvo = ambienteRef.current.sistemas.find((s) => s.id === sistemaId);
+    if (!alvo || alvo.perfil?.codigo !== perfilProduto.codigo) return;
+    if (!fitas?.length) return;
+
+    // RULE-103/104: a sugestão nunca oferece o que está bloqueado na origem.
+    // (o filtro de IP é feito aqui, não no SQL: "%IP%" casaria dentro de outras palavras)
+    const rejeitaIP = perfilRejeitaFitaIP({ descricao: perfilProduto.descricao, familiaPerfil: familia });
+    const compativeis = (fitas as Produto[])
+      .filter((f) => !soBaby || fitaEhBaby({ descricao: f.descricao, isBaby: f.is_baby ?? f.somente_baby }))
+      .filter((f) => !rejeitaIP || !fitaEhIP(f.descricao))
+      .slice(0, 8);
+    if (!compativeis.length) return;
+    setFitasSugeridas((prev) => ({ ...prev, [sistemaId]: { larguraMax, fitas: compativeis } }));
+  };
+
+  // Aplica uma fita sugerida reutilizando o fluxo normal de seleção de fita
+  // (snapshot completo incl. largura_mm, reset de qtdDriversManual, sugestão de driver).
+  const aplicarFitaSugerida = (fita: Produto, sistemaId: string) => {
+    const idx = ambiente.sistemas.findIndex((s) => s.id === sistemaId);
+    if (idx === -1) return;
+    handleSelectProdutoSistema(fita, idx, 'fita');
+    setFitasSugeridas((prev) => ({ ...prev, [sistemaId]: undefined }));
   };
 
   const handleSelectProdutoSistema = async (produto: Produto, sistemaIndex: number, component: 'perfil' | 'fita' | 'driver') => {
@@ -184,19 +287,52 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       }
     }
 
-    // ── REGRA #12/#13: Perfil Baby-only aceita apenas fita Baby ──────────
-    if (component === 'fita' && sis.perfil?.somente_baby && !(produto.is_baby ?? produto.somente_baby)) {
+    // ── REGRA #12/#13 + RULE-103: perfil Baby-only (Light Mini / Ripado) — BLOQUEIO ──
+    // A flag `somente_baby` do catálogo tem precedência; a família/nome cobre o que
+    // ainda não está cadastrado. Motivo é físico: outra fita não cabe no canal.
+    const perfilAtualSoBaby = sis.perfil
+      ? perfilSomenteFitaBaby({
+          descricao: sis.perfil.descricao,
+          familiaPerfil: sis.perfil.familia_perfil,
+          somenteBaby: sis.perfil.somente_baby,
+        })
+      : false;
+    if (component === 'fita' && perfilAtualSoBaby && !fitaEhBaby({ descricao: produto.descricao, isBaby: produto.is_baby ?? produto.somente_baby })) {
       toast.error(
-        `🚫 O perfil selecionado aceita SOMENTE fita Baby. Selecione uma fita Baby.`,
+        `🚫 O perfil selecionado aceita SOMENTE fita Baby (não cabe outra). Selecione uma fita Baby.`,
         { duration: 6000 }
       );
       return;
     }
-    if (component === 'perfil' && produto.somente_baby && sis.fita.codigo && !sis.fita.is_baby) {
-      toast.warning(
-        `⚠️ Este perfil aceita SOMENTE fita Baby. A fita atual (${sis.fita.codigo}) não é Baby — troque a fita.`,
+    // ── RULE-104: perfil Nano / Cantoneira não aceita fita com IP — BLOQUEIO ──
+    const perfilAtualRejeitaIP = sis.perfil
+      ? perfilRejeitaFitaIP({ descricao: sis.perfil.descricao, familiaPerfil: sis.perfil.familia_perfil })
+      : false;
+    if (component === 'fita' && perfilAtualRejeitaIP && fitaEhIP(produto.descricao)) {
+      toast.error(
+        `🚫 Perfil Nano/Cantoneira não aceita fita com IP (${produto.codigo}) — não cabe no canal. Selecione uma fita sem IP.`,
         { duration: 7000 }
       );
+      return;
+    }
+    if (component === 'perfil' && sis.fita.codigo) {
+      const novoSoBaby = perfilSomenteFitaBaby({
+        descricao: produto.descricao,
+        familiaPerfil: produto.familia_perfil,
+        somenteBaby: produto.somente_baby,
+      });
+      if (novoSoBaby && !fitaEhBaby({ descricao: sis.fita.descricao, isBaby: sis.fita.is_baby })) {
+        toast.warning(
+          `⚠️ Este perfil aceita SOMENTE fita Baby. A fita atual (${sis.fita.codigo}) não é Baby — troque a fita.`,
+          { duration: 7000 }
+        );
+      }
+      if (perfilRejeitaFitaIP({ descricao: produto.descricao, familiaPerfil: produto.familia_perfil }) && fitaEhIP(sis.fita.descricao)) {
+        toast.warning(
+          `⚠️ Perfil Nano/Cantoneira não aceita fita com IP. A fita atual (${sis.fita.codigo}) tem IP — troque a fita.`,
+          { duration: 7000 }
+        );
+      }
     }
 
     // ── REGRA #9: Alerta produto magnético ───────────────────────────────
@@ -227,6 +363,8 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
           somente_baby: produto.somente_baby,
         },
       });
+      // RULE-011: perfil escolhido → sugerir fitas compatíveis (nunca auto-escolher, RULE-010)
+      buscarFitasCompativeis(produto, sis.id);
     } else if (component === 'fita') {
       const fitaAtualizada = {
         ...sis.fita,
@@ -238,17 +376,39 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         voltagem: (produto.voltagem ?? sis.fita.voltagem) as 12 | 24 | 48,
         wm: produto.wm ?? sis.fita.wm,
         is_baby: produto.is_baby,
+        largura_mm: produto.largura_mm ?? null, // RULE-013: snapshot p/ validação perfil×fita na edge
+        metragemRolo: produto.tamanho_rolo_m ?? 5, // RULE-005: rolo vem do catálogo; fallback 5m
       };
+
+      // Trocar manualmente a fita de um sistema vinculado o tira da categoria: o grupo
+      // consolida pela fita da categoria (RULE-017), então manter o vínculo faria a fita
+      // nova ser cobrada como se fosse a da categoria — e ela sumiria do Resumo de Fitas.
+      const catAtual = sis.categoriaId ? categorias.find((c) => c.id === sis.categoriaId) : undefined;
+      const saiuDaCategoria = !!catAtual && catAtual.fita.codigo !== produto.codigo;
+      if (saiuDaCategoria) {
+        toast.info(`Fita diferente da categoria "${catAtual!.nome}" — este sistema foi desvinculado da categoria.`);
+      }
 
       // Aplica a fita imediatamente (síncrono) — nunca pode ser perdida pela
       // janela do await da sugestão de driver.
-      updateSistema(sistemaIndex, { ...sis, fita: fitaAtualizada });
+      // Trocar a fita invalida o override de qtd de drivers (o cálculo muda de base);
+      // override obsoleto seria cobrado silenciosamente no Step 3/PDF.
+      updateSistema(sistemaIndex, {
+        ...sis,
+        fita: fitaAtualizada,
+        qtdDriversManual: null,
+        categoriaId: saiuDaCategoria ? null : sis.categoriaId,
+      });
 
       const fitaVolt = fitaAtualizada.voltagem;
       const driverVazio = !sis.driver.codigo; // D-03: só preenche se vazio
       if (driverVazio && fitaVolt) {
         const metragemReal = calcularDemandaFita({ ...sis, fita: fitaAtualizada });
-        const sugerido = await buscarDriverSugerido(fitaVolt, fitaAtualizada.wm, metragemReal);
+        const restr = restricaoDriverDoPerfil(sis.perfil);
+        const sugerido = await buscarDriverSugerido(fitaVolt, fitaAtualizada.wm, metragemReal, {
+          tetoW: restr.tetoW,
+          exigeSlim: restr.exigeSlim,
+        });
         if (sugerido) {
           // Reconcilia contra o estado mais recente, localizando o sistema por id
           // (não por índice — pode ter sido reordenado/removido durante o await)
@@ -276,23 +436,37 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         }
       }
     } else {
-      // ── REGRA #10/#11: Driver restrito por perfil ────────────────────────
-      if (sis.perfil?.driver_restr_tipo === 'slim' && produto.driver_tipo !== 'slim') {
-        toast.error(
-          `🚫 Este perfil aceita SOMENTE Driver Slim. O driver selecionado não é compatível.`,
-          { duration: 6000 }
-        );
-        return;
+      // ── REGRA #10/#11 + RULE-029/100: driver restrito por perfil ─────────
+      // Driver alojado dentro do perfil (Trick/Alojamento) = Slim até 72 W. BLOQUEIA
+      // quando o catálogo diz que o driver NÃO é Slim; quando o dado não existe, avisa.
+      const restr = restricaoDriverDoPerfil(sis.perfil);
+      if (restr.exigeSlim) {
+        const classe = classificarDriverSlim({ driverTipo: produto.driver_tipo, descricao: produto.descricao });
+        if (classe === 'nao_slim') {
+          toast.error(
+            `🚫 Este perfil aceita SOMENTE Driver Slim. O driver selecionado não é compatível.`,
+            { duration: 6000 }
+          );
+          return;
+        }
+        if (classe === 'indeterminado') {
+          toast.warning(
+            `⚠️ Este perfil aceita SOMENTE Driver Slim e o catálogo não classifica ${produto.codigo} — confira antes de fechar.`,
+            { duration: 7000 }
+          );
+        }
       }
-      if (sis.perfil?.driver_restr_max_w && produto.driver_potencia_w && produto.driver_potencia_w > sis.perfil.driver_restr_max_w) {
+      if (restr.tetoW != null && produto.driver_potencia_w && produto.driver_potencia_w > restr.tetoW) {
         toast.error(
-          `🚫 Driver de ${produto.driver_potencia_w}W não cabe fisicamente neste perfil. Máximo: ${sis.perfil.driver_restr_max_w}W.`,
+          `🚫 Driver de ${produto.driver_potencia_w}W não cabe fisicamente neste perfil. Máximo: ${restr.tetoW}W.`,
           { duration: 6000 }
         );
         return;
       }
       updateSistema(sistemaIndex, {
         ...sis,
+        // Trocar o driver invalida o override de qtd (potência/voltagem mudam o cálculo)
+        qtdDriversManual: null,
         driver: {
           ...sis.driver,
           codigo: produto.codigo,
@@ -306,6 +480,28 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         },
       });
     }
+  };
+
+  /** RULE-016: vincular o sistema a uma categoria COPIA a fita da categoria para o sistema
+   *  (o snapshot continua sendo do sistema — preço e W/m seguem editáveis, RULE-001) e faz a
+   *  metragem deste sistema somar na fita da categoria no Resumo de Fitas.
+   *  `categoriaId` vazio = desvincular; a fita já aplicada permanece, só volta a consolidar
+   *  por código. Trocar a fita invalida o override de qtd de drivers (mesma razão da troca
+   *  manual de fita). */
+  const vincularCategoria = (si: number, categoriaId: string) => {
+    const sis = ambiente.sistemas[si];
+    if (!categoriaId) {
+      updateSistema(si, { ...sis, categoriaId: null });
+      return;
+    }
+    const cat = categorias.find((c) => c.id === categoriaId);
+    if (!cat) return;
+    updateSistema(si, {
+      ...sis,
+      categoriaId,
+      fita: { ...cat.fita, id: sis.fita.id },
+      qtdDriversManual: null,
+    });
   };
 
   const vincularPerfil = (si: number) => {
@@ -338,11 +534,12 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         descricao: produto.descricao,
         wm: produto.wm ?? 0,
         voltagem: (produto.voltagem ?? 24) as 12 | 24 | 48,
-        metragemRolo: 5,
+        metragemRolo: produto.tamanho_rolo_m ?? 5, // RULE-005: rolo vem do catálogo; fallback 5m
         precoUnitario: preco,
         precoMinimo: precoMin,
         imagemUrl: imgUrl,
         is_baby: produto.is_baby,
+        largura_mm: produto.largura_mm ?? null, // RULE-013: snapshot p/ validação perfil×fita na edge
       };
       const novoDriver: ItemDriver = {
         id: uid(),
@@ -386,6 +583,42 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
           }
         });
       }
+      return;
+    }
+
+    if (tipo === 'perfil') {
+      // RULE-062 / BUG-09: perfil abre um SISTEMA (perfil + fita + driver) com o perfil já
+      // preenchido — a fita fica em branco de propósito (RULE-010: nunca auto-escolher fita).
+      // O sistema recém-criado é o último da lista, e é nele que roda a sugestão de fitas
+      // compatíveis (RULE-011) e os bloqueios Baby/IP (RULE-103/104).
+      const novoPerfil: ItemPerfil = {
+        id: uid(),
+        codigo: produto.codigo,
+        descricao: produto.descricao,
+        comprimentoPeca: 1,
+        quantidade: 1,
+        passadas: (produto.passadas ?? 1) as 1 | 2 | 3,
+        precoUnitario: preco,
+        precoMinimo: precoMin,
+        imagemUrl: imgUrl,
+        familia_perfil: produto.familia_perfil,
+        driver_restr_tipo: produto.driver_restr_tipo,
+        driver_restr_max_w: produto.driver_restr_max_w,
+        somente_baby: produto.somente_baby,
+        passadasPadrao: (produto.passadas ?? 3) as 1 | 2 | 3,
+      };
+      const novoSistema: SistemaIluminacao = {
+        id: uid(),
+        perfil: novoPerfil,
+        fita: { id: uid(), codigo: "", descricao: "", wm: 0, voltagem: 24, metragemRolo: 5, precoUnitario: 0, precoMinimo: 0 },
+        driver: { id: uid(), codigo: "", descricao: "", potencia: 0, voltagem: 24, precoUnitario: 0, precoMinimo: 0 },
+        metragemManual: null,
+        passadasManual: 1,
+        local: null,
+      };
+      onChange({ ...ambiente, sistemas: [...ambiente.sistemas, novoSistema] });
+      // RULE-011: perfil escolhido → sugerir fitas compatíveis (nunca auto-escolher)
+      buscarFitasCompativeis(produto, novoSistema.id);
       return;
     }
 
@@ -588,6 +821,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
             {ambiente.sistemas.map((sis, si) => {
               const demandaFita = calcularDemandaFita(sis);
               const consumoW = calcularConsumoW(sis);
+              // RULE-005: mesmo fallback de calcularRolosPorGrupo — snapshot antigo com 0/undefined
+              // não pode exibir "0m" no Select enquanto o Step 3 cobra rolos de 5 m.
+              const roloEfetivo = sis.fita.metragemRolo > 0 ? sis.fita.metragemRolo : 5;
               const qtdDrivers = calcularQtdDrivers(sis);
               const motivoDrivers = motivoQtdDrivers(sis);
               const subtotal = calcularSubtotalSistemaSemFita(sis);
@@ -640,6 +876,32 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
                       />
                     </div>
 
+                    {/* ── CATEGORIA DE FITA (RULE-016) ── */}
+                    {categorias.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Categoria de fita</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">Opcional</Badge>
+                        </div>
+                        <Select value={sis.categoriaId ?? "__nenhuma__"} onValueChange={(v) => vincularCategoria(si, v === "__nenhuma__" ? "" : v)}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Sem categoria" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__nenhuma__">Sem categoria</SelectItem>
+                            {categorias.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.nome || "(sem nome)"}{c.fita.codigo ? ` · ${c.fita.codigo}` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {sis.categoriaId && (
+                          <p className="text-[11px] text-muted-foreground">
+                            A metragem deste sistema soma na fita da categoria — o rolo é comprado uma vez para o orçamento inteiro.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* ── FITA LED ── */}
                     <div className="space-y-2">
                       <span className="text-xs font-semibold text-primary uppercase tracking-wide">Fita LED</span>
@@ -652,12 +914,14 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-muted-foreground">Rolo:</span>
-                          <Select value={String(sis.fita.metragemRolo)} onValueChange={(v) => updateSistema(si, { ...sis, fita: { ...sis.fita, metragemRolo: Number(v) as 5 | 10 | 15 } })}>
+                          <Select value={String(roloEfetivo)} onValueChange={(v) => updateSistema(si, { ...sis, fita: { ...sis.fita, metragemRolo: Number(v) } })}>
                             <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="5">5m</SelectItem>
-                              <SelectItem value="10">10m</SelectItem>
-                              <SelectItem value="15">15m</SelectItem>
+                              {/* RULE-005: tamanhos reais do catálogo; snapshot legado (ex.: 15m) entra na lista para
+                                  não sumir do Select. Valor exibido é o EFETIVO — o mesmo que precifica no Step 3. */}
+                              {[...new Set([...TAMANHOS_ROLO_CATALOGO, roloEfetivo])].sort((a, b) => a - b).map((t) => (
+                                <SelectItem key={t} value={String(t)}>{t}m</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -735,6 +999,44 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
                               <PrecoInput value={sis.perfil.precoUnitario} min={sis.perfil.precoMinimo} onChange={(v) => updateSistema(si, { ...sis, perfil: { ...sis.perfil!, precoUnitario: v } })} />
                             </div>
                           </div>
+                          {/* RULE-011 / BUG-26: fitas compatíveis com o perfil — painel dispensável (RULE-002),
+                              clicar aplica a fita; NUNCA auto-escolhe (RULE-010) */}
+                          {(() => {
+                            const sug = fitasSugeridas[sis.id];
+                            if (!sug) return null;
+                            return (
+                              <div className="rounded-md border border-blue-400/40 bg-blue-50 px-3 py-2 text-xs text-blue-900 space-y-1.5">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="font-semibold">
+                                    Fitas compatíveis com o perfil (largura ≤ {sug.larguraMax}mm) — clique para aplicar:
+                                  </p>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-5 w-5 shrink-0 text-blue-900 hover:text-blue-950"
+                                    title="Fechar sugestões"
+                                    onClick={() => setFitasSugeridas((prev) => ({ ...prev, [sis.id]: undefined }))}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="space-y-1">
+                                  {sug.fitas.map((f) => (
+                                    <button
+                                      key={f.id ?? f.codigo}
+                                      type="button"
+                                      className="w-full text-left rounded border border-blue-300/50 bg-background/60 px-2 py-1 hover:bg-blue-100 transition-colors"
+                                      onClick={() => aplicarFitaSugerida(f, sis.id)}
+                                    >
+                                      <span className="font-medium">{f.codigo}</span>
+                                      {f.largura_mm != null && <span className="text-blue-700"> · {f.largura_mm}mm</span>}
+                                      <span className="text-blue-800"> — {f.descricao}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </>
                       ) : (
                         <div className="flex items-center gap-3 flex-wrap rounded-md border border-dashed p-3 bg-muted/30">
@@ -783,7 +1085,29 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
                         </div>
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
-                        {qtdDrivers > 0 && <Badge variant="secondary" className="text-xs">Qtd Drivers: {qtdDrivers}</Badge>}
+                        {/* RULE-001: qtd de drivers cobrada é editável — override manual com fallback no cálculo */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">Qtd drivers:</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={qtdDriversDraft[sis.id] ?? String(calcularQtdDriversEfetiva(sis))}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              setQtdDriversDraft((d) => ({ ...d, [sis.id]: raw }));
+                              if (raw !== "") updateSistema(si, { ...sis, qtdDriversManual: Math.max(0, parseInt(raw) || 0) });
+                            }}
+                            onBlur={() => {
+                              const raw = qtdDriversDraft[sis.id];
+                              if (raw === "") updateSistema(si, { ...sis, qtdDriversManual: null });
+                              setQtdDriversDraft((d) => { const { [sis.id]: _, ...rest } = d; return rest; });
+                            }}
+                            className="w-20 h-8"
+                          />
+                          {calcularQtdDriversEfetiva(sis) !== qtdDrivers && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">manual (calc: {qtdDrivers})</Badge>
+                          )}
+                        </div>
                         {consumoW > 0 && <Badge variant="outline" className="text-xs">Consumo: {consumoW.toFixed(1)}W</Badge>}
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-muted-foreground whitespace-nowrap">Preço Un.:</span>

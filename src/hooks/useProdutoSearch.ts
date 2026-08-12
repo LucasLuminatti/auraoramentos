@@ -22,8 +22,14 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
             "familia_perfil, driver_tipo:subtipo, driver_potencia_w:potencia_watts, " +
             "driver_restr_tipo:driver_tipo_permitido, driver_restr_max_w:driver_max_watts, " +
             "sistema_magnetico:sistema, is_baby:somente_baby, somente_baby, " +
-            "tipo_produto, subtipo"
-          );
+            // `cor` é o que sustenta RULE-054/055/110 (acessório na cor do produto); sem ela
+            // a checagem cairia sempre no heurístico de sufixo PT/BC do código.
+            "tipo_produto, subtipo, largura_mm, tamanho_rolo_m, cor"
+          )
+          // RULE-003 / BUG-15: só códigos do catálogo ATUAL podem ser oferecidos.
+          // Itens saindo de linha são marcados com "DESCONTINUAR" na descrição
+          // (mesmo critério já usado na auto-sugestão de driver do AmbienteCard).
+          .not('descricao', 'ilike', '%DESCONTINUAR%');
 
         if (filtro === 'fita' || filtro === 'driver' || filtro === 'perfil' || filtro === 'conector' || filtro === 'kit_fixacao') {
           queryBuilder = queryBuilder.eq('tipo_produto', filtro);
@@ -74,6 +80,9 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
             .select("codigo, tipo_produto")
             .or(`codigo.ilike.%${query}%,descricao.ilike.%${query}%`)
             .in("tipo_produto", ["perfil", "fita", "driver"])
+            // RULE-003: mesmo filtro da query principal. Sem ele, um item descontinuado
+            // redirecionaria para uma aba onde ele também está oculto (beco sem saída).
+            .not("descricao", "ilike", "%DESCONTINUAR%")
             .order("codigo")
             .limit(1);
           redirect = fb?.[0]?.tipo_produto ?? null;

@@ -17,7 +17,7 @@
  * novos sempre saem com v2 e persistem `pdf_template_version: 2`.
  */
 
-import type { Ambiente } from "@/types/orcamento";
+import type { Ambiente, CategoriaFita } from "@/types/orcamento";
 import { gerarOrcamentoHtmlV1 } from "./pdfTemplates/v1";
 import { gerarOrcamentoHtmlV2, type AtributosMap } from "./pdfTemplates/v2";
 import { gerarOrcamentoHtmlV3 } from "./pdfTemplates/v3";
@@ -35,6 +35,11 @@ export interface PdfParams {
    * <2 ou ausente = v1 legacy. PDF-05.
    */
   templateVersion?: number;
+  /** Categorias de fita do orçamento (RULE-014) — usadas no Resumo de Fitas do v2/v3.
+   *  O v1 é congelado e ignora o campo. */
+  categorias?: CategoriaFita[];
+  /** Escritório/arquiteto do cliente — "Parceiro" no cabeçalho do PDF (RULE-064/065). */
+  parceiro?: string | null;
 }
 
 /**

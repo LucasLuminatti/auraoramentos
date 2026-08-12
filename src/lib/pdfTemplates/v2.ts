@@ -7,11 +7,12 @@
  * Tipografia: Playfair Display (títulos) + Inter (corpo) — via @fontsource carregado pelo call site.
  */
 
-import type { Ambiente, ItemLuminaria, SistemaIluminacao } from "@/types/orcamento";
+import type { Ambiente, ItemLuminaria, SistemaIluminacao, CategoriaFita } from "@/types/orcamento";
 import {
   calcularDemandaFita,
   calcularConsumoW,
   calcularQtdDrivers,
+  calcularQtdDriversEfetiva,
   calcularSubtotalLuminaria,
   calcularSubtotalPerfilSistema,
   calcularSubtotalDriverSistema,
@@ -34,6 +35,11 @@ export interface PdfParamsV2 {
   logoBase64?: string;
   /** WIZ-05: map de atributos por código para descrição rica nas row functions. Opcional — ausente = descrição crua. */
   atributosMap?: AtributosMap;
+  /** Categorias de fita do orçamento (RULE-014). Ausente = orçamento sem categorias. */
+  categorias?: CategoriaFita[];
+  /** Escritório/arquiteto do cliente — "Parceiro" no vocabulário comercial (RULE-064/065).
+   *  Ausente = cliente sem parceiro vinculado; a linha não é impressa. */
+  parceiro?: string | null;
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -87,9 +93,11 @@ function agruparPorLocal(sistemas: SistemaIluminacao[]): Array<{ local: string |
  * Sistemas vazios são filtrados antes de renderizar para não vazar placeholders no PDF do cliente.
  */
 function isSistemaVazio(sis: SistemaIluminacao): boolean {
+  // Quantidade EFETIVA (RULE-001): override manual > 0 mantém o sistema no PDF,
+  // senão o total geral incluiria um driver que não aparece em nenhuma linha.
   return calcularDemandaFita(sis) === 0
     && calcularConsumoW(sis) === 0
-    && calcularQtdDrivers(sis) === 0;
+    && calcularQtdDriversEfetiva(sis) === 0;
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -125,6 +133,9 @@ function rowLuminaria(item: ItemLuminaria, atributosMap: AtributosMap): string {
 
 /** Linha de fita dentro de um sistema. Quantidade calculada em metros (demanda). */
 function rowFita(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
+  // Sistema mantido no PDF só pelo override de drivers (RULE-001) pode não ter
+  // fita selecionada — sem código e sem demanda, não vaza linha placeholder.
+  if (!sis.fita.codigo && calcularDemandaFita(sis) === 0) return "";
   const demanda = calcularDemandaFita(sis);
   const consumo = calcularConsumoW(sis);
   const chipsHtml = [
@@ -184,9 +195,10 @@ function rowPerfil(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
     </tr>`;
 }
 
-/** Linha de driver — quantidade calculada por calcularQtdDrivers. */
+/** Linha de driver — quantidade efetiva (override manual RULE-001 com fallback no cálculo),
+ *  mantém paridade com calcularSubtotalDriverSistema. Snapshots antigos: idêntico ao cálculo. */
 function rowDriver(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
-  const qtd = calcularQtdDrivers(sis);
+  const qtd = calcularQtdDriversEfetiva(sis);
   const subtotal = calcularSubtotalDriverSistema(sis);
   const chipsHtml = [
     chip(`${sis.driver.potencia}W`),
@@ -262,9 +274,9 @@ function blocoAmbiente(amb: Ambiente, atributosMap: AtributosMap): string {
     </section>`;
 }
 
-/** Resumo de Fitas LED por código (mesmo cálculo do v1, layout editorial). */
-function blocoResumoFitas(ambientes: Ambiente[]): string {
-  const grupos = calcularRolosPorGrupo(ambientes);
+/** Resumo de Fitas LED consolidado (por categoria quando houver — RULE-017). */
+function blocoResumoFitas(ambientes: Ambiente[], categorias?: CategoriaFita[]): string {
+  const grupos = calcularRolosPorGrupo(ambientes, categorias);
   if (!grupos.length) return "";
   const totalFitas = grupos.reduce((s, g) => s + g.subtotal, 0);
   const rows = grupos.map(g => {
@@ -277,7 +289,7 @@ function blocoResumoFitas(ambientes: Ambiente[]): string {
       <tr class="item-row">
         <td class="thumb-cell">${thumb(g.imagemUrl)}</td>
         <td class="desc-cell">
-          <div class="desc-name">${esc(g.descricao)}</div>
+          <div class="desc-name">${g.categoriaNome ? `${esc(g.categoriaNome)} — ` : ""}${esc(g.descricao)}</div>
           <div class="chips">${chipsHtml}</div>
         </td>
         <td class="qty-cell">${g.qtdRolosTotal} un</td>
@@ -356,7 +368,7 @@ function blocoTermos(): string {
  * Recebe params + Ambiente[] (já com base64 e local quando aplicáveis) e devolve HTML para html2pdf.
  */
 export function gerarOrcamentoHtmlV2(params: PdfParamsV2): string {
-  const { clienteNome, projetoNome, colaborador, tipo, ambientes, logoBase64, atributosMap = {} } = params;
+  const { clienteNome, projetoNome, colaborador, tipo, ambientes, logoBase64, atributosMap = {}, categorias, parceiro } = params;
   const data = formatarData();
   const totalGeral = calcularTotalGeral(ambientes);
 
@@ -365,7 +377,7 @@ export function gerarOrcamentoHtmlV2(params: PdfParamsV2): string {
     : `<span class="logo-text">AURA</span>`;
 
   const ambientesHtml = ambientes.map(amb => blocoAmbiente(amb, atributosMap)).join("");
-  const resumoFitasHtml = blocoResumoFitas(ambientes);
+  const resumoFitasHtml = blocoResumoFitas(ambientes, categorias);
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -456,9 +468,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       <h1 class="doc-title">Proposta Comercial</h1>
       <div class="doc-meta-row"><strong>Cliente:</strong> ${esc(clienteNome)}</div>
       <div class="doc-meta-row"><strong>Projeto:</strong> ${esc(projetoNome)}</div>
+      ${parceiro ? `<div class="doc-meta-row"><strong>Parceiro:</strong> ${esc(parceiro)}</div>` : ""}
       <div class="doc-meta-row"><strong>Colaborador:</strong> ${esc(colaborador || "—")}</div>
       <div class="doc-meta-row"><strong>Data:</strong> ${data}</div>
-      <div class="doc-meta-row"><strong>Tipo:</strong> ${esc(tipo || "Orçamento")}</div>
+      <div class="doc-meta-row"><strong>Revisão:</strong> ${esc(tipo || "Orçamento")}</div>
     </div>
   </header>
 

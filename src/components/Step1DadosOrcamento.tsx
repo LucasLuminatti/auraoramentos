@@ -12,6 +12,22 @@ interface Step1Props {
   onNext: () => void;
 }
 
+/** Rótulos de revisão (RULE-069/072). O `valor` é o que vai para o banco — "Primeiro Orçamento"
+ *  é histórico e não pode mudar sem migrar os orçamentos existentes; o rótulo é o que a equipe
+ *  usa no dia a dia (R00 é a revisão inicial). */
+const TIPOS_ORCAMENTO: { valor: DadosOrcamento['tipo']; rotulo: string }[] = [
+  { valor: 'Primeiro Orçamento', rotulo: 'Revisão 00 (R00) — primeiro orçamento' },
+  { valor: 'Revisão 01', rotulo: 'Revisão 01 (R01)' },
+  { valor: 'Revisão 02', rotulo: 'Revisão 02 (R02)' },
+  { valor: 'Revisão 03', rotulo: 'Revisão 03 (R03)' },
+  { valor: 'Revisão 04', rotulo: 'Revisão 04 (R04)' },
+  { valor: 'Revisão 05', rotulo: 'Revisão 05 (R05)' },
+  { valor: 'Revisão 06', rotulo: 'Revisão 06 (R06)' },
+  { valor: 'Revisão 07', rotulo: 'Revisão 07 (R07)' },
+  { valor: 'Revisão 08', rotulo: 'Revisão 08 (R08)' },
+  { valor: 'Revisão 09', rotulo: 'Revisão 09 (R09)' },
+];
+
 const Step1DadosOrcamento = ({ dados, onChange, onNext }: Step1Props) => {
   const handleNext = () => {
     if (!dados.tipo) {
@@ -39,12 +55,12 @@ const Step1DadosOrcamento = ({ dados, onChange, onNext }: Step1Props) => {
               <SelectValue placeholder="Selecione o tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Primeiro Orçamento">Primeiro Orçamento</SelectItem>
-              <SelectItem value="Revisão 01">Revisão 01</SelectItem>
-              <SelectItem value="Revisão 02">Revisão 02</SelectItem>
-              <SelectItem value="Revisão 03">Revisão 03</SelectItem>
-              <SelectItem value="Revisão 04">Revisão 04</SelectItem>
-              <SelectItem value="Revisão 05">Revisão 05</SelectItem>
+              {/* RULE-069: a revisão inicial é a R00 — o rótulo mudou, mas o valor gravado
+                  continua "Primeiro Orçamento" para não invalidar os orçamentos já salvos.
+                  RULE-072: até 10 revisões por projeto (R00…R09). */}
+              {TIPOS_ORCAMENTO.map(({ valor, rotulo }) => (
+                <SelectItem key={valor} value={valor}>{rotulo}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
