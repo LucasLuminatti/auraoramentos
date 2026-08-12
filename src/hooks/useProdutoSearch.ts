@@ -39,9 +39,18 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
           // Difusos SYSTEM MOLD têm tipo_produto='acessorio' e sistema='s_mode' (Phase 21 / SIST-03).
           // NÃO reusar filtroSistema — ele tem .is('tipo_produto', null) que exclui difusos (Pitfall 1).
           // NÃO usar .not('sistema','in',...) — NULL NOT IN = NULL (falsy), descartaria tudo (Phase 20 lesson).
+          //
+          // RULE-043 / BUG-20: spots, pendentes e concentrados do modular NÃO foram categorizados
+          // no catálogo (tipo_produto e sistema ficaram NULL), então o filtro acima sozinho só
+          // listava os difusos — não havia como montar um perfil modular com spot. Segundo ramo:
+          // pega qualquer "MODULO ..." da linha SYSTEM MOLD pela descrição. A exceção da regra
+          // (magneto nunca entra no modular) sai por `%MAGNET%`, que cobre MAGNETO e MAGNETICO.
           queryBuilder = queryBuilder
-            .eq('tipo_produto', 'acessorio')
-            .eq('sistema', 's_mode');
+            .not('descricao', 'ilike', '%MAGNET%')
+            .or(
+              'and(tipo_produto.eq.acessorio,sistema.eq.s_mode),' +
+              'and(descricao.ilike.*SYSTEM MOLD*,descricao.ilike.*MODULO*)'
+            );
         }
 
         // Pré-filtro de voltagem do driver: 46/61 drivers têm tensao=null mas são compatíveis (D-01)

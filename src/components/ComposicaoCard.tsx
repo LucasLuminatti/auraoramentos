@@ -20,6 +20,10 @@ import {
   parsearComprimentoDescricao,
   calcularOcupacaoTrilho,
   escolherTampaCega,
+  contarTampasFuroFaltantes,
+  ehModuloSpotOuPendente,
+  SKU_TAMPA_FURO_MODULAR,
+  COMPRIMENTO_TAMPA_FURO_M,
   corDoProduto,
   normalizarCor,
   exigeDriverAlojado,
@@ -116,6 +120,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
 
   // Estado local da sugestão de tampa cega (RULE-037/038)
   const [buscandoTampa, setBuscandoTampa] = useState(false);
+  // RULE-039: a oferta de tampa COM FURO é opcional ("posso colocar o spot no difusor") —
+  // dispensada, some até o colaborador adicionar outro módulo de spot/pendente.
+  const [buscandoTampaFuro, setBuscandoTampaFuro] = useState(false);
+  const [tampaFuroDispensada, setTampaFuroDispensada] = useState(false);
   // Buffer local do input "m:" dos acessórios (id → texto em edição) — flush no blur,
   // mesmo padrão do input "Qtd drivers" do AmbienteCard (evita repintar no meio da digitação)
   const [comprimentoDraft, setComprimentoDraft] = useState<Record<string, string>>({});
@@ -154,6 +162,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   const EPS_TRILHO = 0.005; // meio centímetro — ruído de float/parse não gera aviso
   const excedeTrilho = !!ocupacao && ocupacao.ocupadoM > ocupacao.trilhoM + EPS_TRILHO;
   const sobraTrilho = ocupacao ? ocupacao.trilhoM - ocupacao.ocupadoComTampasM : 0;
+
+  // RULE-039: uma tampa com furo por módulo de spot/pendente. Derivado a cada render —
+  // acompanha quantidade editada e remoção de módulo sem precisar de state.
+  const tampasFuroFaltantes = isModular ? contarTampasFuroFaltantes(item.composicao) : 0;
 
   // Recomendação 48V (pura, sem side-effect)
   const rec48v = is48V ? recomendarDriver48V(cargaTotalW) : null;
@@ -433,7 +445,11 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       );
     }
 
-    // Para SYSTEM MOLD, grava comprimento como snapshot via parsearComprimentoModulo
+    // Para SYSTEM MOLD, grava comprimento como snapshot via parsearComprimentoModulo.
+    // Só os DIFUSOS ("...FITA LED 132MM...") casam esse parse, e é proposital: quem tem
+    // `comprimento` entra em calcularMetragemModulosDifusos, ou seja, vira fita cobrada.
+    // Spot e concentrado ficam sem snapshot (não levam fita); a ocupação do trilho
+    // continua contando os dois, via parse genérico da descrição (RULE-056).
     const comprimento = isModular ? parsearComprimentoModulo(produto.descricao) : undefined;
     const novoModulo: ItemComposicao = {
       id: crypto.randomUUID(),
@@ -448,6 +464,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       comprimento,
       potenciaW: isModular ? undefined : (produto.driver_potencia_w ?? undefined),
     };
+    // RULE-039: um novo spot/pendente refaz a pergunta da tampa com furo, mesmo que
+    // ela já tenha sido dispensada para os módulos anteriores.
+    if (ehModuloSpotOuPendente(produto.descricao)) setTampaFuroDispensada(false);
+
     const base = itemRef.current;
     onChange({ ...base, composicao: [...(base.composicao ?? []), novoModulo] });
     setMostrarBuscaModulo(false);
@@ -620,6 +640,69 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       onChange({ ...base, composicao: [...(base.composicao ?? []), nova] });
     } finally {
       setBuscandoTampa(false);
+    }
+  };
+
+  // RULE-039/040 — insere a tampa cega COM FURO dos módulos de spot/pendente do modular.
+  // Uma por módulo (quantidade = faltantes), na cor pedida. LM2561 = branco, LM2562 = preto
+  // (confirmado pela equipe em 2026-08-12 e conferido nas descrições do catálogo).
+  // O comprimento vem da descrição do produto; COMPRIMENTO_TAMPA_FURO_M (13,3 cm) só entra
+  // se o cadastro não trouxer medida — a tampa participa da subtração da RULE-037.
+  const adicionarTampaFuro = async (cor: "branco" | "preto") => {
+    const faltantes = contarTampasFuroFaltantes(itemRef.current.composicao);
+    if (buscandoTampaFuro || faltantes <= 0) return;
+    const sku = SKU_TAMPA_FURO_MODULAR[cor];
+    setBuscandoTampaFuro(true);
+    try {
+      const { data } = await supabase
+        .from("produtos")
+        .select("codigo, descricao, preco_tabela, preco_minimo, imagem_url")
+        .eq("codigo", sku)
+        // RULE-003: nunca oferecer código fora do catálogo atual. Se a tampa sair de linha,
+        // a busca volta vazia e cai no aviso abaixo, em vez de sugerir item descontinuado.
+        .not("descricao", "ilike", "%DESCONTINUAR%")
+        .limit(1);
+
+      const tampa = data?.[0] as
+        | { codigo: string; descricao: string; preco_tabela: number; preco_minimo: number; imagem_url: string | null }
+        | undefined;
+      if (!tampa) {
+        toast.error(`A tampa com furo ${sku} não está no catálogo — adicione o item manualmente.`);
+        return;
+      }
+
+      const base = itemRef.current;
+      const composicaoAtual = base.composicao ?? [];
+      // Já existe uma linha dessa tampa? Soma na quantidade em vez de criar outra linha —
+      // duas linhas do mesmo código dão o mesmo total mas poluem o PDF e a conferência.
+      const existente = composicaoAtual.find(
+        (c) => c.codigo === tampa.codigo && c.papel === "acessorio_opcional"
+      );
+      if (existente) {
+        onChange({
+          ...base,
+          composicao: composicaoAtual.map((c) =>
+            c.id === existente.id ? { ...c, quantidade: c.quantidade + faltantes } : c
+          ),
+        });
+        return;
+      }
+
+      const nova: ItemComposicao = {
+        id: crypto.randomUUID(),
+        codigo: tampa.codigo,
+        descricao: tampa.descricao,
+        quantidade: faltantes,
+        precoUnitario: Math.round((tampa.preco_tabela || 0) * 100) / 100,
+        precoMinimo: Math.round((tampa.preco_minimo || 0) * 100) / 100,
+        imagemUrl: tampa.imagem_url || undefined,
+        papel: "acessorio_opcional",
+        obrigatorio: false,
+        comprimento: parsearComprimentoDescricao(tampa.descricao) ?? COMPRIMENTO_TAMPA_FURO_M,
+      };
+      onChange({ ...base, composicao: [...composicaoAtual, nova] });
+    } finally {
+      setBuscandoTampaFuro(false);
     }
   };
 
@@ -1152,7 +1235,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
             <ProdutoAutocomplete
               value=""
               onSelect={handleSelecionarModulo}
-              placeholder={isModular ? "Buscar difuso SYSTEM MOLD..." : "Buscar módulo..."}
+              placeholder={isModular ? "Buscar módulo SYSTEM MOLD (difuso, spot...)" : "Buscar módulo..."}
               filtro={isModular ? "modulo_difuso" : "luminaria"}
               filtroSistema={isModular ? undefined : familiaSistema}
             />
@@ -1172,7 +1255,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
             className="gap-2 mt-2"
             onClick={() => setMostrarBuscaModulo(true)}
           >
-            <Plus className="h-4 w-4" />{isModular ? "+ Adicionar difuso" : "+ Adicionar módulo"}
+            <Plus className="h-4 w-4" />+ Adicionar módulo
           </Button>
         )}
 
@@ -1259,6 +1342,46 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
                 </Button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* RULE-039 — tampa cega COM FURO por módulo de spot/pendente (só s_mode).
+            Oferta opcional: o spot também pode ir no difusor, então tem "Não, obrigado".
+            A cor sai igual à do trilho âncora (RULE-054/110); quando o catálogo não diz a
+            cor do trilho, oferecemos as duas em vez de chutar. */}
+        {isModular && tampasFuroFaltantes > 0 && !tampaFuroDispensada && (
+          <div className="rounded-md border border-sky-300/50 bg-sky-50/50 px-3 py-2 space-y-2">
+            <p className="text-xs font-semibold text-sky-900">
+              {tampasFuroFaltantes === 1
+                ? "1 módulo de spot/pendente sem tampa com furo — quer incluir?"
+                : `${tampasFuroFaltantes} módulos de spot/pendente sem tampa com furo — quer incluir?`}
+              <span className="font-normal text-sky-700"> (13,3 cm cada — entra na conta da sobra do trilho)</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(corAncora ? [corAncora] : (["branco", "preto"] as const)).map((cor) => (
+                <Button
+                  key={cor}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1"
+                  disabled={buscandoTampaFuro}
+                  onClick={() => adicionarTampaFuro(cor)}
+                >
+                  <Plus className="h-3 w-3" />
+                  {buscandoTampaFuro
+                    ? "Adicionando..."
+                    : `Tampa com furo ${cor} (${SKU_TAMPA_FURO_MODULAR[cor]})`}
+                </Button>
+              ))}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => setTampaFuroDispensada(true)}
+              >
+                Não, obrigado
+              </Button>
+            </div>
           </div>
         )}
 

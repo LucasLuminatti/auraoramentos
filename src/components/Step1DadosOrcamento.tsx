@@ -2,7 +2,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DadosOrcamento } from "@/types/orcamento";
+import {
+  DadosOrcamento,
+  opcoesRevisao,
+  rotuloUltimaRevisao,
+  LIMITE_ORCAMENTOS_POR_PROJETO,
+} from "@/types/orcamento";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,21 +17,11 @@ interface Step1Props {
   onNext: () => void;
 }
 
-/** Rótulos de revisão (RULE-069/072). O `valor` é o que vai para o banco — "Primeiro Orçamento"
- *  é histórico e não pode mudar sem migrar os orçamentos existentes; o rótulo é o que a equipe
- *  usa no dia a dia (R00 é a revisão inicial). */
-const TIPOS_ORCAMENTO: { valor: DadosOrcamento['tipo']; rotulo: string }[] = [
-  { valor: 'Primeiro Orçamento', rotulo: 'Revisão 00 (R00) — primeiro orçamento' },
-  { valor: 'Revisão 01', rotulo: 'Revisão 01 (R01)' },
-  { valor: 'Revisão 02', rotulo: 'Revisão 02 (R02)' },
-  { valor: 'Revisão 03', rotulo: 'Revisão 03 (R03)' },
-  { valor: 'Revisão 04', rotulo: 'Revisão 04 (R04)' },
-  { valor: 'Revisão 05', rotulo: 'Revisão 05 (R05)' },
-  { valor: 'Revisão 06', rotulo: 'Revisão 06 (R06)' },
-  { valor: 'Revisão 07', rotulo: 'Revisão 07 (R07)' },
-  { valor: 'Revisão 08', rotulo: 'Revisão 08 (R08)' },
-  { valor: 'Revisão 09', rotulo: 'Revisão 09 (R09)' },
-];
+/** Rótulos de revisão (RULE-069/072) — derivados de `LIMITE_ORCAMENTOS_POR_PROJETO` para
+ *  que a lista nunca fique menor que o teto do guard. O `valor` é o que vai para o banco:
+ *  "Primeiro Orçamento" é histórico e não pode mudar sem migrar os orçamentos existentes;
+ *  o rótulo é o que a equipe usa no dia a dia (R00 é a revisão inicial). */
+const TIPOS_ORCAMENTO = opcoesRevisao();
 
 const Step1DadosOrcamento = ({ dados, onChange, onNext }: Step1Props) => {
   const handleNext = () => {
@@ -57,12 +52,15 @@ const Step1DadosOrcamento = ({ dados, onChange, onNext }: Step1Props) => {
             <SelectContent>
               {/* RULE-069: a revisão inicial é a R00 — o rótulo mudou, mas o valor gravado
                   continua "Primeiro Orçamento" para não invalidar os orçamentos já salvos.
-                  RULE-072: até 10 revisões por projeto (R00…R09). */}
+                  RULE-072: o teto de revisões por projeto vem de LIMITE_ORCAMENTOS_POR_PROJETO. */}
               {TIPOS_ORCAMENTO.map(({ valor, rotulo }) => (
                 <SelectItem key={valor} value={valor}>{rotulo}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Até {LIMITE_ORCAMENTOS_POR_PROJETO} revisões por projeto (R00 a {rotuloUltimaRevisao()}).
+          </p>
         </div>
       </div>
 

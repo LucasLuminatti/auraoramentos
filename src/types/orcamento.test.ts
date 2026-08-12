@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcularDriversPorProjeto, calcularRolosPorGrupo, detectarTipoAncora, calcularCargaComposicao, recomendarDriver48V, calcularDemandaFita, calcularConsumoW, calcularSubtotalSistemaSemFita, calcularMetragemModulosDifusos, parsearComprimentoModulo, parsearComprimentoDescricao, calcularOcupacaoTrilho, escolherTampaCega, ehTampaCega, clonarItemLuminaria, clonarAmbiente, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalDriverSistema } from '@/types/orcamento';
+import { contarTampasFuroFaltantes, ehModuloSpotOuPendente, ehTampaComFuro, opcoesRevisao, rotuloUltimaRevisao, LIMITE_ORCAMENTOS_POR_PROJETO, calcularDriversPorProjeto, calcularRolosPorGrupo, detectarTipoAncora, calcularCargaComposicao, recomendarDriver48V, calcularDemandaFita, calcularConsumoW, calcularSubtotalSistemaSemFita, calcularMetragemModulosDifusos, parsearComprimentoModulo, parsearComprimentoDescricao, calcularOcupacaoTrilho, escolherTampaCega, ehTampaCega, clonarItemLuminaria, clonarAmbiente, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalDriverSistema } from '@/types/orcamento';
 import type { Ambiente, SistemaIluminacao, ItemFitaLED, ItemDriver, LocalBreakdown, Produto, ItemComposicao, ItemLuminaria } from '@/types/orcamento';
 
 // ─── Helpers mínimos para montar fixtures ───
@@ -1117,5 +1117,93 @@ describe('ehTampaCega — detecção por descrição (RULE-099)', () => {
   it('não confunde com outros produtos', () => {
     expect(ehTampaCega('MODULO DIFUSO PARA FITA LED 264MM')).toBe(false);
     expect(ehTampaCega('')).toBe(false);
+  });
+});
+
+// ─── Testes WP-I: RULE-039/040 — tampa cega COM FURO do modular ───
+
+describe('ehModuloSpotOuPendente — gatilho da oferta de tampa com furo (RULE-039)', () => {
+  it('detecta módulo de spot e de pendente (descrições reais do catálogo)', () => {
+    expect(ehModuloSpotOuPendente('SYSTEM MOLD 22 MODULO SPOT PARA DICROICA ATE 8W 132MM PT GU10')).toBe(true);
+    expect(ehModuloSpotOuPendente('SYSTEM MOLD 22 MÓDULO PENDENTE PARA USO NO PERFIL MODULAR')).toBe(true);
+  });
+
+  it('não confunde com difuso, concentrado nem com a própria tampa', () => {
+    expect(ehModuloSpotOuPendente('SYSTEM MOLD 22 MODULO DIFUSO PARA FITA LED 132MM')).toBe(false);
+    expect(ehModuloSpotOuPendente('SYSTEM MOLD 22 MODULO CONCENTRADO 5W 100LM 2700K 132MM PT')).toBe(false);
+    expect(ehModuloSpotOuPendente('SYSTEM MOLD 22 TAMPA C/FURO PARA SPOT USO PERFIL MODULAR 10CM BRANCO')).toBe(false);
+    expect(ehModuloSpotOuPendente('')).toBe(false);
+  });
+});
+
+describe('ehTampaComFuro — por código e por descrição', () => {
+  it('reconhece LM2561/LM2562 pelo código', () => {
+    expect(ehTampaComFuro('LM2561')).toBe(true);
+    expect(ehTampaComFuro('lm2562', 'descrição qualquer')).toBe(true);
+  });
+
+  it('reconhece as duas grafias do catálogo pela descrição', () => {
+    expect(ehTampaComFuro(null, 'SYSTEM MOLD 22 TAMPA CEGA COM FURO SISTEMA PERFIL MODULAR 0,133M BRANCO')).toBe(true);
+    expect(ehTampaComFuro(null, 'SYSTEM MOLD 22 TAMPA C/FURO PARA SPOT USO PERFIL MODULAR 10CM PRETO')).toBe(true);
+  });
+
+  it('tampa cega SEM furo não conta', () => {
+    expect(ehTampaComFuro('LM2999', 'SYSTEM MOLD 22 TAMPA CEGA SISTEMA PERFIL MODULAR 1M BRANCO')).toBe(false);
+  });
+});
+
+describe('contarTampasFuroFaltantes — uma tampa por módulo de spot/pendente (RULE-039)', () => {
+  const mod = (codigo: string, descricao: string, quantidade = 1, papel: ItemComposicao['papel'] = 'modulo'): ItemComposicao => ({
+    id: codigo, codigo, descricao, quantidade, precoUnitario: 10, precoMinimo: 8, papel, obrigatorio: false,
+  });
+  const SPOT = 'SYSTEM MOLD 22 MODULO SPOT PARA DICROICA ATE 8W 132MM PT GU10';
+  const TAMPA = 'SYSTEM MOLD 22 TAMPA CEGA COM FURO SISTEMA PERFIL MODULAR 0,133M BRANCO';
+
+  it('sem spot → nada a sugerir', () => {
+    expect(contarTampasFuroFaltantes([mod('LM2107', 'MODULO DIFUSO PARA FITA LED 132MM')])).toBe(0);
+    expect(contarTampasFuroFaltantes(undefined)).toBe(0);
+  });
+
+  it('conta a QUANTIDADE de cada módulo, não a linha', () => {
+    expect(contarTampasFuroFaltantes([mod('LM2010', SPOT, 3)])).toBe(3);
+  });
+
+  it('desconta as tampas já presentes', () => {
+    const comp = [mod('LM2010', SPOT, 3), mod('LM2561', TAMPA, 2, 'acessorio_opcional')];
+    expect(contarTampasFuroFaltantes(comp)).toBe(1);
+  });
+
+  it('tampas a mais não viram número negativo', () => {
+    const comp = [mod('LM2010', SPOT, 1), mod('LM2561', TAMPA, 5, 'acessorio_opcional')];
+    expect(contarTampasFuroFaltantes(comp)).toBe(0);
+  });
+
+  it('a tampa cega comum (sem furo) não desconta', () => {
+    const comp = [
+      mod('LM2010', SPOT, 2),
+      mod('LM2500', 'SYSTEM MOLD 22 TAMPA CEGA SISTEMA PERFIL MODULAR 1M BRANCO', 1, 'acessorio_opcional'),
+    ];
+    expect(contarTampasFuroFaltantes(comp)).toBe(2);
+  });
+});
+
+// ─── Testes WP-I: RULE-072 — teto de revisões ───
+
+describe('opcoesRevisao / rotuloUltimaRevisao (RULE-069/072)', () => {
+  it('gera exatamente LIMITE_ORCAMENTOS_POR_PROJETO opções, começando na R00', () => {
+    const ops = opcoesRevisao();
+    expect(ops).toHaveLength(LIMITE_ORCAMENTOS_POR_PROJETO);
+    expect(ops[0].valor).toBe('Primeiro Orçamento');
+    expect(ops[1].valor).toBe('Revisão 01');
+  });
+
+  it('a última opção casa com o rótulo usado nas mensagens do guard', () => {
+    const ops = opcoesRevisao();
+    const ultima = ops[ops.length - 1];
+    expect(ultima.rotulo).toContain(rotuloUltimaRevisao());
+  });
+
+  it('rótulos são zero-padded de dois dígitos', () => {
+    expect(rotuloUltimaRevisao()).toMatch(/^R\d{2}$/);
   });
 });

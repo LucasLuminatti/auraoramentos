@@ -150,10 +150,11 @@ export interface Ambiente {
 
 export interface DadosOrcamento {
   colaborador: string;
-  /** RULE-069/072: "Primeiro Orçamento" é a revisão inicial (exibida como R00); até 10 por
-   *  projeto (R00…R09). O valor gravado no banco não muda para não invalidar histórico. */
+  /** RULE-069/072: "Primeiro Orçamento" é a revisão inicial (exibida como R00); até 15 por
+   *  projeto (R00…R14). O valor gravado no banco não muda para não invalidar histórico. */
   tipo: 'Primeiro Orçamento' | 'Revisão 01' | 'Revisão 02' | 'Revisão 03' | 'Revisão 04' | 'Revisão 05'
-      | 'Revisão 06' | 'Revisão 07' | 'Revisão 08' | 'Revisão 09' | '';
+      | 'Revisão 06' | 'Revisão 07' | 'Revisão 08' | 'Revisão 09' | 'Revisão 10' | 'Revisão 11'
+      | 'Revisão 12' | 'Revisão 13' | 'Revisão 14' | '';
 }
 
 /** Categoria de fita (RULE-014/015): nome livre dado pelo colaborador (ex.: "sanca quente",
@@ -197,9 +198,29 @@ export const MARGEM_SEGURANCA_DRIVER = 1.20;
  */
 export const SOBRA_ROLO_FITA = 0.05;
 
-/** RULE-072 — teto de revisões por projeto (R00 … R09). Vale no ponto de gravação, para
- *  cobrir também o caminho "Duplicar como nova revisão". */
-export const LIMITE_ORCAMENTOS_POR_PROJETO = 10;
+/** RULE-072 — teto de revisões por projeto. Vale no ponto de gravação, para cobrir
+ *  também o caminho "Duplicar como nova revisão".
+ *  Número confirmado pela equipe (Luis/Paolla, 2026-08-12, 2ª rodada): 15 (R00…R14). */
+export const LIMITE_ORCAMENTOS_POR_PROJETO = 15;
+
+/** Rótulo da última revisão permitida ("R14") — derivado da constante para que os textos
+ *  de UI nunca divirjam do guard (lição do rótulo "× 1,05" hardcoded no WP-B). */
+export function rotuloUltimaRevisao(): string {
+  return `R${String(LIMITE_ORCAMENTOS_POR_PROJETO - 1).padStart(2, '0')}`;
+}
+
+/** Opções do seletor de revisão (RULE-069/072), na ordem exibida no Step 1.
+ *  O `valor` é o que já era gravado em `orcamentos.tipo` — só o rótulo mudou. */
+export function opcoesRevisao(): Array<{ valor: DadosOrcamento['tipo']; rotulo: string }> {
+  const opcoes: Array<{ valor: DadosOrcamento['tipo']; rotulo: string }> = [
+    { valor: 'Primeiro Orçamento', rotulo: 'Revisão 00 (R00) — primeiro orçamento' },
+  ];
+  for (let i = 1; i < LIMITE_ORCAMENTOS_POR_PROJETO; i++) {
+    const nn = String(i).padStart(2, '0');
+    opcoes.push({ valor: `Revisão ${nn}` as DadosOrcamento['tipo'], rotulo: `Revisão ${nn} (R${nn})` });
+  }
+  return opcoes;
+}
 
 /** Tamanhos de rolo praticados no catálogo (RULE-005, conferido em 2026-08-12:
  *  186 fitas com `tamanho_rolo_m` → 5 m, 10 m, 25 m e 50 m).
@@ -883,6 +904,50 @@ export function corDoProduto(codigo?: string | null, descricao?: string | null):
 
   if (preto === branco) return null; // nenhum marcador OU marcadores conflitantes
   return preto ? 'preto' : 'branco';
+}
+
+// ─── Tampa cega COM FURO do sistema modular (RULE-039/040) ───
+
+/** Códigos da tampa cega COM FURO do SYSTEM MOLD (RULE-039). Cores confirmadas pela
+ *  equipe (Luis/Paolla, 2026-08-12, 2ª rodada): LM2561 = BRANCO, LM2562 = PRETO —
+ *  o catálogo confirma nas descrições ("...0,133M BRANCO" / "...0,133M PRETO"). */
+export const SKU_TAMPA_FURO_MODULAR: Record<'branco' | 'preto', string> = {
+  branco: 'LM2561',
+  preto: 'LM2562',
+};
+
+/** RULE-040 — a tampa com furo do modular tem medida única de 13,3 cm.
+ *  Usada só como fallback: o comprimento real vem do parse da descrição do produto. */
+export const COMPRIMENTO_TAMPA_FURO_M = 0.133;
+
+/** Módulo de SPOT ou PENDENTE do sistema modular (RULE-039) — é o que dispara a oferta
+ *  de tampa com furo. Casa "MODULO SPOT ..." / "MODULO PENDENTE ..." (grafia do catálogo,
+ *  com e sem acento). NÃO casa a própria tampa ("TAMPA C/FURO PARA SPOT"), nem o módulo
+ *  difuso, nem o concentrado — esses não levam tampa com furo. */
+export function ehModuloSpotOuPendente(descricao?: string | null): boolean {
+  return /\bM[OÓ]DULO\s+(SPOT|PENDENTE)\b/i.test(descricao ?? '');
+}
+
+/** A peça é uma tampa COM FURO? (por código ou pela descrição, cobrindo snapshots
+ *  antigos e as duas variações do catálogo: "TAMPA CEGA COM FURO" e "TAMPA C/FURO"). */
+export function ehTampaComFuro(codigo?: string | null, descricao?: string | null): boolean {
+  const cod = (codigo ?? '').toUpperCase();
+  if (cod === SKU_TAMPA_FURO_MODULAR.branco || cod === SKU_TAMPA_FURO_MODULAR.preto) return true;
+  return /TAMPA\s+(CEGA\s+)?(COM|C\/)\s*FURO/i.test(descricao ?? '');
+}
+
+/** RULE-039 — quantas tampas com furo ainda faltam na composição: uma por módulo de
+ *  spot/pendente (contando a quantidade de cada módulo), menos as que já estão lá.
+ *  Nunca negativo — colaborador que adiciona tampas a mais não vira aviso. */
+export function contarTampasFuroFaltantes(composicao?: ItemComposicao[]): number {
+  let modulos = 0;
+  let tampas = 0;
+  for (const c of composicao ?? []) {
+    const qtd = Math.max(1, c.quantidade || 1);
+    if (c.papel === 'modulo' && ehModuloSpotOuPendente(c.descricao)) modulos += qtd;
+    else if (ehTampaComFuro(c.codigo, c.descricao)) tampas += qtd;
+  }
+  return Math.max(0, modulos - tampas);
 }
 
 /** Limite físico do driver que fica ALOJADO dentro do trilho/perfil (RULE-029/100):

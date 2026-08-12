@@ -7,7 +7,7 @@ import Step2Ambientes from "@/components/Step2Ambientes";
 import Step3Revisao from "@/components/Step3Revisao";
 import ClienteList from "@/components/ClienteList";
 import type { DadosOrcamento, Ambiente, Orcamento, CategoriaFita } from "@/types/orcamento";
-import { LIMITE_ORCAMENTOS_POR_PROJETO } from "@/types/orcamento";
+import { LIMITE_ORCAMENTOS_POR_PROJETO, rotuloUltimaRevisao } from "@/types/orcamento";
 import { useAuth } from "@/hooks/useAuth";
 import { useColaborador } from "@/hooks/useColaborador";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -234,14 +234,14 @@ const Index = () => {
   };
 
   const handleNovoOrcamento = async (clienteId: string, projetoId: string, projetoNome: string, clienteNome: string) => {
-    // RULE-072: no máximo 10 revisões por projeto (R00…R09).
+    // RULE-072: teto de revisões por projeto (a equipe fixou 15 — R00…R14).
     const { count, error } = await supabase
       .from("orcamentos")
       .select("id", { count: "exact", head: true })
       .eq("projeto_id", projetoId);
     if (!error && (count ?? 0) >= LIMITE_ORCAMENTOS_POR_PROJETO) {
       toast.error(
-        `Este projeto já tem ${LIMITE_ORCAMENTOS_POR_PROJETO} revisões (R00 a R09).`,
+        `Este projeto já tem ${LIMITE_ORCAMENTOS_POR_PROJETO} revisões (R00 a ${rotuloUltimaRevisao()}).`,
         { description: "Crie um novo projeto para continuar orçando." },
       );
       return;

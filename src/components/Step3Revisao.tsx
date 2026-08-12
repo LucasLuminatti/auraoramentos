@@ -15,7 +15,7 @@ import {
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
   calcularSubtotalSistemaSemFita, calcularTotalAmbienteSemFita, calcularRolosPorGrupo,
   calcularDriversPorProjeto, calcularTotalGeral, formatarMoeda,
-  detectarChecklistIssues, LIMITE_ORCAMENTOS_POR_PROJETO
+  detectarChecklistIssues, LIMITE_ORCAMENTOS_POR_PROJETO, rotuloUltimaRevisao
 } from "@/types/orcamento";
 import { ordenarComponentes, labelPapel } from "@/lib/pdfTemplates/v3";
 import type { ChecklistIssue } from "@/types/orcamento";
@@ -477,9 +477,9 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         if (error) throw error;
         return orcamentoId;
       }
-      // RULE-072: o teto de 10 revisões por projeto tem que valer no ponto de GRAVAÇÃO —
+      // RULE-072: o teto de revisões por projeto tem que valer no ponto de GRAVAÇÃO —
       // checar só no botão "Novo Orçamento" deixava o caminho "Duplicar como nova revisão"
-      // criar a 11ª sem passar por nenhuma validação.
+      // furar o limite sem passar por nenhuma validação.
       if (projetoId) {
         const { count } = await supabase
           .from("orcamentos")
@@ -487,7 +487,7 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
           .eq("projeto_id", projetoId);
         if ((count ?? 0) >= LIMITE_ORCAMENTOS_POR_PROJETO) {
           toast.error(
-            `Este projeto já tem ${LIMITE_ORCAMENTOS_POR_PROJETO} revisões (R00 a R09).`,
+            `Este projeto já tem ${LIMITE_ORCAMENTOS_POR_PROJETO} revisões (R00 a ${rotuloUltimaRevisao()}).`,
             { description: "Crie um novo projeto para salvar esta." },
           );
           return null;
