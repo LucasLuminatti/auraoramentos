@@ -97,7 +97,9 @@ function isSistemaVazio(sis: SistemaIluminacao): boolean {
   // senão o total geral incluiria um driver que não aparece em nenhuma linha.
   return calcularDemandaFita(sis) === 0
     && calcularConsumoW(sis) === 0
-    && calcularQtdDriversEfetiva(sis) === 0;
+    && calcularQtdDriversEfetiva(sis) === 0
+    // RULE-106: sistema só com peças avulsas continua valendo dinheiro — não some do PDF.
+    && (sis.acessorios ?? []).length === 0;
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -226,6 +228,33 @@ function rowDriver(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
 }
 
 /** Bloco de Sistema: header "SISTEMA N" + tabela com fita + perfil(?) + driver. */
+/** RULE-106 — peças avulsas do sistema de perfil. Sem estas linhas o subtotal do
+ *  sistema teria valor sem origem visível no PDF. */
+function rowsAcessoriosSistema(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
+  return (sis.acessorios ?? [])
+    .map((a) => {
+      const lookup = atributosMap[a.codigo];
+      const descRica = construirDescricaoRica({
+        nome: a.descricao || "—",
+        atributos: lookup?.atributos ?? null,
+        potenciaWatts: lookup?.potencia_watts ?? null,
+      });
+      return `
+    <tr class="item-row">
+      <td class="thumb-cell">${thumb(a.imagemUrl)}</td>
+      <td class="desc-cell">
+        <div class="desc-name">${esc(descRica)}</div>
+      </td>
+      <td class="qty-cell">${a.quantidade} un</td>
+      <td class="watts-cell">—</td>
+      <td class="price-cell">${formatarMoeda(a.precoUnitario)}</td>
+      <td class="sku-cell"><span class="code-tag">RV${esc(a.codigo)}</span></td>
+      <td class="subtotal-cell">${formatarMoeda(a.precoUnitario * a.quantidade)}</td>
+    </tr>`;
+    })
+    .join("");
+}
+
 function blocoSistema(sis: SistemaIluminacao, indexNoLocal: number, atributosMap: AtributosMap): string {
   return `
     <div class="system-block">
@@ -235,6 +264,7 @@ function blocoSistema(sis: SistemaIluminacao, indexNoLocal: number, atributosMap
           ${rowFita(sis, atributosMap)}
           ${rowPerfil(sis, atributosMap)}
           ${rowDriver(sis, atributosMap)}
+          ${rowsAcessoriosSistema(sis, atributosMap)}
         </tbody>
       </table>
     </div>`;

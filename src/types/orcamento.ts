@@ -136,6 +136,11 @@ export interface SistemaIluminacao {
    *  sistema passa a somar na fita da categoria. Opcional — sistema sem categoria continua
    *  consolidando por código de fita (retrocompatível). */
   categoriaId?: string | null;
+  /** RULE-106 — peças avulsas deste sistema de perfil (tampa cega, spot, suporte...).
+   *  A equipe deixou claro que "perfil dinâmico" não é um produto: qualquer perfil pode
+   *  receber peças, não só o modular. Reusa `ItemComposicao` (mesmo shape dos componentes
+   *  do sistema composto). Opcional — snapshot antigo sem o campo continua válido. */
+  acessorios?: ItemComposicao[];
 }
 
 /** @deprecated Use SistemaIluminacao */
@@ -548,8 +553,20 @@ export function calcularSubtotalDriverSistema(sistema: SistemaIluminacao): numbe
 }
 
 /** Subtotal do sistema SEM fita (perfil + driver apenas) */
+/** RULE-106 — Σ das peças avulsas do sistema de perfil. */
+export function calcularSubtotalAcessoriosSistema(sistema: SistemaIluminacao): number {
+  return (sistema.acessorios ?? []).reduce(
+    (s, a) => s + a.precoUnitario * Math.max(0, a.quantidade || 0),
+    0,
+  );
+}
+
 export function calcularSubtotalSistemaSemFita(sistema: SistemaIluminacao): number {
-  return calcularSubtotalPerfilSistema(sistema) + calcularSubtotalDriverSistema(sistema);
+  return (
+    calcularSubtotalPerfilSistema(sistema) +
+    calcularSubtotalDriverSistema(sistema) +
+    calcularSubtotalAcessoriosSistema(sistema)
+  );
 }
 
 // ─── Sistema 48V magnético (regra 8) ───
@@ -817,6 +834,8 @@ export function clonarSistema(sis: SistemaIluminacao): SistemaIluminacao {
     fita: { ...sis.fita, id: crypto.randomUUID() },
     driver: { ...sis.driver, id: crypto.randomUUID() },
     perfil: sis.perfil ? { ...sis.perfil, id: crypto.randomUUID() } : null,
+    // RULE-106: peças avulsas acompanham a cópia, com ids próprios
+    acessorios: sis.acessorios?.map((a) => ({ ...a, id: crypto.randomUUID() })),
   };
 }
 
@@ -828,6 +847,8 @@ export function clonarSistemaParaAmbiente(sis: SistemaIluminacao): SistemaIlumin
     fita: { ...sis.fita, id: crypto.randomUUID() },
     driver: { ...sis.driver, id: crypto.randomUUID() },
     perfil: sis.perfil ? { ...sis.perfil, id: crypto.randomUUID() } : null,
+    // RULE-106: peças avulsas acompanham a cópia, com ids próprios
+    acessorios: sis.acessorios?.map((a) => ({ ...a, id: crypto.randomUUID() })),
   };
 }
 
@@ -886,6 +907,51 @@ export function ambienteTemLampada(amb: Ambiente): boolean {
         (c) => c.papel === 'lampada' || itemEhLampada(c.descricao)
       )
   );
+}
+
+// ─── RULE-009: conferência de passadas em perfil sem regra cadastrada ───
+
+/** Largura da FITA que cabe no perfil, quando o nome declara ("PARA FITAS DE LED COM
+ *  LARGURA ATÉ 30MM" / "INTERNO ATE 12MM"). É a medida que decide quantas passadas cabem.
+ *  A largura externa ("LARG: 37MM ALT: 42MM") NÃO serve para isso e fica de fora. */
+export function larguraCanalDeclarada(descricao?: string | null): number | null {
+  const canal = (descricao ?? '').toUpperCase().match(/AT[EÉ]\s*(\d+(?:[,.]\d+)?)\s*MM/);
+  return canal ? parseFloat(canal[1].replace(',', '.')) : null;
+}
+
+/** Largura de canal a partir da qual a equipe usa mais de uma passada (RULE-009:
+ *  30 mm → 2 passadas, 50 mm → 3; 12 mm → 1). */
+const LARGURA_MIN_MULTIPLAS_PASSADAS = 25;
+
+/** Perfil de sanca (RULE-105: a equipe escolhe 1 ou 2 passadas caso a caso). */
+function ehPerfilSanca(descricao?: string | null): boolean {
+  return /\bSANCA\b/i.test(descricao ?? '');
+}
+
+/** RULE-009/105 — aviso de conferência das passadas, ou null quando não há o que dizer.
+ *  Dois casos, com textos diferentes:
+ *   - canal largo sem regra cadastrada no catálogo (o default de 1 passada costuma estar
+ *     errado e sai barato demais);
+ *   - sanca, onde a equipe decide 1 ou 2 caso a caso.
+ *  Só AVISA: mudar as passadas sozinho alteraria o preço da fita a partir de uma leitura
+ *  de nome, e a relação "perfil de 30 mm" × "canal até 30 mm" continua ambígua. */
+export function avisoConferirPassadas(perfil?: {
+  codigo?: string;
+  descricao?: string | null;
+  familia_perfil?: string | null;
+  passadas?: number;
+} | null): string | null {
+  if (!perfil?.codigo) return null;
+  if ((perfil.passadas ?? 1) > 1) return null;      // já foi ajustado pelo vendedor
+  if (ehPerfilSanca(perfil.descricao)) {
+    return 'Sanca costuma levar 1 ou 2 passadas de fita, conforme o projeto — confirme antes de fechar (a metragem muda junto).';
+  }
+  if (perfil.familia_perfil) return null;           // tem regra cadastrada: o default é confiável
+  const largura = larguraCanalDeclarada(perfil.descricao);
+  if (largura != null && largura >= LARGURA_MIN_MULTIPLAS_PASSADAS) {
+    return `Este perfil aceita fita de até ${largura}mm e está com 1 passada. O catálogo não traz o padrão desta linha — confira se são 2 ou 3 passadas (a metragem de fita muda junto).`;
+  }
+  return null;
 }
 
 // ─── P6: lâmpadas de spot (RULE-044/045/046/111/112) ───

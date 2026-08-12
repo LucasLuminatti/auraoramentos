@@ -238,6 +238,13 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
         if (sis.driver.precoMinimo > 0 && sis.driver.precoUnitario < sis.driver.precoMinimo) {
           v.push({ ambienteId: amb.id, ambienteNome: amb.nome, tipo: "driver", itemId: sis.driver.id, codigo: sis.driver.codigo, descricao: sis.driver.descricao, precoUnitario: sis.driver.precoUnitario, precoMinimo: sis.driver.precoMinimo });
         }
+        // RULE-106: peças avulsas do perfil seguem o MESMO predicado dos demais itens —
+        // sem isto, desconto em peça avulsa passaria sem pedido de exceção.
+        (sis.acessorios ?? []).forEach((a) => {
+          if (a.precoMinimo > 0 && a.precoUnitario < a.precoMinimo) {
+            v.push({ ambienteId: amb.id, ambienteNome: amb.nome, tipo: "composicao", itemId: a.id, codigo: a.codigo, descricao: a.descricao, precoUnitario: a.precoUnitario, precoMinimo: a.precoMinimo });
+          }
+        });
       });
     });
     return v;
@@ -860,6 +867,23 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                             </TableCell>
                             <TableCell className="text-right font-semibold">{formatarMoeda(calcularSubtotalDriverSistema(sis))}</TableCell>
                           </TableRow>
+                          {/* Peças avulsas do perfil (RULE-106) — o Step 3 espelha o PDF
+                              (RULE-067): o que é cobrado tem que aparecer discriminado. */}
+                          {(sis.acessorios ?? []).map((a) => (
+                            <TableRow key={a.id}>
+                              <TableCell><Badge variant="outline" className="text-xs">Acessório</Badge></TableCell>
+                              <TableCell className="font-mono">{a.codigo}</TableCell>
+                              <TableCell>{descricaoRica(a.codigo, a.descricao)}</TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">×{a.quantidade}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  {formatarMoeda(a.precoUnitario)}
+                                  {violacaoIndicator(a.codigo, a.precoUnitario, a.precoMinimo)}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">{formatarMoeda(a.precoUnitario * a.quantidade)}</TableCell>
+                            </TableRow>
+                          ))}
                         </React.Fragment>
                       );
                     })}
