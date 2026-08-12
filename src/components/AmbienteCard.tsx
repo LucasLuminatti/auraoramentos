@@ -12,8 +12,9 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto, CategoriaFita } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO, tipoLampadaDoSpot, fachosDoSpot, ehSpotConnectNoFrame, skuJuncaoConnect, type TipoLampada } from "@/types/orcamento";
 import ComposicaoCard from "./ComposicaoCard";
+import OfertaLampada, { type LampadaOfertada } from "./OfertaLampada";
 
 interface AmbienteCardProps {
   ambiente: Ambiente;
@@ -54,6 +55,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
   // RULE-011 / BUG-26: sugestões de fitas compatíveis por sistema (id → painel).
   // Só SUGERE (RULE-010 proíbe auto-escolher); painel fechável (RULE-002).
   const [fitasSugeridas, setFitasSugeridas] = useState<Record<string, { larguraMax: number; fitas: Produto[] } | undefined>>({});
+  // RULE-044/045: oferta de lâmpada aberta para uma luminária (id → tipo detectado no nome).
+  // A oferta acontece no MOMENTO da inclusão do spot; dispensar remove a entrada.
+  const [ofertasLampada, setOfertasLampada] = useState<Record<string, TipoLampada>>({});
 
   const uid = () => crypto.randomUUID();
   const { validacoes } = useValidarSistemas(ambiente.sistemas);
@@ -119,10 +123,13 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       }
     }
 
-    // ── REGRA #24: Spot sem LED integrado → lâmpada separada ──
+    // ── REGRA #24: spot sem LED integrado → lâmpada separada.
+    // Quando o nome declara o TIPO da lâmpada, quem avisa é o painel de oferta
+    // (RULE-044), já com as opções compatíveis — o toast genérico fica só para os
+    // casos em que não dá para saber o tipo.
     const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
     const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
-    if (temBaseLampada && !temLedIntegrado) {
+    if (temBaseLampada && !temLedIntegrado && !tipoLampadaDoSpot(produto.descricao)) {
       toast.info(`💡 Este produto não possui LED integrado — lembre-se de incluir a lâmpada separadamente no orçamento.`, { duration: 8000 });
     }
 
@@ -139,8 +146,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       toast.info(`✨ Fita Flexível: considere incluir as Tampas de Vedação (LM2600 — 50 un.) para preservar o IP65 após cortes.`, { duration: 10000 });
     }
 
+    const alvo = ambiente.luminarias[index];
     updateLuminaria(index, {
-      ...ambiente.luminarias[index],
+      ...alvo,
       codigo: produto.codigo,
       descricao: produto.descricao,
       precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100,
@@ -149,6 +157,13 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       sistema: produto.sistema_magnetico ?? null,
       potencia_watts: produto.driver_potencia_w ?? null,
       tensao: produto.voltagem ?? null,
+    });
+
+    // RULE-044: escolher o produto de um item vazio também é "incluir o spot".
+    const tipoLampada = tipoLampadaDoSpot(produto.descricao);
+    setOfertasLampada((o) => {
+      const { [alvo.id]: _, ...resto } = o;
+      return tipoLampada ? { ...resto, [alvo.id]: tipoLampada } : resto;
     });
   };
 
@@ -672,7 +687,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
     const d = (produto.descricao || '').toUpperCase();
     const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
     const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
-    if (temBaseLampada && !temLedIntegrado) {
+    if (temBaseLampada && !temLedIntegrado && !tipoLampadaDoSpot(produto.descricao)) {
       toast.info(`💡 Este produto não possui LED integrado — lembre-se de incluir a lâmpada separadamente no orçamento.`, { duration: 8000 });
     }
     if (/PINO\s+HUB/.test(d)) {
@@ -694,6 +709,51 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       tensao: produto.voltagem ?? null,
     };
     onChange({ ...ambiente, luminarias: [...ambiente.luminarias, novoItem] });
+
+    // RULE-044/045: a lâmpada é atrelada NO MOMENTO da inclusão do spot ("depois não dá
+    // para colocar"). Vale para spot de embutir e para spot de trilho — nos dois a
+    // quantidade fica livre. Se o nome não declara o tipo, nada é ofertado.
+    const tipoLampada = tipoLampadaDoSpot(produto.descricao);
+    if (tipoLampada) {
+      setOfertasLampada((o) => ({ ...o, [novoItem.id]: tipoLampada }));
+    }
+
+    // RULE-112: spots CONNECT NO FRAME instalados lado a lado precisam do acessório de
+    // junção, que muda conforme o tipo de lâmpada (LM2657 até PAR20 / LM2658 nos maiores).
+    // Lembrete, não inserção: quantos spots ficam juntos é decisão de projeto.
+    const skuJuncao = ehSpotConnectNoFrame(produto.descricao) ? skuJuncaoConnect(tipoLampada) : null;
+    if (skuJuncao) {
+      toast.info(
+        `🔗 Se estes spots forem instalados lado a lado, inclua o acessório de junção ${skuJuncao} (um entre cada par).`,
+        { duration: 9000 },
+      );
+    }
+  };
+
+  /** RULE-044 — insere a lâmpada escolhida como item do ambiente, logo após o spot. */
+  const adicionarLampadaDoSpot = (
+    spotId: string,
+    lampada: LampadaOfertada,
+    quantidade: number,
+  ) => {
+    const base = ambienteRef.current;
+    const idx = base.luminarias.findIndex((l) => l.id === spotId);
+    const novaLampada: ItemLuminaria = {
+      id: uid(),
+      codigo: lampada.codigo,
+      descricao: lampada.descricao,
+      quantidade,
+      precoUnitario: Math.round((lampada.preco_tabela || 0) * 100) / 100,
+      precoMinimo: Math.round((lampada.preco_minimo || 0) * 100) / 100,
+      imagemUrl: lampada.imagem_url || undefined,
+      sistema: null,
+      potencia_watts: lampada.potencia_watts ?? null,
+      tensao: null,
+    };
+    const arr = [...base.luminarias];
+    arr.splice(idx === -1 ? arr.length : idx + 1, 0, novaLampada);
+    onChange({ ...base, luminarias: arr });
+    setOfertasLampada(({ [spotId]: _, ...resto }) => resto);
   };
 
   return (
@@ -762,6 +822,19 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
 
             {/* Luminarias: composicao definida → ComposicaoCard; senão → item simples */}
             {ambiente.luminarias.map((item, i) => {
+              // RULE-044/045/111: oferta de lâmpada do spot recém-incluído. Fica logo
+              // abaixo do item que a originou; quantidade sugerida = qtd × fachos.
+              const ofertaTipo = ofertasLampada[item.id];
+              const painelLampada = ofertaTipo ? (
+                <OfertaLampada
+                  tipo={ofertaTipo}
+                  descricaoSpot={item.descricao}
+                  quantidadeSugerida={Math.max(1, item.quantidade || 1) * fachosDoSpot(item.descricao)}
+                  onAdicionar={(lamp, qtd) => adicionarLampadaDoSpot(item.id, lamp, qtd)}
+                  onDispensar={() => setOfertasLampada(({ [item.id]: _, ...resto }) => resto)}
+                />
+              ) : null;
+
               if (item.composicao !== undefined) {
                 return (
                   <ComposicaoCard
@@ -776,7 +849,8 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
               }
               // Item simples (incluindo fallback D-03 para magneto/tiny sem composicao)
               return (
-                <div key={item.id} className="flex items-start gap-2 rounded-lg border p-3 bg-muted/30">
+                <div key={item.id} className="space-y-2">
+                  <div className="flex items-start gap-2 rounded-lg border p-3 bg-muted/30">
                   <div className="flex-1 space-y-2">
                     <ProdutoAutocomplete value={item.codigo} onSelect={(p) => handleSelectProdutoLuminaria(p, i)} placeholder="Código do item" filtro="luminaria" />
                     <Input value={item.descricao} readOnly placeholder="Descrição" className="bg-muted/50" />
@@ -813,6 +887,8 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
                   <Button size="icon" variant="ghost" className="text-destructive shrink-0" onClick={() => removeLuminaria(i)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                  </div>
+                  {painelLampada}
                 </div>
               );
             })}

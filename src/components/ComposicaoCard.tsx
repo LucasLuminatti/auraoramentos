@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ProdutoAutocomplete from "@/components/ProdutoAutocomplete";
+import OfertaLampada, { type LampadaOfertada } from "@/components/OfertaLampada";
 import type { ItemLuminaria, ItemComposicao, Produto } from "@/types/orcamento";
 import {
   calcularCargaComposicao,
@@ -30,6 +31,9 @@ import {
   classificarDriverSlim,
   ehDriverDeTrilho,
   LIMITE_W_DRIVER_ALOJADO,
+  tipoLampadaDoSpot,
+  fachosDoSpot,
+  type TipoLampada,
 } from "@/types/orcamento";
 
 /** Formata metros pt-BR com 2 casas ("1,53"). */
@@ -124,6 +128,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   // dispensada, some até o colaborador adicionar outro módulo de spot/pendente.
   const [buscandoTampaFuro, setBuscandoTampaFuro] = useState(false);
   const [tampaFuroDispensada, setTampaFuroDispensada] = useState(false);
+  // RULE-044: oferta de lâmpada do módulo de spot recém-incluído (tipo lido do nome).
+  const [ofertaLampada, setOfertaLampada] = useState<
+    { tipo: TipoLampada; descricao: string; moduloId: string } | null
+  >(null);
   // Buffer local do input "m:" dos acessórios (id → texto em edição) — flush no blur,
   // mesmo padrão do input "Qtd drivers" do AmbienteCard (evita repintar no meio da digitação)
   const [comprimentoDraft, setComprimentoDraft] = useState<Record<string, string>>({});
@@ -158,6 +166,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
 
   // Ocupação do trilho âncora (RULE-056 aviso / RULE-037 sobra) — recalcula a cada render
   const acessorios = composicao.filter((c) => c.papel === "acessorio_opcional");
+  const lampadas = composicao.filter((c) => c.papel === "lampada");
   const ocupacao = calcularOcupacaoTrilho(item);
   const EPS_TRILHO = 0.005; // meio centímetro — ruído de float/parse não gera aviso
   const excedeTrilho = !!ocupacao && ocupacao.ocupadoM > ocupacao.trilhoM + EPS_TRILHO;
@@ -468,6 +477,11 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     // ela já tenha sido dispensada para os módulos anteriores.
     if (ehModuloSpotOuPendente(produto.descricao)) setTampaFuroDispensada(false);
 
+    // RULE-044: módulo de spot do modular também usa lâmpada (GU10/E27) — ofertar no
+    // momento da inclusão, com o tipo lido do nome ("MODULO SPOT PARA DICROICA...").
+    const tipoLamp = tipoLampadaDoSpot(produto.descricao);
+    if (tipoLamp) setOfertaLampada({ tipo: tipoLamp, descricao: produto.descricao, moduloId: novoModulo.id });
+
     const base = itemRef.current;
     onChange({ ...base, composicao: [...(base.composicao ?? []), novoModulo] });
     setMostrarBuscaModulo(false);
@@ -704,6 +718,25 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     } finally {
       setBuscandoTampaFuro(false);
     }
+  };
+
+  /** RULE-044 — insere a lâmpada escolhida na composição, com papel próprio: ela não
+   *  ocupa o trilho (RULE-056) nem entra na carga do driver (é 127/220 V na base). */
+  const adicionarLampadaModulo = (lamp: LampadaOfertada, quantidade: number) => {
+    const base = itemRef.current;
+    const nova: ItemComposicao = {
+      id: crypto.randomUUID(),
+      codigo: lamp.codigo,
+      descricao: lamp.descricao,
+      quantidade,
+      precoUnitario: Math.round((lamp.preco_tabela || 0) * 100) / 100,
+      precoMinimo: Math.round((lamp.preco_minimo || 0) * 100) / 100,
+      imagemUrl: lamp.imagem_url || undefined,
+      papel: "lampada",
+      obrigatorio: false,
+    };
+    onChange({ ...base, composicao: [...(base.composicao ?? []), nova] });
+    setOfertaLampada(null);
   };
 
   // ─── Checklist ───
@@ -1150,6 +1183,41 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
           </div>
         )}
 
+        {/* Lâmpadas atreladas aos módulos de spot (RULE-044). Sem campo "m:": lâmpada não
+            ocupa o trilho e não pode entrar na somativa de capacidade (RULE-056). */}
+        {lampadas.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+              Lâmpadas
+            </p>
+            <div className="space-y-1.5">
+              {lampadas.map((l) => (
+                <div key={l.id} className="flex items-center gap-2 flex-wrap">
+                  <Input value={l.codigo} readOnly className="bg-muted/50 w-28 h-8" />
+                  <Input value={l.descricao} readOnly className="bg-muted/50 flex-1 h-8 min-w-0" />
+                  <Input type="number" min={1} {...qtdInputProps(l)} className="w-20 h-8" />
+                  <PrecoInput
+                    value={l.precoUnitario}
+                    min={l.precoMinimo}
+                    onChange={(v) => atualizarComposicaoItem(l.id, { precoUnitario: v })}
+                  />
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                    Total: {formatarMoeda(l.precoUnitario * l.quantidade)}
+                  </Badge>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => removerComposicaoItem(l.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Acessórios inseridos na composição (ex.: tampa cega — RULE-037). Editáveis (RULE-001). */}
         {acessorios.length > 0 && (
           <div>
@@ -1343,6 +1411,22 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
               </div>
             )}
           </div>
+        )}
+
+        {/* RULE-044/111 — lâmpada do módulo de spot, ofertada na inclusão. */}
+        {ofertaLampada && (
+          <OfertaLampada
+            tipo={ofertaLampada.tipo}
+            descricaoSpot={ofertaLampada.descricao}
+            quantidadeSugerida={
+              Math.max(
+                1,
+                composicao.find((c) => c.id === ofertaLampada.moduloId)?.quantidade || 1
+              ) * fachosDoSpot(ofertaLampada.descricao)
+            }
+            onAdicionar={adicionarLampadaModulo}
+            onDispensar={() => setOfertaLampada(null)}
+          />
         )}
 
         {/* RULE-039 — tampa cega COM FURO por módulo de spot/pendente (só s_mode).

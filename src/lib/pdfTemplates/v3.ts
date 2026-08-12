@@ -328,6 +328,7 @@ export function labelPapel(papel: ItemComposicao["papel"]): string {
     : papel === "driver_recomendado" || papel === "driver_obrigatorio" ? "Driver"
     : papel === "conector_energia" ? "Conector"
     : papel === "kit_fixacao" ? "Kit"
+    : papel === "lampada" ? "Lâmpada"   // RULE-044: lâmpada atrelada ao módulo de spot
     : "Acessório";
 }
 
@@ -342,6 +343,7 @@ export function ordenarComponentes(composicao: ItemComposicao[]): ItemComposicao
     conector_energia: 3,
     kit_fixacao: 4,
     acessorio_opcional: 5,
+    lampada: 6,   // RULE-044: fecha o bloco, depois dos acessórios
   };
   return [...composicao].sort((a, b) => (ORDEM[a.papel] ?? 9) - (ORDEM[b.papel] ?? 9));
 }

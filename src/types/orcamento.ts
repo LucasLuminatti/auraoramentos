@@ -56,7 +56,7 @@ export interface ItemComposicao {
   precoUnitario: number;
   precoMinimo: number;
   imagemUrl?: string;
-  papel: 'modulo' | 'driver_recomendado' | 'driver_obrigatorio' | 'conector_energia' | 'kit_fixacao' | 'acessorio_opcional' | 'fita_modular';
+  papel: 'modulo' | 'driver_recomendado' | 'driver_obrigatorio' | 'conector_energia' | 'kit_fixacao' | 'acessorio_opcional' | 'fita_modular' | 'lampada';
   obrigatorio: boolean;
   /** Comprimento em metros do módulo (SYSTEM MOLD deriva fita de Σ(comprimento × qtd)). Phase 21. */
   comprimento?: number;
@@ -858,13 +858,134 @@ export function luminariaPrecisaLampada(descricao: string): boolean {
   const d = (descricao ?? '').toUpperCase();
   const temBaseLampada = /\b(GU10|E27|MR11|MR16|AR70|AR111|PAR20|PAR30|DICROICA|DICRO)\b/.test(d);
   const temLedIntegrado = /LED\s+INTEGRADO|COM\s+LED/.test(d);
+  // A própria lâmpada casa "GU10/DICROICA/..." — sem esta guarda, adicionar a lâmpada
+  // gerava um novo item "precisa de lâmpada" (RULE-046).
+  if (ehLampadaAvulsa(descricao)) return false;
   return temBaseLampada && !temLedIntegrado;
 }
 
+/** O item É uma lâmpada (e não um produto que a recebe)?
+ *  Duas assinaturas no catálogo real: a descrição começa com o TIPO ("DICROICA GU10 LED
+ *  4,5W", "PAR20 LED IP65 6W") ou com a própria palavra ("LÂMPADA LED TUBULAR G13").
+ *  A palavra no MEIO é sempre do receptor ("PLAFON ... PARA LÂMPADAS DICROICA") — era
+ *  o que fazia o checklist dar por satisfeito só de existir o spot no ambiente. */
+function itemEhLampada(descricao?: string | null, tipoProduto?: string | null): boolean {
+  if (tipoProduto === 'lampada') return true;
+  if (ehLampadaAvulsa(descricao)) return true;
+  return /^\s*L[ÂA]MPADAS?\b/i.test(descricao ?? '');
+}
+
 export function ambienteTemLampada(amb: Ambiente): boolean {
+  // As lâmpadas de spot do catálogo NÃO trazem a palavra "lâmpada" no nome
+  // ("DICROICA GU10 LED 4,5W") e só 12 das 115 estão com `tipo_produto='lampada'` —
+  // por isso o detector é o do nome, e não a coluna.
   return amb.luminarias.some(
-    (l) => /l[âa]mpada/i.test(l.descricao ?? '') || (l as any).tipo_produto === 'lampada'
+    (l) =>
+      itemEhLampada(l.descricao, (l as any).tipo_produto) ||
+      (l.composicao ?? []).some(
+        (c) => c.papel === 'lampada' || itemEhLampada(c.descricao)
+      )
   );
+}
+
+// ─── P6: lâmpadas de spot (RULE-044/045/046/111/112) ───
+
+/** Tipos de lâmpada que os spots do catálogo pedem pelo nome (R6 final RF6.16: o critério
+ *  de compatibilidade é o tipo indicado no NOME do spot). */
+export type TipoLampada = 'MR11' | 'MR16' | 'AR70' | 'AR111' | 'PAR16' | 'PAR20' | 'PAR30';
+
+/** Como cada tipo aparece no INÍCIO da descrição de uma lâmpada do catálogo.
+ *  Conferido no catálogo real (2026-08-12): as 115 lâmpadas de spot começam pelo tipo
+ *  ("DICROICA GU10 LED 4,5W", "MR11 4W 3000K", "PAR20 LED IP65 6W"), enquanto os spots
+ *  trazem o tipo no meio, depois de "PARA LÂMPADA". Por isso o filtro é por PREFIXO. */
+const PREFIXOS_LAMPADA: Record<TipoLampada, string[]> = {
+  MR11: ['MR11', 'MR-11', 'MINI DICROICA'],
+  MR16: ['DICROICA', 'MR16', 'MR-16'],
+  AR70: ['AR70', 'AR-70'],
+  AR111: ['AR111', 'AR-111'],
+  PAR16: ['PAR16', 'PAR-16'],
+  PAR20: ['PAR20', 'PAR-20'],
+  PAR30: ['PAR30', 'PAR-30'],
+};
+
+/** Prefixos ilike ("DICROICA%") para montar a busca das lâmpadas de um tipo. */
+export function prefixosDeBuscaLampada(tipo: TipoLampada): string[] {
+  return PREFIXOS_LAMPADA[tipo].map((p) => `${p}%`);
+}
+
+/** A descrição é de uma LÂMPADA avulsa (e não de um spot/módulo que a recebe)?
+ *  Critério: começa com o tipo. "MINI DICROICA MR11..." conta; "SPOT ... PARA LAMPADA
+ *  DICROICA MR16" não. Zero falso positivo nos 4.974 produtos ativos. */
+export function ehLampadaAvulsa(descricao?: string | null): boolean {
+  return tipoDaLampada(descricao) != null;
+}
+
+/** Tipo da lâmpada avulsa (pelo prefixo do nome), ou null se não for lâmpada. */
+export function tipoDaLampada(descricao?: string | null): TipoLampada | null {
+  const d = (descricao ?? '').trim().toUpperCase();
+  if (!d) return null;
+  // MR11/mini dicroica ANTES de MR16/dicroica: "MINI DICROICA" começa com... "MINI",
+  // mas "DICROICA" sozinha é MR16 — a ordem evita classificar mini como comum.
+  const ordem: TipoLampada[] = ['MR11', 'MR16', 'AR111', 'AR70', 'PAR16', 'PAR20', 'PAR30'];
+  for (const tipo of ordem) {
+    for (const p of PREFIXOS_LAMPADA[tipo]) {
+      if (d.startsWith(p)) return tipo;
+    }
+  }
+  return null;
+}
+
+/** RULE-044 — tipo de lâmpada que ESTE spot/módulo pede, lido do nome dele.
+ *  Retorna null para luminária com LED integrado ou sem tipo declarado (nada é ofertado). */
+export function tipoLampadaDoSpot(descricao?: string | null): TipoLampada | null {
+  const d = (descricao ?? '').toUpperCase();
+  if (!d) return null;
+  if (ehLampadaAvulsa(d)) return null;               // é a lâmpada, não quem a recebe
+  if (/LED\s+INTEGRADO|COM\s+LED\b/.test(d)) return null;
+  // Mesma ordem do detector acima; aqui o tipo aparece no meio da descrição.
+  if (/\bMR-?11\b|MINI\s+DICROICA/.test(d)) return 'MR11';
+  if (/\bMR-?16\b|\bDICROICA\b|\bDICRO\b/.test(d)) return 'MR16';
+  if (/\bAR-?111\b/.test(d)) return 'AR111';
+  if (/\bAR-?70\b/.test(d)) return 'AR70';
+  if (/\bPAR-?16\b/.test(d)) return 'PAR16';
+  if (/\bPAR-?20\b/.test(d)) return 'PAR20';
+  if (/\bPAR-?30\b/.test(d)) return 'PAR30';
+  return null;
+}
+
+/** RULE-111 — quantos fachos (lâmpadas) o spot leva: duplo = 2, triplo = 3, quádruplo = 4,
+ *  "2 FOCOS" = 2. Default 1. O catálogo atual não tem spot multifoco cadastrado; o helper
+ *  fica pronto para quando tiver, e a quantidade sugerida já sai multiplicada. */
+export function fachosDoSpot(descricao?: string | null): number {
+  const d = (descricao ?? '').toUpperCase();
+  const nFocos = d.match(/\b(\d+)\s*FOCOS?\b/);
+  if (nFocos) return Math.max(1, parseInt(nFocos[1], 10) || 1);
+  if (/\bQU[AÁ]D(R)?UPLO\b|\bQUADUPLO\b/.test(d)) return 4;
+  if (/\bTRIPLO\b/.test(d)) return 3;
+  if (/\bDUPLO\b/.test(d)) return 2;
+  return 1;
+}
+
+/** RULE-112 — acessório de junção do SPOT CONNECT NO FRAME, escolhido pelo tipo de lâmpada.
+ *  Códigos conferidos no catálogo em 2026-08-12 (a SPEC trazia LM1231/LM1232, que são da
+ *  linha antiga — os da linha CONNECT são estes):
+ *   - LM2657: "PARA LAMPADAS MR111, MR16, AR70, PAR20"
+ *   - LM2658: "PARA LAMPADAS AR111, PAR30" */
+export const SKU_JUNCAO_CONNECT: Record<'menor' | 'maior', string> = {
+  menor: 'LM2657',
+  maior: 'LM2658',
+};
+
+/** SKU do acessório de junção para o tipo de lâmpada, ou null quando não se aplica. */
+export function skuJuncaoConnect(tipo: TipoLampada | null): string | null {
+  if (!tipo) return null;
+  if (tipo === 'AR111' || tipo === 'PAR30') return SKU_JUNCAO_CONNECT.maior;
+  return SKU_JUNCAO_CONNECT.menor;
+}
+
+/** O produto é da linha SPOT CONNECT NO FRAME (a única com acessório de junção por tipo)? */
+export function ehSpotConnectNoFrame(descricao?: string | null): boolean {
+  return /SPOT\s+CONNECT\s+NO\s+FRAME/i.test(descricao ?? '');
 }
 
 // ─── WP-F: cor, família de perfil e restrições físicas ───
