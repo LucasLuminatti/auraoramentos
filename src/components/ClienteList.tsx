@@ -21,6 +21,8 @@ import { toast } from "sonner";
 import ClienteArquivos from "@/components/ClienteArquivos";
 import StatusBadgeSelect from "@/components/StatusBadgeSelect";
 import OrcamentoArquivos from "@/components/OrcamentoArquivos";
+import { useColaborador } from "@/hooks/useColaborador";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface OrcamentoRow {
   id: string;
@@ -28,6 +30,8 @@ interface OrcamentoRow {
   valor: number;
   status: string;
   tipo: string | null;
+  /** Criador do orçamento — RULE-088: só ele (ou um admin) pode excluir. */
+  colaborador_id: string | null;
 }
 
 interface ProjetoWithOrcamentos {
@@ -50,6 +54,12 @@ interface ClienteListProps {
 
 const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
   const navigate = useNavigate();
+  // RULE-088 / CONF-03: excluir orçamento é do dono ou do admin. O RLS já barra o resto —
+  // aqui o botão some para quem não pode, para ninguém clicar e levar erro do banco.
+  const { colaborador } = useColaborador();
+  const { isAdmin } = useUserRole();
+  const podeExcluir = (orc: OrcamentoRow) =>
+    isAdmin || (!!colaborador?.id && orc.colaborador_id === colaborador.id);
   const [clientes, setClientes] = useState<ClienteWithProjetos[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -80,9 +90,10 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
       .select("id, nome, cliente_id")
       .order("nome");
 
+    // RULE-088: `colaborador_id` decide se o botão de excluir aparece (dono ou admin).
     const { data: orcamentosData } = await supabase
       .from("orcamentos")
-      .select("id, data, valor, status, tipo, projeto_id")
+      .select("id, data, valor, status, tipo, projeto_id, colaborador_id")
       .order("data", { ascending: false });
 
     if (clientesData) {
@@ -383,13 +394,15 @@ const ClienteList = ({ onNovoOrcamento }: ClienteListProps) => {
                                         >
                                           <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                                         </button>
-                                        <button
-                                          className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
-                                          title="Excluir orçamento"
-                                          onClick={() => setDeleteOrcTarget({ id: orc.id, clienteId: cliente.id })}
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5 text-destructive/70" />
-                                        </button>
+                                        {podeExcluir(orc) && (
+                                          <button
+                                            className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
+                                            title="Excluir orçamento"
+                                            onClick={() => setDeleteOrcTarget({ id: orc.id, clienteId: cliente.id })}
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-destructive/70" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                     {anexosOpen && (

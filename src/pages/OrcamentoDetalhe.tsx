@@ -28,6 +28,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import OrcamentoArquivos from "@/components/OrcamentoArquivos";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useColaborador } from "@/hooks/useColaborador";
 import { gerarOrcamentoHtml, type PdfParams } from "@/lib/gerarPdfHtml";
 import logo from "@/assets/logo.png";
 import type { Ambiente, CategoriaFita } from "@/types/orcamento";
@@ -46,6 +47,7 @@ interface OrcamentoFull {
   tipo: string;
   projeto_id: string | null;
   cliente_id: string | null;
+  colaborador_id: string | null;
   ambientes: Ambiente[];
   /** RULE-014 — pode vir ausente em orçamento salvo antes da migration 20260812000004. */
   categorias?: CategoriaFita[] | null;
@@ -120,6 +122,7 @@ const OrcamentoDetalhe = () => {
   // RULE-074: a mesma tela atende admin (via /admin/orcamento/:id) e colaborador
   // (via /orcamento/:id). O destino do "Voltar" muda conforme quem está olhando.
   const { isAdmin } = useUserRole();
+  const { colaborador } = useColaborador();
   const voltarPara = isAdmin ? "/admin?tab=pedidos" : "/";
   const [orc, setOrc] = useState<OrcamentoFull | null>(null);
   const [revisoes, setRevisoes] = useState<RevisaoRow[]>([]);
@@ -163,7 +166,7 @@ const OrcamentoDetalhe = () => {
       // A coluna `categorias` é nova (migration 20260812000004): se ela ainda não existe no
       // banco, carregamos sem ela em vez de deixar a tela de detalhe inacessível.
       const COLUNAS = `
-          id, data, valor, status, tipo, projeto_id, cliente_id, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
+          id, data, valor, status, tipo, projeto_id, cliente_id, colaborador_id, ambientes, motivo_perda, fechado_at, created_at, pdf_template_version,
           clientes ( nome, email, telefone, contato, cpf_cnpj,
             arquitetos ( nome, contato )
           ),
@@ -313,6 +316,7 @@ const OrcamentoDetalhe = () => {
   };
 
   const totalGeral = orc ? calcularTotalGeral(orc.ambientes ?? []) : 0;
+  const podeExcluir = isAdmin || (!!colaborador?.id && orc?.colaborador_id === colaborador.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -351,9 +355,9 @@ const OrcamentoDetalhe = () => {
               {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
               Re-emitir PDF
             </Button>
-            {/* RULE-088: excluir orçamento é ação de admin — o RLS já barra, mas o botão
-                não deve nem aparecer para o colaborador que só está visualizando. */}
-            {isAdmin && (
+            {/* RULE-088 / CONF-03: quem exclui é o criador do orçamento ou um admin.
+                O RLS já barra o resto; o botão some para não dar erro no clique. */}
+            {podeExcluir && (
               <Button
                 variant="outline"
                 size="sm"
