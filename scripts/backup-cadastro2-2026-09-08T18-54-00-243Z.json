@@ -1,0 +1,303 @@
+[
+  {
+    "id": "59dd24c2-78e1-42be-b35c-449a7c65bcd7",
+    "codigo": "LM2791",
+    "antes": {
+      "watts_por_metro": 60
+    }
+  },
+  {
+    "id": "c19b7497-0b18-472a-b75f-cb36e27e6cee",
+    "codigo": "LM3827",
+    "antes": {
+      "descricao": "FITA LED BABY COB 50W 700W/M 3000K 12V 5M"
+    }
+  },
+  {
+    "id": "b445a8e8-9792-4d5c-87e0-d8c12605d16c",
+    "codigo": "LM3828",
+    "antes": {
+      "descricao": "FITA LED COB 40W 700W/M 3000K 12V 5M IP68"
+    }
+  },
+  {
+    "id": "2ea4f966-2784-4801-8253-56b2f2a69785",
+    "codigo": "LM291",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "b7a5f013-b894-4850-9e90-35710e324153",
+    "codigo": "LM292",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "b3da9617-429a-46d9-bfa1-a166c38001f3",
+    "codigo": "LM3007",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "c50733e5-6abe-4ae7-bd47-1eded2e346b1",
+    "codigo": "LM3008",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "fd053e3e-2f8e-4ff1-9442-7690ba987e9c",
+    "codigo": "LM3009",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "d6219ae5-1d35-4f0e-9a9c-09177991533f",
+    "codigo": "LM3010",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "9715b1bc-37fa-4640-8ed0-cfdf82a92624",
+    "codigo": "LM3011",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "48b7f563-a4de-4aa8-90e7-2ff3a5b3a625",
+    "codigo": "LM3012",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "3cf49502-023c-40d2-a98d-b0746973ad4e",
+    "codigo": "LM3014",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "698f1e08-ee7f-42f5-830b-31b8737404d4",
+    "codigo": "LM3015",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "e277dd4e-cc95-4053-bf5b-e04160004221",
+    "codigo": "LM3033",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "af4d3197-44bf-4894-8efb-0b35252c3942",
+    "codigo": "LM3035",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "89adbf22-d9ad-482c-b05d-ff71422de17f",
+    "codigo": "LM3045",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "80d7453b-fae4-416c-a04e-518df718d77f",
+    "codigo": "LM3047",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "0b605508-4dfa-4ae5-ac7b-f6261a60a951",
+    "codigo": "LM3048",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "99166179-0163-4b54-9b97-8c1aba825896",
+    "codigo": "LM3044",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "64c46698-0eb8-419f-a46b-6238006ace92",
+    "codigo": "LM3049",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "74ac56f1-934f-4b10-b9f7-5c7a66c9acc5",
+    "codigo": "LM3000",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "22528887-d068-4110-9de9-ee57e6e0516e",
+    "codigo": "LM3037",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "031cbc51-164a-4017-976e-de17b9e724b0",
+    "codigo": "LM3002",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "490bf643-bc4a-46d3-8b14-553fe7b6bd5f",
+    "codigo": "LM3034",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "d2af88f2-58b2-4222-bd6f-8eaec7bfce3f",
+    "codigo": "LM3004",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "c83000db-0562-4cb0-8cc4-4489159582bd",
+    "codigo": "LM3032",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "c5e99a6b-496e-4763-93d7-5f8517496696",
+    "codigo": "LM3001",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "4932feb6-5f0a-4b1b-9946-c55e4f213b62",
+    "codigo": "LM3038",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "a8710ee5-dc5e-4ac4-8711-9df05c110b41",
+    "codigo": "LM3013",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "96e6a8a1-0892-4707-babc-952336191f50",
+    "codigo": "LM3041",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "6af4cdc4-7ccd-4fdb-844f-a63caf5c8aa5",
+    "codigo": "LM3003",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "899e54bc-8b4b-40fb-bb6b-2a443d29c9f9",
+    "codigo": "LM3039",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "39d52af2-245f-4dc0-a00f-d12cd36ffb05",
+    "codigo": "LM3006",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "86fa9303-11e7-4e15-82ee-0efd7d21c9fb",
+    "codigo": "LM3040",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "7b561ab0-cf0d-4365-af57-d84fe9f20750",
+    "codigo": "LM3005",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "331a5f0b-ca29-439c-998e-7197216c6cf8",
+    "codigo": "LM3036",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "7ba14240-a7df-4f5d-8247-374d4f2d8d31",
+    "codigo": "LM3042",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "d0563b8e-63b6-4888-b53e-f39d7389411b",
+    "codigo": "LM3050",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "9d6faa67-551d-4a92-8eab-eca93b623580",
+    "codigo": "LM3043",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "1a7fa828-d2c6-4caf-b066-d67a75faf0ee",
+    "codigo": "LM3051",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "3560bfc2-c804-4d74-8c40-d2807b9c77b9",
+    "codigo": "LM3046",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "7252c044-59bf-4f42-8711-f9f898134111",
+    "codigo": "LM2848",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "fdc09b36-ab3d-4540-a89d-4e4619c9ea3c",
+    "codigo": "LM3470",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  }
+]
