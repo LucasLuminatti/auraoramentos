@@ -1,0 +1,207 @@
+[
+  {
+    "id": "1ce16e34-26ea-41ca-bf51-e1321886a75b",
+    "codigo": "LM1118",
+    "tensao": null
+  },
+  {
+    "id": "bd8ca758-ad56-4e48-8fd6-a020cae0ea65",
+    "codigo": "LM1361",
+    "tensao": null
+  },
+  {
+    "id": "b6deed86-fc14-485c-b672-ef52cd1f4abf",
+    "codigo": "LM3490",
+    "tensao": null
+  },
+  {
+    "id": "33efc733-5fca-4728-ac5b-05a67a73a9ff",
+    "codigo": "LM2343",
+    "tensao": null
+  },
+  {
+    "id": "2de868ad-a0b9-4dc2-9851-2042350ffe7b",
+    "codigo": "LM1120",
+    "tensao": null
+  },
+  {
+    "id": "f916726e-fb08-4ee7-b9bf-2a078b206ca5",
+    "codigo": "LM1205",
+    "tensao": null
+  },
+  {
+    "id": "5e8a9968-1576-486a-bcb4-fd910bef09c4",
+    "codigo": "LM1362",
+    "tensao": null
+  },
+  {
+    "id": "ad591de4-8bd1-429c-a064-7ce9eae1e3b7",
+    "codigo": "LM2126",
+    "tensao": null
+  },
+  {
+    "id": "2a6f3b82-5efb-4c12-aa8a-944a5adaa529",
+    "codigo": "LM2550",
+    "tensao": null
+  },
+  {
+    "id": "1bf73fda-3c0e-4d9f-83ba-243e1042478a",
+    "codigo": "LM1363",
+    "tensao": null
+  },
+  {
+    "id": "d5a70530-0fc8-494f-9f1d-8f8f5f4ba332",
+    "codigo": "LM2549",
+    "tensao": null
+  },
+  {
+    "id": "86c57f8c-1bd8-40c5-9f84-f222b93f89d0",
+    "codigo": "LM2127",
+    "tensao": null
+  },
+  {
+    "id": "c9a7c8e7-b169-44a1-9a31-f52106299d3b",
+    "codigo": "LM2551",
+    "tensao": null
+  },
+  {
+    "id": "21d13124-fdf5-4db6-b5dc-c8c493835a4d",
+    "codigo": "LM2553",
+    "tensao": null
+  },
+  {
+    "id": "368bbb26-5758-4850-9530-9827d839b2aa",
+    "codigo": "LM3491",
+    "tensao": null
+  },
+  {
+    "id": "e19711f3-7a91-4397-b3c0-ff3346229386",
+    "codigo": "LM2538",
+    "tensao": null
+  },
+  {
+    "id": "93448529-1c1a-4ffc-8bfe-aad45eda4a9c",
+    "codigo": "LM2536",
+    "tensao": null
+  },
+  {
+    "id": "971bf5e4-8ef1-4ce6-8302-083a9557ffe9",
+    "codigo": "LM2537",
+    "tensao": null
+  },
+  {
+    "id": "43600249-2dbd-4fde-a8e9-e2e4c4837de7",
+    "codigo": "LM3372",
+    "tensao": null
+  },
+  {
+    "id": "0e33cc1c-d9d6-441c-b0ba-4d849c054f29",
+    "codigo": "LM2344",
+    "tensao": null
+  },
+  {
+    "id": "142f6181-98bd-4be0-81e9-45ba39b6aaa8",
+    "codigo": "LM1122",
+    "tensao": null
+  },
+  {
+    "id": "04166883-4f65-42a3-933b-ee377960ecf2",
+    "codigo": "LM1117",
+    "tensao": null
+  },
+  {
+    "id": "ef31a72f-09b9-47bb-99a7-b5ade6536bde",
+    "codigo": "LM1357",
+    "tensao": null
+  },
+  {
+    "id": "e4033e4e-f332-45af-b46f-3e8e9ed5fdef",
+    "codigo": "LM1240",
+    "tensao": null
+  },
+  {
+    "id": "41843303-7d10-46d7-9645-01e0a4636075",
+    "codigo": "LM1463",
+    "tensao": null
+  },
+  {
+    "id": "9a2044f1-725d-4003-8d01-84eba1253f7b",
+    "codigo": "LM2552",
+    "tensao": null
+  },
+  {
+    "id": "726c89c5-c27e-42fa-b635-92e0691ed354",
+    "codigo": "LM3489",
+    "tensao": null
+  },
+  {
+    "id": "9c722b9d-2239-4664-834b-0022225cdfed",
+    "codigo": "LM2128",
+    "tensao": null
+  },
+  {
+    "id": "b10f318a-7559-499f-9342-2dc911ac2704",
+    "codigo": "LM1359",
+    "tensao": null
+  },
+  {
+    "id": "a0c755ec-80eb-4291-9d3f-9b8e90a2666a",
+    "codigo": "LM3493",
+    "tensao": null
+  },
+  {
+    "id": "ef3c21d8-69f5-4d8c-b477-fbcbaedf8852",
+    "codigo": "LM3492",
+    "tensao": null
+  },
+  {
+    "id": "9eba8dbd-dd49-47a4-9e3d-fa94db7eb27c",
+    "codigo": "LM1119",
+    "tensao": null
+  },
+  {
+    "id": "f21f7702-7605-4f87-8180-df0d5d877e74",
+    "codigo": "LM1103",
+    "tensao": null
+  },
+  {
+    "id": "b6e15ab6-6e40-4da9-83bd-1aa0e4d5e306",
+    "codigo": "LM1356",
+    "tensao": null
+  },
+  {
+    "id": "fb96c82a-8696-40c1-983a-ac263b4fc4e5",
+    "codigo": "LM1102",
+    "tensao": null
+  },
+  {
+    "id": "50bb283b-abd4-4bb8-b02d-9197f3ea6d90",
+    "codigo": "LM1358",
+    "tensao": null
+  },
+  {
+    "id": "1cfe08d1-4c4e-4645-b5fd-ec89a929961d",
+    "codigo": "LM1364",
+    "tensao": null
+  },
+  {
+    "id": "2b558895-bf4e-422e-9bf1-1070a2f829b9",
+    "codigo": "LM2131",
+    "tensao": null
+  },
+  {
+    "id": "56351da9-b4fe-4c3e-a28d-a07433637b5d",
+    "codigo": "LM2129",
+    "tensao": null
+  },
+  {
+    "id": "ccd110d5-fbf8-4304-9e80-3f578ab4166d",
+    "codigo": "LM2535",
+    "tensao": null
+  },
+  {
+    "id": "73bd7c09-a55f-4e97-bfcc-6c83c995ac08",
+    "codigo": "LM2548",
+    "tensao": null
+  }
+]
