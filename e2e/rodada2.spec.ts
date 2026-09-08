@@ -94,18 +94,24 @@ test("RULE-103: perfil estreito recusa fita que não é Baby", async ({ page }) 
   // a sugestão da Baby aparece (a única que sobrevive sem largura_mm no cadastro)
   await expect(page.getByText(/a fita Baby é a indicada/i)).toBeVisible({ timeout: 15_000 });
 
+  // O campo de código guarda o que foi DIGITADO mesmo quando a escolha é recusada — quem
+  // diz se a fita entrou de verdade é a descrição, que só o produto aplicado preenche.
   const buscaFita = page.locator('input[placeholder="Código da fita"]').last();
+  const descricaoFita = buscaFita.locator(
+    "xpath=following::input[@placeholder='Descrição'][1]",
+  );
+
   await buscaFita.fill(FITA_COMUM);
   const opcao = page.getByRole("button", { name: new RegExp(`^${FITA_COMUM}\\b`, "i") }).first();
   await expect(opcao).toBeVisible({ timeout: 15_000 });
   await opcao.click();
 
-  // bloqueia (decisão da Paolla em 2026-09-08: "nesse caso prefiro que trave")
-  await expect(page.getByText(/aceita SOMENTE fita Baby/i).first()).toBeVisible();
-  // e a fita NÃO entra no sistema
-  await expect(buscaFita).not.toHaveValue(FITA_COMUM);
+  // bloqueia (decisão da Paolla em 2026-09-08: "nesse caso prefiro que trave").
+  // "não cabe no canal" é do texto do BLOQUEIO — o alerta anterior não dizia isso.
+  await expect(page.getByText(/não cabe no canal/i).first()).toBeVisible();
+  await expect(descricaoFita).toHaveValue("");
 
   // a Baby sugerida, essa sim, entra com um clique
   await page.getByRole("button", { name: /LM3827/ }).first().click();
-  await expect(buscaFita).toHaveValue("LM3827");
+  await expect(descricaoFita).toHaveValue(/BABY/i);
 });

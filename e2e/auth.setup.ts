@@ -18,8 +18,10 @@ setup("authenticate", async ({ page }) => {
   await page.getByRole("textbox", { name: "Senha" }).fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  // login OK → redireciona pra home (raiz) e mostra a saudação
-  await expect(page).toHaveURL(/orcamentosaura\.com\.br\/?$/);
+  // login OK → redireciona pra home (raiz) e mostra a saudação.
+  // A checagem é pelo CAMINHO, não pelo domínio: assim a suíte roda tanto contra
+  // produção quanto contra o dev local (E2E_BASE_URL=http://localhost:8080).
+  await expect(page).toHaveURL((url) => url.pathname === "/");
   await expect(page.getByText(/Bom dia|Boa tarde|Boa noite|lenny\.wajcberg/i)).toBeVisible({ timeout: 20_000 });
 
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
