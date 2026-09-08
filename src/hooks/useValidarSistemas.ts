@@ -13,8 +13,10 @@ export interface ValidacaoState {
   [sistemaId: string]: ValidacaoResultado;
 }
 
-// Converte um SistemaIluminacao para o formato esperado pela edge function
-function sistemaParaPayload(sis: SistemaIluminacao) {
+// Converte um SistemaIluminacao para o formato esperado pela edge function.
+// Exportado para teste: o payload é o contrato com a edge, e campo que falta aqui
+// desliga silenciosamente a validação lá (foi o que aconteceu com `codigo_fita`).
+export function sistemaParaPayload(sis: SistemaIluminacao) {
   const comprimento_perfil_m = sis.perfil
     ? sis.perfil.comprimentoPeca
     : null;
@@ -44,6 +46,10 @@ function sistemaParaPayload(sis: SistemaIluminacao) {
     // no servidor (o payload é opcional na edge — snapshot antigo simplesmente não envia).
     descricao_perfil: sis.perfil?.descricao ?? null,
     descricao_fita: sis.fita.descricao ?? null,
+    // `codigo_fita` é o campo que a edge usa para saber se JÁ EXISTE fita escolhida
+    // (`temFita`). Sem ele, as checagens de Baby e de fita com IP do servidor nunca
+    // disparavam — a regra existia lá e ficava inerte, valendo só no front.
+    codigo_fita: sis.fita.codigo || null,
     descricao_driver: sis.driver.descricao ?? null,
     // RULE-013: largura da fita p/ validação dimensional perfil×fita (edge regra #6).
     // Snapshots antigos sem largura_mm enviam null → validação é pulada no server.
