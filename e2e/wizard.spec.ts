@@ -58,13 +58,17 @@ test("criar orçamento → autocomplete com preço → gerar PDF", async ({ page
   await page.getByRole("option", { name: /Primeiro Orçamento/i }).click();
   await page.getByRole("button", { name: /Próximo/i }).click();
 
+  // Passo de categorias de fita (Onda 1 / WP-D) — segue sem criar nenhuma
+  await expect(page.getByRole("heading", { name: /Categorias de Fita/i })).toBeVisible();
+  await page.getByRole("button", { name: /Próximo/i }).click();
+
   // Step 2 — adicionar ambiente + luminária
   await expect(page.getByRole("heading", { name: /Ambientes e Itens/i })).toBeVisible();
   await page.getByRole("button", { name: /Adicionar Ambiente/i }).click();
-  await page.getByRole("button", { name: /Adicionar Luminária/i }).click();
 
-  // autocomplete: digita código → opção aparece → seleciona
-  await page.getByRole("textbox", { name: /Código do item/i }).first().fill(PRODUTO.codigo);
+  // autocomplete do ambiente: digita código → opção aparece → seleciona
+  // (o botão "Adicionar Luminária" deu lugar à busca única "Adicionar ao ambiente")
+  await page.locator('input[placeholder*="Buscar produto"]').fill(PRODUTO.codigo);
   const opcao = page.getByRole("button", { name: new RegExp(`${PRODUTO.codigo}.*BULBO`, "i") });
   await expect(opcao).toBeVisible({ timeout: 15_000 });
   // o dropdown já mostra o preço de tabela integrado

@@ -53,6 +53,10 @@ async function gotoStep2ComAmbiente(page: Page) {
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: /Primeiro Orçamento/i }).click();
   await page.getByRole("button", { name: /Próximo/i }).click();
+  // O wizard virou 4 passos (Onda 1 / WP-D): Categorias de Fita entrou entre Dados e
+  // Ambientes. Segue sem criar categoria — a fita é escolhida direto no sistema.
+  await expect(page.getByRole("heading", { name: /Categorias de Fita/i })).toBeVisible();
+  await page.getByRole("button", { name: /Próximo/i }).click();
   await expect(page.getByRole("heading", { name: /Ambientes e Itens/i })).toBeVisible();
   await page.getByRole("button", { name: /Adicionar Ambiente/i }).click();
 }
@@ -60,12 +64,10 @@ async function gotoStep2ComAmbiente(page: Page) {
 test("CAT-01: WALL WASHER, CANTONEIRA, NANO aparecem no seletor de PERFIL e a fita no seletor de FITA", async ({ page }) => {
   await gotoStep2ComAmbiente(page);
 
-  // abre a aba de Sistemas e cria um sistema
-  await page.getByRole("tab", { name: /Sistemas de Iluminação/i }).click();
-  await page.getByRole("button", { name: /Novo Sistema/i }).click();
-
-  // revela o seletor de perfil (é opcional, atrás de "Vincular Perfil")
-  await page.getByRole("button", { name: /Vincular Perfil/i }).click();
+  // A UI virou uma busca única por ambiente (Onda 1): escolher um PERFIL nela já abre o
+  // sistema (perfil + fita + driver) com os seletores próprios de perfil e de fita.
+  await page.locator('input[placeholder*="Buscar produto"]').fill(PERFIS[0].codigo);
+  await page.getByRole("button", { name: new RegExp(`^${PERFIS[0].codigo}\\b`, "i") }).first().click();
 
   // cada família corrigida deve aparecer como opção no seletor de perfil
   const perfilBox = page.getByRole("textbox", { name: /Código do perfil/i }).first();
@@ -91,9 +93,8 @@ test("CAT-01: WALL WASHER, CANTONEIRA, NANO aparecem no seletor de PERFIL e a fi
 test("CAT-02: ao adicionar MAGNETO 48V, a dica descreve o MAGNETO (48V), não o TINY (24V)", async ({ page }) => {
   await gotoStep2ComAmbiente(page);
 
-  // MAGNETO 48V tem tipo_produto null → aparece no seletor de luminária
-  await page.getByRole("button", { name: /Adicionar Luminária/i }).click();
-  await page.getByRole("textbox", { name: /Código do item/i }).first().fill(MAGNETO.codigo);
+  // MAGNETO 48V tem tipo_produto null → aparece na busca do ambiente
+  await page.locator('input[placeholder*="Buscar produto"]').fill(MAGNETO.codigo);
   const opt = page.getByRole("button", { name: new RegExp(`^${MAGNETO.codigo}\\b`, "i") });
   await expect(opt.first()).toBeVisible({ timeout: 15_000 });
   await opt.first().click();

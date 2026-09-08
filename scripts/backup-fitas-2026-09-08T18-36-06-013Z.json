@@ -1,0 +1,236 @@
+[
+  {
+    "id": "7a377e1d-d642-49a7-b9c5-7147c9564aa7",
+    "codigo": "LM1152",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "267fc9b7-f195-4216-9f74-8ba0c67463f8",
+    "codigo": "LM1153",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "1afe2823-0c2b-416f-aa1c-879eb00f3d9d",
+    "codigo": "LM1251",
+    "watts_por_metro": null,
+    "tamanho_rolo_m": 5
+  },
+  {
+    "id": "bc183287-f8a5-486e-80da-bc2aa4d2a0c8",
+    "codigo": "LM532",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "061e5343-2731-4b81-a614-1087418deb99",
+    "codigo": "LM527",
+    "watts_por_metro": null,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "a7db6abe-3ce2-4cde-89b6-19d11e44293b",
+    "codigo": "LM529",
+    "watts_por_metro": null,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "b7e7a82a-7a87-4b14-9d96-a750f7beeb8b",
+    "codigo": "LM534",
+    "watts_por_metro": null,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "5579bc5a-5c20-46ea-9118-8258320680d2",
+    "codigo": "LM536",
+    "watts_por_metro": null,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "9f279db2-6d69-4788-a30a-94862fa3a4bd",
+    "codigo": "LM3530",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "2d32dee2-50b5-4847-99e4-962205242580",
+    "codigo": "LM819",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "6eab61a2-dd17-42fd-b866-3bfd5e36aeb9",
+    "codigo": "LM824",
+    "watts_por_metro": 5,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "92fbfd0a-b39d-49dc-9b31-ffea14d1ac13",
+    "codigo": "LM535",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "1629d2fa-1bf4-4bb7-b328-36be160b5188",
+    "codigo": "LM531",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "a0ac3be6-646f-401e-9b63-f2fb2ae74d3b",
+    "codigo": "LM3526",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "1c8dc24a-1af6-4fd0-b642-7f056b494fce",
+    "codigo": "LM3634",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "698f1084-9083-4ad8-992a-8aa774b66126",
+    "codigo": "LM3636",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "835b64e5-18b0-4d73-88fa-b638644c1747",
+    "codigo": "LM3637",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "0e2909e2-55c0-4259-9651-e80a1f602b34",
+    "codigo": "LM3667",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "0accc224-1d30-4c51-81ac-4aa7c73fd813",
+    "codigo": "LM3668",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "ac7b5050-99f6-4319-aa85-1a8edf361173",
+    "codigo": "LM3669",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "55a9f715-17aa-4ea2-9dc6-59ea0d7b34b9",
+    "codigo": "LM3670",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "ef656eb5-e557-45ee-a539-154efeb44d75",
+    "codigo": "LM3823",
+    "watts_por_metro": 28,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "bab77608-b87a-475c-a84b-cdb18ebb97f9",
+    "codigo": "LM3825",
+    "watts_por_metro": 28,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "777d45b7-94a8-4a78-a655-bec2638bcdc7",
+    "codigo": "LM1250",
+    "watts_por_metro": null,
+    "tamanho_rolo_m": 5
+  },
+  {
+    "id": "b29e4ac3-d3de-449a-a1ff-b1be7c2e5499",
+    "codigo": "LM3826",
+    "watts_por_metro": 28,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "c19b7497-0b18-472a-b75f-cb36e27e6cee",
+    "codigo": "LM3827",
+    "watts_por_metro": 7,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "b445a8e8-9792-4d5c-87e0-d8c12605d16c",
+    "codigo": "LM3828",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "f7602324-804f-4fd9-a3b8-722a6f6c0fd2",
+    "codigo": "LM3638",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "c179af12-9c58-404b-b154-4fb3619b2622",
+    "codigo": "LM530",
+    "watts_por_metro": 5,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "419fba93-3643-42bb-8031-415944a2671f",
+    "codigo": "LM3635",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "5f3f86a7-b86a-460d-8eb7-a35fd7c5876e",
+    "codigo": "LM3527",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "c3127fe0-1db4-49a6-ad40-002047d2dd6a",
+    "codigo": "LM3666",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "2f38892c-73ad-401a-82fc-1602680507fd",
+    "codigo": "LM3824",
+    "watts_por_metro": 28,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "b95b16e1-9f61-4653-be27-0411e5eacf57",
+    "codigo": "LM1249",
+    "watts_por_metro": null,
+    "tamanho_rolo_m": 5
+  },
+  {
+    "id": "dbaa85fa-b61c-4b18-b5c0-f61e856bfdb4",
+    "codigo": "LM3665",
+    "watts_por_metro": 10,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "b6adffde-aed7-4132-a114-f2f03fb905c9",
+    "codigo": "LM3531",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "36690d02-51f1-436b-a940-85c7c017f4d9",
+    "codigo": "LM820",
+    "watts_por_metro": 14.4,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "4e1e575e-01a0-4a5a-98d3-1aabe9bbc954",
+    "codigo": "LM823",
+    "watts_por_metro": 5,
+    "tamanho_rolo_m": null
+  },
+  {
+    "id": "76777853-3879-440b-908b-f0be94becc7d",
+    "codigo": "LM528",
+    "watts_por_metro": 5,
+    "tamanho_rolo_m": null
+  }
+]
