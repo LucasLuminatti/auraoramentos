@@ -52,6 +52,10 @@ describe('avisoConferirPassadas (RULE-009/105) — só avisa, nunca muda o preç
     expect(avisoConferirPassadas(perfil(PERFIS.sanca37))).toContain('1 ou 2 passadas');
   });
 
+  it('a nota da sanca some depois que o vendedor escolhe 2 passadas', () => {
+    expect(avisoConferirPassadas(perfil(PERFIS.sanca37, { passadas: 2 }))).toBeNull();
+  });
+
   it('não avisa quando o catálogo tem a regra da família', () => {
     expect(avisoConferirPassadas(perfil(PERFIS.largo30, { familia_perfil: 'light_30' }))).toBeNull();
   });
@@ -61,8 +65,19 @@ describe('avisoConferirPassadas (RULE-009/105) — só avisa, nunca muda o preç
     expect(avisoConferirPassadas(perfil(PERFIS.cantoneira10))).toBeNull();
   });
 
-  it('não insiste depois de o vendedor ajustar as passadas', () => {
-    expect(avisoConferirPassadas(perfil(PERFIS.largo30, { passadas: 2 }))).toBeNull();
+  it('explica o número que o sistema calculou pelo canal (2ª rodada, resposta 4)', () => {
+    const aviso = avisoConferirPassadas(perfil(PERFIS.largo30, { passadas: 2, passadasPadrao: 1 }));
+    expect(aviso).toContain('2 passadas');
+    expect(aviso).toContain('30mm');
+  });
+
+  it('não insiste quando o catálogo já traz as 2 passadas', () => {
+    expect(avisoConferirPassadas(perfil(PERFIS.largo30, { passadas: 2, passadasPadrao: 2 }))).toBeNull();
+  });
+
+  it('avisa de volta se o vendedor baixar um canal largo para 1 passada', () => {
+    expect(avisoConferirPassadas(perfil(PERFIS.largo30, { passadas: 1, passadasPadrao: 1 })))
+      .toContain('está com 1 passada');
   });
 
   it('perfil vazio / ausente não gera aviso', () => {

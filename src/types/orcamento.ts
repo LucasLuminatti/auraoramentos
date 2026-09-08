@@ -909,6 +909,67 @@ export function ambienteTemLampada(amb: Ambiente): boolean {
   );
 }
 
+// ─── RULE-108: linha TINY — spot avulso exige driver 24V externo ───
+
+/** Spot avulso da linha TINY (2ª rodada, resposta 6: "São as linhas SPOT TINY, MAG TINY,
+ *  da página 17 à 25"). No catálogo são 15 códigos (LM3176…LM3188 e LM3558/LM3559), todos
+ *  24V e SEM driver embutido — o driver é externo e dimensionado pela soma das potências.
+ *  O TINY MAG (trilho magnético) fica de fora: ele vira sistema composto e já tem o aviso
+ *  próprio de driver 24V. */
+export function ehSpotTiny(descricao?: string | null): boolean {
+  const d = (descricao ?? '').toUpperCase();
+  // O magnético é excluído por MAG/MAGNETO em QUALQUER posição do nome: a linha já apareceu
+  // no catálogo como "TINY MAG ..." e como "MAGNETO TINY ..." em momentos diferentes.
+  return /^\s*TINY\b/.test(d) && !/\bMAG(NETO|NETIC[OA])?\b/.test(d);
+}
+
+/** RULE-108 — quantos spots TINY o ambiente tem. O aviso de driver depende da PRESENÇA do
+ *  spot, não da potência: se o catálogo não trouxer os watts, o aviso continua valendo. */
+export function qtdSpotsTiny(amb: Ambiente): number {
+  return amb.luminarias
+    .filter((l) => ehSpotTiny(l.descricao))
+    .reduce((acc, l) => acc + (l.quantidade || 0), 0);
+}
+
+/** RULE-108 — potência somada dos spots TINY do ambiente. O driver é dimensionado pela
+ *  SOMA (não por spot), como a equipe descreveu na reunião 6. */
+export function potenciaSpotsTiny(amb: Ambiente): number {
+  return amb.luminarias
+    .filter((l) => ehSpotTiny(l.descricao))
+    .reduce((acc, l) => acc + (l.potencia_watts ?? 0) * (l.quantidade || 0), 0);
+}
+
+/** Driver 24V lançado como item avulso do ambiente (o vendedor pode incluir pela busca de
+ *  luminárias em vez de montar um sistema). */
+function itemEhDriver24V(descricao?: string | null, tensao?: number | null): boolean {
+  const d = (descricao ?? '').toUpperCase();
+  if (!/\b(DRIVER|FONTE)\b/.test(d)) return false;
+  return tensao === 24 || /\b24\s*V\b/.test(d);
+}
+
+/** RULE-108 — o ambiente já tem de onde alimentar os spots TINY? Vale driver de sistema,
+ *  driver aplicado dentro de um composto e driver lançado avulso. */
+export function ambienteTemDriver24V(amb: Ambiente): boolean {
+  const emSistema = amb.sistemas.some((s) => !!s.driver.codigo && s.driver.voltagem === 24);
+  const avulso = amb.luminarias.some((l) => itemEhDriver24V(l.descricao, l.tensao));
+  // O sub-item do composto não guarda tensão, então quem decide é o NOME. Fixar 24 aqui
+  // faria o driver 48V de um trilho MAGNETO contar como alimentação dos spots TINY.
+  const emComposto = amb.luminarias.some((l) =>
+    (l.composicao ?? []).some(
+      (c) =>
+        (c.papel === 'driver_recomendado' || c.papel === 'driver_obrigatorio') &&
+        itemEhDriver24V(c.descricao, null),
+    ),
+  );
+  return emSistema || avulso || emComposto;
+}
+
+/** RULE-108 — potência mínima que os drivers 24V precisam somar para os spots TINY do
+ *  ambiente, já com a folga de 20% que a equipe usa nos demais drivers (RULE-002). */
+export function potenciaMinimaDriverTiny(amb: Ambiente): number {
+  return Math.ceil(potenciaSpotsTiny(amb) * MARGEM_SEGURANCA_DRIVER);
+}
+
 // ─── RULE-009: conferência de passadas em perfil sem regra cadastrada ───
 
 /** Largura da FITA que cabe no perfil, quando o nome declara ("PARA FITAS DE LED COM
@@ -923,33 +984,73 @@ export function larguraCanalDeclarada(descricao?: string | null): number | null 
  *  30 mm → 2 passadas, 50 mm → 3; 12 mm → 1). */
 const LARGURA_MIN_MULTIPLAS_PASSADAS = 25;
 
+/** Largura de fita usada como referência para contar passadas.
+ *  A equipe trabalha com 12, 10, 8 e 5 mm (Baby) e o cadastro NÃO traz a medida em
+ *  nenhuma das 316 fitas — na 2ª rodada (resposta 3) a decisão foi não levantar produto
+ *  a produto e deixar só a relação com a Baby como alerta. Sem o dado por fita, a conta
+ *  usa a mais larga das padrão (12 mm): o número de passadas que sai daqui é o que cabe
+ *  em qualquer fita comum. */
+export const LARGURA_FITA_REFERENCIA_MM = 12;
+
+/** Teto de passadas praticado pela equipe (RULE-009: 50 mm → 3). */
+const MAX_PASSADAS = 3;
+
+/** RULE-009 — quantas passadas de fita cabem lado a lado no canal declarado no nome do
+ *  perfil (2ª rodada, resposta 4: "faça calcular sozinho, mas que não fique travado e se
+ *  necessário a gente edite"). Bate com o que a equipe confirmou: 12 mm → 1, 30 mm → 2,
+ *  50 mm → 3 (pelo teto).
+ *
+ *  Nunca REDUZ o que o catálogo já traz: `passadas_padrao` maior continua valendo, porque
+ *  diminuir passadas sozinho baixaria o preço da fita a partir de uma leitura de nome.
+ *  O vendedor pode mudar o número dos dois lados no seletor — ele não é mais travado. */
+export function passadasPorCanal(
+  descricao?: string | null,
+  passadasPadrao?: number | null,
+): 1 | 2 | 3 {
+  const base = Math.min(Math.max(Math.trunc(passadasPadrao ?? 1) || 1, 1), MAX_PASSADAS);
+  const canal = larguraCanalDeclarada(descricao);
+  if (canal == null) return base as 1 | 2 | 3;
+  const cabem = Math.floor(canal / LARGURA_FITA_REFERENCIA_MM);
+  const calculado = Math.min(Math.max(cabem, 1), MAX_PASSADAS);
+  return Math.max(base, calculado) as 1 | 2 | 3;
+}
+
 /** Perfil de sanca (RULE-105: a equipe escolhe 1 ou 2 passadas caso a caso). */
 function ehPerfilSanca(descricao?: string | null): boolean {
   return /\bSANCA\b/i.test(descricao ?? '');
 }
 
-/** RULE-009/105 — aviso de conferência das passadas, ou null quando não há o que dizer.
- *  Dois casos, com textos diferentes:
- *   - canal largo sem regra cadastrada no catálogo (o default de 1 passada costuma estar
- *     errado e sai barato demais);
- *   - sanca, onde a equipe decide 1 ou 2 caso a caso.
- *  Só AVISA: mudar as passadas sozinho alteraria o preço da fita a partir de uma leitura
- *  de nome, e a relação "perfil de 30 mm" × "canal até 30 mm" continua ambígua. */
+/** RULE-009/105 — nota sobre as passadas, ou null quando não há o que dizer.
+ *  Três casos, com textos diferentes:
+ *   - sanca, onde a equipe decide 1 ou 2 caso a caso (RULE-105);
+ *   - passadas que o sistema calculou pelo canal declarado no nome (explica de onde saiu
+ *     o número, porque ele mexe na metragem de fita e o vendedor pode mudar);
+ *   - canal largo que ficou com 1 passada porque o vendedor baixou na mão.
+ *  Nunca bloqueia: depois da 2ª rodada o número é calculado, mas continua editável. */
 export function avisoConferirPassadas(perfil?: {
   codigo?: string;
   descricao?: string | null;
   familia_perfil?: string | null;
   passadas?: number;
+  passadasPadrao?: number;
 } | null): string | null {
   if (!perfil?.codigo) return null;
-  if ((perfil.passadas ?? 1) > 1) return null;      // já foi ajustado pelo vendedor
   if (ehPerfilSanca(perfil.descricao)) {
-    return 'Sanca costuma levar 1 ou 2 passadas de fita, conforme o projeto — confirme antes de fechar (a metragem muda junto).';
+    // Some assim que o vendedor escolhe — na sanca o número é decisão dele (RULE-105).
+    return (perfil.passadas ?? 1) > 1
+      ? null
+      : 'Sanca costuma levar 1 ou 2 passadas de fita, conforme o projeto — confirme antes de fechar (a metragem muda junto).';
   }
-  if (perfil.familia_perfil) return null;           // tem regra cadastrada: o default é confiável
   const largura = larguraCanalDeclarada(perfil.descricao);
+  const calculado = passadasPorCanal(perfil.descricao, perfil.passadasPadrao);
+  const passadas = perfil.passadas ?? 1;
+  if (largura != null && calculado > (perfil.passadasPadrao ?? 1) && passadas === calculado) {
+    return `Canal de até ${largura}mm: cabem ${calculado} passadas de fita de ${LARGURA_FITA_REFERENCIA_MM}mm lado a lado, e foi isso que o sistema aplicou. Se o projeto pedir outro número, troque aqui — a metragem de fita acompanha.`;
+  }
+  if (passadas > 1) return null;                    // já está com mais de uma passada
+  if (perfil.familia_perfil) return null;           // tem regra cadastrada: o default é confiável
   if (largura != null && largura >= LARGURA_MIN_MULTIPLAS_PASSADAS) {
-    return `Este perfil aceita fita de até ${largura}mm e está com 1 passada. O catálogo não traz o padrão desta linha — confira se são 2 ou 3 passadas (a metragem de fita muda junto).`;
+    return `Este perfil aceita fita de até ${largura}mm e está com 1 passada. Confira se não são 2 ou 3 (a metragem de fita muda junto).`;
   }
   return null;
 }

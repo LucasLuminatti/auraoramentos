@@ -222,12 +222,17 @@ function validarDriverAlojado(
   }
 }
 
-/** RULE-103 + RULE-104 (BLOQUEIO): compatibilidade física perfil × fita.
- *  Só dispara com dado suficiente — payload sem descrição/subtipo da fita não gera erro. */
+/** Compatibilidade física perfil × fita.
+ *  RULE-103 (Baby) é ALERTA desde a 2ª rodada de respostas (resposta 3: a largura não vai
+ *  ser levantada fita a fita e "vamos deixar em alerta apenas a relação com a fita baby").
+ *  RULE-104 (fita com IP em Nano/Cantoneira) continua BLOQUEIO — não veio na pergunta e é
+ *  incompatibilidade confirmada na R6.
+ *  Só dispara com dado suficiente — payload sem descrição/subtipo da fita não diz nada. */
 function validarPerfilFita(
   item: SistemaItem,
   regrasPerfil: Record<string, unknown> | null,
   erros: string[],
+  alertas: string[],
 ) {
   const nomePerfil = item.familia_perfil ?? item.descricao_perfil ?? "selecionado";
 
@@ -237,12 +242,12 @@ function validarPerfilFita(
   // "fita ainda não selecionada" de "fita comum" (subtipo_fita/descricao vêm preenchidos
   // com valores neutros durante a montagem do sistema).
   const temFita = !!(item.codigo_fita ?? "").trim();
-  const jaAvisouBaby = erros.some((e) => /SOMENTE fita Baby/i.test(e));
+  const jaAvisouBaby = alertas.some((a) => /fita Baby/i.test(a));
   if (!jaAvisouBaby && temFita && perfilSomenteFitaBaby(item, regrasPerfil)) {
     if (!fitaEhBaby(item)) {
-      erros.push(
-        `Perfil ${nomePerfil} aceita SOMENTE fita Baby — outra fita não cabe no canal. ` +
-        `Selecione uma fita Baby.`,
+      alertas.push(
+        `Perfil ${nomePerfil} é de canal estreito e costuma aceitar SOMENTE fita Baby — ` +
+        `confira se a fita escolhida cabe.`,
       );
     }
   }
@@ -293,21 +298,23 @@ function validarSistemaPadrao(
     const larguraMaxCanal = regrasPerfil.largura_max_fita_mm as number | null;
     const somenteBaby = regrasPerfil.somente_baby as boolean;
 
-    // Regra #6 — Largura da fita vs canal do perfil (CRÍTICO)
+    // Regra #6 — Largura da fita vs canal do perfil.
+    // 2ª rodada, resposta 3: a largura por fita não vai ser cadastrada, então isso deixou de
+    // bloquear (e hoje nunca dispara — `largura_mm` está vazio nas 316 fitas).
     if (larguraMaxCanal != null && largura_fita_mm != null && largura_fita_mm > larguraMaxCanal) {
-      erros.push(
+      alertas.push(
         `Fita larga demais: ${largura_fita_mm}mm não cabe no canal do perfil ${familia_perfil} ` +
         `(máximo ${larguraMaxCanal}mm).`,
       );
     }
 
-    // Regras #15, #16, #17 / RULE-103 — Somente Baby (CRÍTICO).
+    // Regras #15, #16, #17 / RULE-103 — Somente Baby (ALERTA desde a 2ª rodada).
     // O caso "sem regra cadastrada" (família detectada pelo nome) é coberto por
     // `validarPerfilFita`, chamado transversalmente no handler.
     if (somenteBaby && subtipo_fita !== "baby" && !fitaEhBaby(item)) {
-      erros.push(
-        `Perfil ${familia_perfil} aceita SOMENTE fita Baby. ` +
-        `Selecione uma fita Baby (largura ≤ ${larguraMaxCanal}mm).`,
+      alertas.push(
+        `Perfil ${familia_perfil} é de canal estreito e costuma aceitar SOMENTE fita Baby ` +
+        `(largura ≤ ${larguraMaxCanal}mm) — confira se a fita escolhida cabe.`,
       );
     }
 
@@ -623,7 +630,7 @@ serve(async (req) => {
       // Validações transversais (aplicam a qualquer sistema)
       // RULE-029/100 e RULE-103/104 — incompatibilidades FÍSICAS: sempre ERRO (CONF-01).
       validarDriverAlojado(item, regrasPerfil, erros);
-      validarPerfilFita(item, regrasPerfil, erros);
+      validarPerfilFita(item, regrasPerfil, erros, alertas);
       validarKitPendente(item, erros);
       validarFitaFlexivel(item, alertas, sugestoes);
 

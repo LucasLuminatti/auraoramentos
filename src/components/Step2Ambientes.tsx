@@ -23,13 +23,14 @@ import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
 import type { Ambiente, ItemLuminaria, CategoriaFita } from "@/types/orcamento";
-import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos, clonarItemLuminaria } from "@/types/orcamento";
+import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos, clonarItemLuminaria, qtdSpotsTiny, potenciaSpotsTiny, potenciaMinimaDriverTiny, ambienteTemDriver24V } from "@/types/orcamento";
 import { toast } from "sonner";
 
 interface AdvisoryItem {
   ambienteNome: string;
   tipo: 'fita-sem-driver' | 'driver-sem-fita' | 'perfil-sem-fita' | 'peca-sem-lampada'
-      | 'composto-sem-driver' | 'composto-sem-conector' | 'modular-sem-fita';
+      | 'composto-sem-driver' | 'composto-sem-conector' | 'modular-sem-fita'
+      | 'spot-tiny-sem-driver';
   descricao: string;
 }
 
@@ -84,6 +85,7 @@ const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
   'composto-sem-driver': 'Sistema composto sem driver aplicado',
   'composto-sem-conector': 'Sistema composto sem o conector obrigatório da família',
   'modular-sem-fita': 'SYSTEM MOLD sem fita adicionada',
+  'spot-tiny-sem-driver': 'Spot da linha TINY sem driver 24V no ambiente',
 };
 
 const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }: Step2Props) => {
@@ -219,6 +221,20 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }
             itensIncompletos.push({ ambienteNome: amb.nome, tipo: 'peca-sem-lampada', descricao: lum.descricao });
           }
         }
+      }
+      // RULE-108 (resposta 6 da 2ª rodada): spot TINY é 24V sem driver embutido — o driver
+      // é externo e dimensionado pela SOMA das potências dos spots TINY do ambiente.
+      // O gatilho é a PRESENÇA do spot: spot TINY sem potência no cadastro somaria 0 e
+      // calaria justamente o aviso que a regra existe para dar.
+      if (qtdSpotsTiny(amb) > 0 && !ambienteTemDriver24V(amb)) {
+        const potenciaTiny = potenciaSpotsTiny(amb);
+        itensIncompletos.push({
+          ambienteNome: amb.nome,
+          tipo: 'spot-tiny-sem-driver',
+          descricao: potenciaTiny > 0
+            ? `${potenciaTiny}W somados nos spots TINY — inclua driver(s) 24V de no mínimo ${potenciaMinimaDriverTiny(amb)}W (já com a folga de 20%).`
+            : 'Os spots TINY do ambiente estão sem potência no cadastro — inclua o driver 24V e confira a potência somada antes de fechar.',
+        });
       }
       // VAL-01 / D-03: avisos de compostos incompletos (não-bloqueante)
       itensIncompletos.push(...detectarAvisosComposto(amb));

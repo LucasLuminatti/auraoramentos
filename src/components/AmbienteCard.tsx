@@ -12,7 +12,7 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto, CategoriaFita, ItemComposicao } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO, tipoLampadaDoSpot, fachosDoSpot, ehSpotConnectNoFrame, skuJuncaoConnect, avisoConferirPassadas, type TipoLampada } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO, tipoLampadaDoSpot, fachosDoSpot, ehSpotConnectNoFrame, skuJuncaoConnect, avisoConferirPassadas, passadasPorCanal, ehSpotTiny, type TipoLampada } from "@/types/orcamento";
 import ComposicaoCard from "./ComposicaoCard";
 import OfertaLampada, { type LampadaOfertada } from "./OfertaLampada";
 
@@ -54,7 +54,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
   const [qtdDriversDraft, setQtdDriversDraft] = useState<Record<string, string>>({});
   // RULE-011 / BUG-26: sugestões de fitas compatíveis por sistema (id → painel).
   // Só SUGERE (RULE-010 proíbe auto-escolher); painel fechável (RULE-002).
-  const [fitasSugeridas, setFitasSugeridas] = useState<Record<string, { larguraMax: number; fitas: Produto[] } | undefined>>({});
+  const [fitasSugeridas, setFitasSugeridas] = useState<Record<string, { larguraMax: number | null; fitas: Produto[] } | undefined>>({});
   // RULE-044/045: oferta de lâmpada aberta para uma luminária (id → tipo detectado no nome).
   // A oferta acontece no MOMENTO da inclusão do spot; dispensar remove a entrada.
   const [ofertasLampada, setOfertasLampada] = useState<Record<string, TipoLampada>>({});
@@ -121,6 +121,16 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       } else {
         toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
       }
+    }
+
+    // ── RULE-108: spot avulso da linha TINY (resposta 6 da 2ª rodada) ──
+    // 24V sem driver embutido: o driver é externo e dimensionado pela SOMA das potências
+    // dos spots TINY do ambiente. Aviso na inclusão + advisory ao avançar (Step2Ambientes).
+    if (ehSpotTiny(produto.descricao)) {
+      toast.warning(
+        `⚡ Linha TINY 24V: este spot não tem driver embutido. Inclua um driver 24V no ambiente — a potência de todos os spots TINY soma no mesmo driver.`,
+        { duration: 9000 }
+      );
     }
 
     // ── REGRA #24: spot sem LED integrado → lâmpada separada.
@@ -223,34 +233,48 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
     // Perfil trocado: descarta sugestão anterior do sistema
     setFitasSugeridas((prev) => ({ ...prev, [sistemaId]: undefined }));
     const familia = perfilProduto.familia_perfil;
-    if (!familia) return;
-
-    const { data: regras } = await supabase
-      .from('regras_compatibilidade_perfil')
-      .select('largura_max_fita_mm')
-      .eq('familia_perfil', familia)
-      .limit(1);
-    const larguraMax = regras?.[0]?.largura_max_fita_mm;
-    if (larguraMax == null) return;
-
-    let query = supabase
-      .from('produtos')
-      .select(
-        'id, codigo, descricao, preco_tabela, preco_minimo, imagem_url, ' +
-        'voltagem:tensao, wm:watts_por_metro, is_baby:somente_baby, somente_baby, largura_mm, tamanho_rolo_m, tipo_produto'
-      )
-      .eq('tipo_produto', 'fita')
-      .lte('largura_mm', larguraMax)
-      .not('descricao', 'ilike', '%DESCONTINUAR%')
-      .order('largura_mm', { ascending: true })
-      .order('codigo');
     // Perfil Baby-only: só fitas Baby são fisicamente compatíveis (REGRA #12/#13 / RULE-103)
     const soBaby = perfilSomenteFitaBaby({
       descricao: perfilProduto.descricao,
       familiaPerfil: familia,
       somenteBaby: perfilProduto.somente_baby,
     });
-    if (soBaby) query = query.eq('somente_baby', true);
+
+    const COLUNAS_FITA =
+      'id, codigo, descricao, preco_tabela, preco_minimo, imagem_url, ' +
+      'voltagem:tensao, wm:watts_por_metro, is_baby:somente_baby, somente_baby, largura_mm, tamanho_rolo_m, tipo_produto';
+
+    let larguraMax: number | null = null;
+    let query;
+    if (soBaby) {
+      // 2ª rodada, resposta 3: a largura NÃO vai ser levantada fita a fita, então a única
+      // sugestão que sobrevive é a da Baby — e ela sai pelo NOME, porque a coluna
+      // `somente_baby` da única fita Baby do catálogo (LM3827) está em `false`.
+      query = supabase
+        .from('produtos')
+        .select(COLUNAS_FITA)
+        .eq('tipo_produto', 'fita')
+        .ilike('descricao', '%BABY%')
+        .not('descricao', 'ilike', '%DESCONTINUAR%')
+        .order('codigo');
+    } else {
+      if (!familia) return;
+      const { data: regras } = await supabase
+        .from('regras_compatibilidade_perfil')
+        .select('largura_max_fita_mm')
+        .eq('familia_perfil', familia)
+        .limit(1);
+      larguraMax = regras?.[0]?.largura_max_fita_mm ?? null;
+      if (larguraMax == null) return;
+      query = supabase
+        .from('produtos')
+        .select(COLUNAS_FITA)
+        .eq('tipo_produto', 'fita')
+        .lte('largura_mm', larguraMax)
+        .not('descricao', 'ilike', '%DESCONTINUAR%')
+        .order('largura_mm', { ascending: true })
+        .order('codigo');
+    }
     const { data: fitas } = await query.limit(12);
 
     // Reconciliação pós-await: só exibe se o sistema ainda existir com ESTE perfil
@@ -302,9 +326,12 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       }
     }
 
-    // ── REGRA #12/#13 + RULE-103: perfil Baby-only (Light Mini / Ripado) — BLOQUEIO ──
+    // ── REGRA #12/#13 + RULE-103: perfil Baby-only (Light Mini / Ripado) — ALERTA ──
     // A flag `somente_baby` do catálogo tem precedência; a família/nome cobre o que
     // ainda não está cadastrado. Motivo é físico: outra fita não cabe no canal.
+    // 2ª rodada, resposta 3: a largura não vai ser levantada fita a fita e a relação com
+    // a Baby fica "em alerta" — deixou de BLOQUEAR (só existe 1 fita Baby no catálogo,
+    // travar a venda nela inteira era caro demais). A escolha segue valendo.
     const perfilAtualSoBaby = sis.perfil
       ? perfilSomenteFitaBaby({
           descricao: sis.perfil.descricao,
@@ -313,11 +340,10 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         })
       : false;
     if (component === 'fita' && perfilAtualSoBaby && !fitaEhBaby({ descricao: produto.descricao, isBaby: produto.is_baby ?? produto.somente_baby })) {
-      toast.error(
-        `🚫 O perfil selecionado aceita SOMENTE fita Baby (não cabe outra). Selecione uma fita Baby.`,
-        { duration: 6000 }
+      toast.warning(
+        `⚠️ Este perfil é de canal estreito e costuma aceitar SOMENTE fita Baby — confira se a fita ${produto.codigo} cabe antes de fechar.`,
+        { duration: 7000 }
       );
-      return;
     }
     // ── RULE-104: perfil Nano / Cantoneira não aceita fita com IP — BLOQUEIO ──
     const perfilAtualRejeitaIP = sis.perfil
@@ -360,7 +386,10 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
 
     if (component === 'perfil') {
       const base: ItemPerfil = sis.perfil || { id: uid(), codigo: "", descricao: "", comprimentoPeca: 1 as const, quantidade: 1, passadas: 1 as const, precoUnitario: 0, precoMinimo: 0 };
-      const passadasAuto = (produto.passadas ?? base.passadas) as 1 | 2 | 3;
+      // RULE-009 (2ª rodada, resposta 4): quantas fitas cabem lado a lado no canal declarado
+      // no nome. O padrão do catálogo continua valendo quando é maior; o seletor não trava.
+      const passadasCatalogo = (produto.passadas ?? base.passadas) as 1 | 2 | 3;
+      const passadasAuto = passadasPorCanal(produto.descricao, passadasCatalogo);
       updateSistema(sistemaIndex, {
         ...sis,
         perfil: {
@@ -371,7 +400,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
           precoMinimo: precoMin,
           imagemUrl: imgUrl,
           passadas: passadasAuto,
-          passadasPadrao: passadasAuto,
+          passadasPadrao: passadasCatalogo,
           familia_perfil: produto.familia_perfil,
           driver_restr_tipo: produto.driver_restr_tipo,
           driver_restr_max_w: produto.driver_restr_max_w,
@@ -648,7 +677,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         descricao: produto.descricao,
         comprimentoPeca: 1,
         quantidade: 1,
-        passadas: (produto.passadas ?? 1) as 1 | 2 | 3,
+        passadas: passadasPorCanal(produto.descricao, produto.passadas),
         precoUnitario: preco,
         precoMinimo: precoMin,
         imagemUrl: imgUrl,
@@ -656,7 +685,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         driver_restr_tipo: produto.driver_restr_tipo,
         driver_restr_max_w: produto.driver_restr_max_w,
         somente_baby: produto.somente_baby,
-        passadasPadrao: (produto.passadas ?? 3) as 1 | 2 | 3,
+        passadasPadrao: (produto.passadas ?? 1) as 1 | 2 | 3,
       };
       const novoSistema: SistemaIluminacao = {
         id: uid(),
@@ -734,6 +763,13 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
     }
     if (/FITA\s+FLEX|NEON\s+FLEX|FLEXIVEL/.test(d)) {
       toast.info(`✨ Fita Flexível: considere incluir as Tampas de Vedação (LM2600 — 50 un.) para preservar o IP65 após cortes.`, { duration: 10000 });
+    }
+    // RULE-108 (resposta 6 da 2ª rodada): spot avulso da linha TINY é 24V sem driver embutido.
+    if (ehSpotTiny(produto.descricao)) {
+      toast.warning(
+        `⚡ Linha TINY 24V: este spot não tem driver embutido. Inclua um driver 24V no ambiente — a potência de todos os spots TINY soma no mesmo driver.`,
+        { duration: 9000 }
+      );
     }
 
     const novoItem: ItemLuminaria = {
@@ -1097,17 +1133,17 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
                               >
                                 <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  {[1, 2, 3]
-                                    .filter((n) => n <= (sis.perfil!.passadasPadrao ?? 3))
-                                    .map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                                  {/* 2ª rodada, resposta 4: "faça calcular sozinho, mas que não
+                                      fique travado e se necessário a gente edite" — o número
+                                      vem do canal, mas as três opções ficam sempre abertas. */}
+                                  {[1, 2, 3].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
                           </div>
-                          {/* RULE-009 — perfil sem regra de passadas no catálogo (477 dos 672 em
-                              2026-08-12) entra com 1 passada. Quando o nome diz que o canal é
-                              largo, isso costuma estar errado e sai barato demais. Só avisa:
-                              mudar as passadas sozinho alteraria o preço da fita. */}
+                          {/* RULE-009 — o número sai do canal declarado no nome (resposta 4 da
+                              2ª rodada). A nota explica de onde veio, porque ele mexe na
+                              metragem de fita, e lembra que dá para trocar. */}
                           {(() => {
                             const aviso = avisoConferirPassadas(sis.perfil);
                             return aviso ? (
@@ -1132,7 +1168,9 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
                               <div className="rounded-md border border-blue-400/40 bg-blue-50 px-3 py-2 text-xs text-blue-900 space-y-1.5">
                                 <div className="flex items-start justify-between gap-2">
                                   <p className="font-semibold">
-                                    Fitas compatíveis com o perfil (largura ≤ {sug.larguraMax}mm) — clique para aplicar:
+                                    {sug.larguraMax != null
+                                      ? `Fitas compatíveis com o perfil (largura ≤ ${sug.larguraMax}mm) — clique para aplicar:`
+                                      : 'Este perfil é de canal estreito — a fita Baby é a indicada. Clique para aplicar:'}
                                   </p>
                                   <Button
                                     size="icon"
