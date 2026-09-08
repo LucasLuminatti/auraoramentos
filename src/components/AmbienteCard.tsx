@@ -326,12 +326,15 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       }
     }
 
-    // ── REGRA #12/#13 + RULE-103: perfil Baby-only (Light Mini / Ripado) — ALERTA ──
+    // ── REGRA #12/#13 + RULE-103: perfil Baby-only (Light Mini / Ripado) — BLOQUEIO ──
     // A flag `somente_baby` do catálogo tem precedência; a família/nome cobre o que
     // ainda não está cadastrado. Motivo é físico: outra fita não cabe no canal.
-    // 2ª rodada, resposta 3: a largura não vai ser levantada fita a fita e a relação com
-    // a Baby fica "em alerta" — deixou de BLOQUEAR (só existe 1 fita Baby no catálogo,
-    // travar a venda nela inteira era caro demais). A escolha segue valendo.
+    //
+    // Histórico da decisão: na 2ª rodada (resposta 3) a equipe pediu para virar alerta;
+    // vendo o resultado, a Paolla decidiu em 2026-09-08 que "nesse caso prefiro que trave".
+    // Volta a bloquear. Consequência conhecida e aceita: como só existe UMA fita Baby no
+    // catálogo (LM3827), nesses perfis o vendedor só consegue escolher ela — por isso o
+    // painel de sugestão a oferece com um clique.
     const perfilAtualSoBaby = sis.perfil
       ? perfilSomenteFitaBaby({
           descricao: sis.perfil.descricao,
@@ -340,10 +343,11 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         })
       : false;
     if (component === 'fita' && perfilAtualSoBaby && !fitaEhBaby({ descricao: produto.descricao, isBaby: produto.is_baby ?? produto.somente_baby })) {
-      toast.warning(
-        `⚠️ Este perfil é de canal estreito e costuma aceitar SOMENTE fita Baby — confira se a fita ${produto.codigo} cabe antes de fechar.`,
+      toast.error(
+        `🚫 Este perfil aceita SOMENTE fita Baby — a fita ${produto.codigo} não cabe no canal. Use a fita Baby sugerida logo abaixo do perfil.`,
         { duration: 7000 }
       );
+      return;
     }
     // ── RULE-104: perfil Nano / Cantoneira não aceita fita com IP — BLOQUEIO ──
     const perfilAtualRejeitaIP = sis.perfil

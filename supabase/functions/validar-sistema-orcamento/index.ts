@@ -222,11 +222,10 @@ function validarDriverAlojado(
   }
 }
 
-/** Compatibilidade física perfil × fita.
- *  RULE-103 (Baby) é ALERTA desde a 2ª rodada de respostas (resposta 3: a largura não vai
- *  ser levantada fita a fita e "vamos deixar em alerta apenas a relação com a fita baby").
- *  RULE-104 (fita com IP em Nano/Cantoneira) continua BLOQUEIO — não veio na pergunta e é
- *  incompatibilidade confirmada na R6.
+/** Compatibilidade física perfil × fita — RULE-103 (Baby) e RULE-104 (IP), as duas BLOQUEIO.
+ *  A 2ª rodada chegou a pedir a Baby como alerta; vendo o resultado, a Paolla decidiu em
+ *  2026-09-08 que "nesse caso prefiro que trave". O que ficou daquela resposta é o ESCOPO:
+ *  a largura não será levantada fita a fita, então a única relação verificada é a da Baby.
  *  Só dispara com dado suficiente — payload sem descrição/subtipo da fita não diz nada. */
 function validarPerfilFita(
   item: SistemaItem,
@@ -242,12 +241,12 @@ function validarPerfilFita(
   // "fita ainda não selecionada" de "fita comum" (subtipo_fita/descricao vêm preenchidos
   // com valores neutros durante a montagem do sistema).
   const temFita = !!(item.codigo_fita ?? "").trim();
-  const jaAvisouBaby = alertas.some((a) => /fita Baby/i.test(a));
+  const jaAvisouBaby = erros.some((e) => /SOMENTE fita Baby/i.test(e));
   if (!jaAvisouBaby && temFita && perfilSomenteFitaBaby(item, regrasPerfil)) {
     if (!fitaEhBaby(item)) {
-      alertas.push(
-        `Perfil ${nomePerfil} é de canal estreito e costuma aceitar SOMENTE fita Baby — ` +
-        `confira se a fita escolhida cabe.`,
+      erros.push(
+        `Perfil ${nomePerfil} aceita SOMENTE fita Baby — outra fita não cabe no canal. ` +
+        `Selecione uma fita Baby.`,
       );
     }
   }
@@ -308,13 +307,13 @@ function validarSistemaPadrao(
       );
     }
 
-    // Regras #15, #16, #17 / RULE-103 — Somente Baby (ALERTA desde a 2ª rodada).
-    // O caso "sem regra cadastrada" (família detectada pelo nome) é coberto por
-    // `validarPerfilFita`, chamado transversalmente no handler.
+    // Regras #15, #16, #17 / RULE-103 — Somente Baby (BLOQUEIO; ver histórico da decisão
+    // em `validarPerfilFita`). O caso "sem regra cadastrada" (família detectada pelo nome)
+    // é coberto por `validarPerfilFita`, chamado transversalmente no handler.
     if (somenteBaby && subtipo_fita !== "baby" && !fitaEhBaby(item)) {
-      alertas.push(
-        `Perfil ${familia_perfil} é de canal estreito e costuma aceitar SOMENTE fita Baby ` +
-        `(largura ≤ ${larguraMaxCanal}mm) — confira se a fita escolhida cabe.`,
+      erros.push(
+        `Perfil ${familia_perfil} aceita SOMENTE fita Baby. ` +
+        `Selecione uma fita Baby (largura ≤ ${larguraMaxCanal}mm).`,
       );
     }
 

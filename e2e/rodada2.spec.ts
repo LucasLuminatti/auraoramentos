@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 /**
  * Regras da 2ª rodada de respostas (2026-09-08) — RULE-009 (passadas pelo canal),
- * RULE-103 (fita Baby virou alerta) e RULE-108 (spot TINY exige driver 24V).
+ * RULE-103 (fita Baby: bloqueio) e RULE-108 (spot TINY exige driver 24V).
  *
  * Nenhum destes testes chega a gravar: o wizard só escreve no banco em "Gerar PDF",
  * e todos param no passo de ambientes. Por isso não há cleanup — de propósito.
@@ -87,7 +87,7 @@ test("RULE-108: spot TINY sem driver 24V avisa com a potência somada", async ({
   await dialog.getByRole("button", { name: /Revisar/i }).click();
 });
 
-test("RULE-103: fita não-Baby em perfil estreito avisa, mas entra", async ({ page }) => {
+test("RULE-103: perfil estreito recusa fita que não é Baby", async ({ page }) => {
   await abrirPassoDeAmbientes(page);
   await adicionarAoAmbiente(page, PERFIL_RIPADO);
 
@@ -100,8 +100,12 @@ test("RULE-103: fita não-Baby em perfil estreito avisa, mas entra", async ({ pa
   await expect(opcao).toBeVisible({ timeout: 15_000 });
   await opcao.click();
 
-  // avisa...
-  await expect(page.getByText(/costuma aceitar SOMENTE fita Baby/i).first()).toBeVisible();
-  // ...mas NÃO bloqueia: a fita ficou aplicada no sistema
-  await expect(buscaFita).toHaveValue(FITA_COMUM);
+  // bloqueia (decisão da Paolla em 2026-09-08: "nesse caso prefiro que trave")
+  await expect(page.getByText(/aceita SOMENTE fita Baby/i).first()).toBeVisible();
+  // e a fita NÃO entra no sistema
+  await expect(buscaFita).not.toHaveValue(FITA_COMUM);
+
+  // a Baby sugerida, essa sim, entra com um clique
+  await page.getByRole("button", { name: /LM3827/ }).first().click();
+  await expect(buscaFita).toHaveValue("LM3827");
 });
