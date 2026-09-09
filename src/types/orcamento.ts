@@ -909,6 +909,48 @@ export function ambienteTemLampada(amb: Ambiente): boolean {
   );
 }
 
+// ─── RULE-057/058/059: trilho de sobrepor (2 fios) e o conector de emenda ───
+
+/** Trilho de sobrepor da linha de 2 fios — LM934…LM939, "TRILHO DE SOBREPOR, BRANCO - 1
+ *  METRO". Foi o produto usado na demonstração da R4 (LM936).
+ *  Ancorado no INÍCIO do nome de propósito: sem isso, "BASE DE SOBREPOR PARA LUMINARIA DE
+ *  TRILHO" (LM948…LM953) entraria junto. O trilho magnético fica de fora — ele tem fluxo
+ *  próprio de composição, com conector obrigatório e driver dedicado. */
+export function ehTrilhoSobrepor(descricao?: string | null): boolean {
+  const d = (descricao ?? '').toUpperCase();
+  return /^\s*TRILHO\b/.test(d) && /\bSOBREPOR\b/.test(d) && !/\bMAG(NETICO|NETO)?\b/.test(d);
+}
+
+/** Conector de emenda do trilho de sobrepor — LM940…LM947, modelos T, L, X e I em branco e
+ *  preto ("CONECTOR MODELO X, PARA TRILHOS DE SOBREPOR, BRANCO"). Também ancorado: os "KIT
+ *  TRES SPOTS PARA TRILHO DE SOBREPOR" citam conector no meio da descrição. */
+export function ehConectorTrilhoSobrepor(descricao?: string | null): boolean {
+  const d = (descricao ?? '').toUpperCase();
+  return /^\s*CONECTOR\b/.test(d) && /TRILHO/.test(d) && /\bSOBREPOR\b/.test(d) && !/\bMAG(NETICO|NETO)?\b/.test(d);
+}
+
+/** RULE-059 — quantos trilhos de sobrepor o ambiente tem (somando a quantidade de cada
+ *  item): é a partir do SEGUNDO que a emenda passa a precisar de conector. */
+export function qtdTrilhosSobrepor(amb: Ambiente): number {
+  return amb.luminarias
+    .filter((l) => ehTrilhoSobrepor(l.descricao))
+    .reduce((acc, l) => acc + (l.quantidade || 0), 0);
+}
+
+/** RULE-057 — já existe conector de trilho no ambiente? */
+export function ambienteTemConectorTrilho(amb: Ambiente): boolean {
+  return amb.luminarias.some((l) => ehConectorTrilhoSobrepor(l.descricao));
+}
+
+/** Cor do trilho pelo nome, para sugerir o conector certo (RULE-054: a cor do acessório
+ *  acompanha a do trilho). Null quando o nome não diz. */
+export function corDoTrilho(descricao?: string | null): 'branco' | 'preto' | null {
+  const d = (descricao ?? '').toUpperCase();
+  if (/\bBRANCO\b/.test(d)) return 'branco';
+  if (/\bPRETO\b/.test(d)) return 'preto';
+  return null;
+}
+
 // ─── RULE-108: linha TINY — spot avulso exige driver 24V externo ───
 
 /** Spot avulso da linha TINY (2ª rodada, resposta 6: "São as linhas SPOT TINY, MAG TINY,

@@ -23,14 +23,14 @@ import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
 import type { Ambiente, ItemLuminaria, CategoriaFita } from "@/types/orcamento";
-import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos, clonarItemLuminaria, qtdSpotsTiny, potenciaSpotsTiny, potenciaMinimaDriverTiny, ambienteTemDriver24V } from "@/types/orcamento";
+import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos, clonarItemLuminaria, qtdSpotsTiny, potenciaSpotsTiny, potenciaMinimaDriverTiny, ambienteTemDriver24V, qtdTrilhosSobrepor, ambienteTemConectorTrilho } from "@/types/orcamento";
 import { toast } from "sonner";
 
 interface AdvisoryItem {
   ambienteNome: string;
   tipo: 'fita-sem-driver' | 'driver-sem-fita' | 'perfil-sem-fita' | 'peca-sem-lampada'
       | 'composto-sem-driver' | 'composto-sem-conector' | 'modular-sem-fita'
-      | 'spot-tiny-sem-driver';
+      | 'spot-tiny-sem-driver' | 'trilho-sem-conector';
   descricao: string;
 }
 
@@ -86,6 +86,7 @@ const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
   'composto-sem-conector': 'Sistema composto sem o conector obrigatório da família',
   'modular-sem-fita': 'SYSTEM MOLD sem fita adicionada',
   'spot-tiny-sem-driver': 'Spot da linha TINY sem driver 24V no ambiente',
+  'trilho-sem-conector': 'Mais de um trilho de sobrepor, sem conector de emenda',
 };
 
 const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }: Step2Props) => {
@@ -234,6 +235,16 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }
           descricao: potenciaTiny > 0
             ? `${potenciaTiny}W somados nos spots TINY — inclua driver(s) 24V de no mínimo ${potenciaMinimaDriverTiny(amb)}W (já com a folga de 20%).`
             : 'Os spots TINY do ambiente estão sem potência no cadastro — inclua o driver 24V e confira a potência somada antes de fechar.',
+        });
+      }
+      // RULE-057/059: dois ou mais trilhos de sobrepor se emendam com conector (T, L, X ou I).
+      // Um trilho sozinho não precisa, por isso o gatilho é a partir do segundo.
+      const trilhos = qtdTrilhosSobrepor(amb);
+      if (trilhos > 1 && !ambienteTemConectorTrilho(amb)) {
+        itensIncompletos.push({
+          ambienteNome: amb.nome,
+          tipo: 'trilho-sem-conector',
+          descricao: `${trilhos} trilhos de sobrepor no ambiente — inclua o conector da emenda (LM940 a LM947: modelos T, L, X e I, na cor do trilho).`,
         });
       }
       // VAL-01 / D-03: avisos de compostos incompletos (não-bloqueante)

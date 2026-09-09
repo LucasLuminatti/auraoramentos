@@ -1,0 +1,276 @@
+[
+  {
+    "id": "6a2f79ac-ae5d-4ada-97a6-7d3d2e526d69",
+    "codigo": "LM2952",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "2a3d31fa-c490-45aa-b209-d7595ae4532c",
+    "codigo": "LM2953",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "fa8202d7-6cfb-4167-a1fc-0da3e5a8bd08",
+    "codigo": "LM2954",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "a43279af-cf97-42a6-8cbe-875176f4e50b",
+    "codigo": "LM2955",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "5369c30a-def1-4d42-9479-f9c1f105b6d4",
+    "codigo": "LM3442AC",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "c17e51bc-8a63-4b62-aaee-2b9782364f4c",
+    "codigo": "LM3443",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "b3fc8818-b984-4b73-a2eb-1c29ec5ac4e9",
+    "codigo": "LM3444AC",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "6c88e93e-4ca4-4c8a-9124-c2e20b748d48",
+    "codigo": "LM3445AC",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "b5d656f0-f576-4017-bdd2-bad1e88d919f",
+    "codigo": "LM3446AC",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "48cf2c9d-1241-433c-82a0-d300b52001b2",
+    "codigo": "LM3479",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "b7622c2b-cfe1-4ce5-99ac-1354305f725e",
+    "codigo": "LM3480",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "334f1511-b268-4d00-b15c-2bcb4195005f",
+    "codigo": "LM3588",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "c881fa67-e028-48f5-b73b-709fe3ce82aa",
+    "codigo": "LM3447AC",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "a5c8d4ac-86d9-4d4d-bbf0-405d38279338",
+    "codigo": "LM3442",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "ed4acf97-b9cc-4612-93b2-2872b2435734",
+    "codigo": "LM3443AC",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "89230546-0b7e-4d0a-898b-40e3cc23662d",
+    "codigo": "LM2951",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "180da69a-e854-43c8-9fdc-face29bd4855",
+    "codigo": "LM3446",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "c7fe345f-8f00-4f58-854c-af81eda65f4a",
+    "codigo": "LM3475",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "48d85bc0-5f67-4c14-854d-6a536e10d2bd",
+    "codigo": "LM3445",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "abd8beb3-28c4-4321-a19e-33c83ac8951f",
+    "codigo": "LM3444",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "397b139e-0f90-4895-b1db-fc4616a0b2ef",
+    "codigo": "LM3587",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "26a6c6b1-c6ff-4025-b06b-f6b978fad629",
+    "codigo": "LM2956",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "cd29dfdb-b1cc-47bd-9bd1-57651ff408aa",
+    "codigo": "LM3447",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "8e5c9737-dcfa-4708-b7ae-556c15459b27",
+    "codigo": "LM3476",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "8f1a5c9d-fc27-41eb-8edb-e501d9aeca9b",
+    "codigo": "LM3477",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "12d8103d-1eeb-4c95-9597-1ebed88408ea",
+    "codigo": "LM3478",
+    "antes": {
+      "familia_perfil": null,
+      "passadas_padrao": 1,
+      "driver_tipo_permitido": "qualquer",
+      "driver_max_watts": null
+    }
+  },
+  {
+    "id": "39f4e623-d6fa-4be0-a840-ac2f1aca067a",
+    "codigo": "LM486",
+    "antes": {
+      "tipo_produto": "driver"
+    }
+  },
+  {
+    "id": "3fe35ad7-ff6d-4832-adef-b12119aad0e4",
+    "codigo": "LM487",
+    "antes": {
+      "tipo_produto": "driver"
+    }
+  }
+]

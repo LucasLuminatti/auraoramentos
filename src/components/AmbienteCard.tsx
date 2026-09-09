@@ -12,7 +12,7 @@ import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
 import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto, CategoriaFita, ItemComposicao } from "@/types/orcamento";
-import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO, tipoLampadaDoSpot, fachosDoSpot, ehSpotConnectNoFrame, skuJuncaoConnect, avisoConferirPassadas, passadasPorCanal, ehSpotTiny, type TipoLampada } from "@/types/orcamento";
+import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO, tipoLampadaDoSpot, fachosDoSpot, ehSpotConnectNoFrame, skuJuncaoConnect, avisoConferirPassadas, passadasPorCanal, ehSpotTiny, ehTrilhoSobrepor, qtdTrilhosSobrepor, ambienteTemConectorTrilho, corDoTrilho, type TipoLampada } from "@/types/orcamento";
 import ComposicaoCard from "./ComposicaoCard";
 import OfertaLampada, { type LampadaOfertada } from "./OfertaLampada";
 
@@ -102,6 +102,24 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
     onChange({ ...ambiente, sistemas: arr });
   };
 
+  /** RULE-059 — a partir do SEGUNDO trilho de sobrepor a emenda precisa de conector.
+   *  A cor sugerida acompanha a do trilho (RULE-054). Só avisa: RULE-057 é lembrete. */
+  const avisarConectorTrilho = (produto: Produto, quantidadeNova = 1) => {
+    if (!ehTrilhoSobrepor(produto.descricao)) return;
+    const total = qtdTrilhosSobrepor(ambienteRef.current) + quantidadeNova;
+    if (total < 2 || ambienteTemConectorTrilho(ambienteRef.current)) return;
+    const cor = corDoTrilho(produto.descricao);
+    const sugestao = cor === 'preto'
+      ? 'LM941 (T), LM943 (L), LM945 (X) ou LM947 (I), todos pretos'
+      : cor === 'branco'
+        ? 'LM940 (T), LM942 (L), LM944 (X) ou LM946 (I), todos brancos'
+        : 'LM940 a LM947 (modelos T, L, X e I, em branco ou preto)';
+    toast.warning(
+      `🔗 ${total} trilhos no ambiente: para emendar é preciso conector — ${sugestao}.`,
+      { duration: 9000 }
+    );
+  };
+
   const handleSelectProdutoLuminaria = (produto: Produto, index: number) => {
     const imgUrl = produto.imagem_url || undefined;
     const d = (produto.descricao || '').toUpperCase();
@@ -122,6 +140,8 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         toast.warning(`⚡ TINY MAG 24V: requer driver 24V externo. Inclua o driver no sistema de iluminação correspondente.`, { duration: 9000 });
       }
     }
+
+    avisarConectorTrilho(produto, 0); // RULE-059 (o item já está na lista, não soma de novo)
 
     // ── RULE-108: spot avulso da linha TINY (resposta 6 da 2ª rodada) ──
     // 24V sem driver embutido: o driver é externo e dimensionado pela SOMA das potências
@@ -768,6 +788,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
     if (/FITA\s+FLEX|NEON\s+FLEX|FLEXIVEL/.test(d)) {
       toast.info(`✨ Fita Flexível: considere incluir as Tampas de Vedação (LM2600 — 50 un.) para preservar o IP65 após cortes.`, { duration: 10000 });
     }
+    avisarConectorTrilho(produto); // RULE-059
     // RULE-108 (resposta 6 da 2ª rodada): spot avulso da linha TINY é 24V sem driver embutido.
     if (ehSpotTiny(produto.descricao)) {
       toast.warning(
