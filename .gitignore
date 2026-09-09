@@ -34,3 +34,10 @@ produtos-sem-foto.csv
 /blob-report/
 /playwright/.cache/
 e2e/.auth/
+
+# Dumps de catalogo e diagnostico: dados, nao codigo (8,8 MB de JSON).
+# Os backups das correcoes pontuais (scripts/backup-fitas-*, backup-perfis-*, backup-drivers-*)
+# CONTINUAM versionados de proposito: sao o caminho de volta de cada mudanca aplicada.
+scripts/migracao-catalogo-2026/*.json
+scripts/diag-*.json
+scripts/backup-catalogo2-*.json
