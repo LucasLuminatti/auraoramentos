@@ -483,6 +483,7 @@ export type Database = {
         Row: {
           aplicacao: string | null
           arquiteto_id: string | null
+          ativo: boolean
           atributos: Json
           codigo: string
           cor: string | null
@@ -515,6 +516,7 @@ export type Database = {
         Insert: {
           aplicacao?: string | null
           arquiteto_id?: string | null
+          ativo?: boolean
           atributos?: Json
           codigo: string
           cor?: string | null
@@ -547,6 +549,7 @@ export type Database = {
         Update: {
           aplicacao?: string | null
           arquiteto_id?: string | null
+          ativo?: boolean
           atributos?: Json
           codigo?: string
           cor?: string | null
@@ -765,6 +768,7 @@ export type Database = {
         Row: {
           aplicacao: string | null
           arquiteto_id: string | null
+          ativo: boolean | null
           codigo: string | null
           cor: string | null
           created_at: string | null
@@ -792,6 +796,7 @@ export type Database = {
         Insert: {
           aplicacao?: string | null
           arquiteto_id?: string | null
+          ativo?: boolean | null
           codigo?: string | null
           cor?: string | null
           created_at?: string | null
@@ -819,6 +824,7 @@ export type Database = {
         Update: {
           aplicacao?: string | null
           arquiteto_id?: string | null
+          ativo?: boolean | null
           codigo?: string | null
           cor?: string | null
           created_at?: string | null

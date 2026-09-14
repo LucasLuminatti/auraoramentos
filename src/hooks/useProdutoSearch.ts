@@ -29,7 +29,10 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
           // RULE-003 / BUG-15: só códigos do catálogo ATUAL podem ser oferecidos.
           // Itens saindo de linha são marcados com "DESCONTINUAR" na descrição
           // (mesmo critério já usado na auto-sugestão de driver do AmbienteCard).
-          .not('descricao', 'ilike', '%DESCONTINUAR%');
+          .not('descricao', 'ilike', '%DESCONTINUAR%')
+          // Fora de linha e linhas de categoria do ERP (AU*) ficam com ativo=false — soft-delete;
+          // o Admin continua vendo, porque lê product_variants direto.
+          .eq('ativo', true);
 
         if (filtro === 'fita' || filtro === 'driver' || filtro === 'perfil' || filtro === 'conector' || filtro === 'kit_fixacao') {
           queryBuilder = queryBuilder.eq('tipo_produto', filtro);
@@ -92,6 +95,7 @@ export function useProdutoSearch(query: string, filtro: ProdutoFiltro = 'todos',
             // RULE-003: mesmo filtro da query principal. Sem ele, um item descontinuado
             // redirecionaria para uma aba onde ele também está oculto (beco sem saída).
             .not("descricao", "ilike", "%DESCONTINUAR%")
+            .eq("ativo", true)
             .order("codigo")
             .limit(1);
           redirect = fb?.[0]?.tipo_produto ?? null;

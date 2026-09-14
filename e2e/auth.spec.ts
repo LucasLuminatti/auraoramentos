@@ -15,7 +15,8 @@ test("login com credenciais válidas entra no sistema", async ({ page }) => {
   await page.getByRole("textbox", { name: "Senha" }).fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  await expect(page).toHaveURL(/orcamentosaura\.com\.br\/?$/);
+  // pelo caminho, não pelo domínio: a suíte também roda contra o dev local (E2E_BASE_URL)
+  await expect(page).toHaveURL((url) => url.pathname === "/");
   await expect(page.getByText(/Clientes/i).first()).toBeVisible({ timeout: 20_000 });
 });
 

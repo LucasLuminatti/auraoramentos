@@ -215,7 +215,8 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
       .eq('tipo_produto', 'driver')
       .eq('tensao', voltagem)
       .gte('potencia_watts', consumoEstimado)
-      .not('descricao', 'ilike', '%DESCONTINUAR%');
+      .not('descricao', 'ilike', '%DESCONTINUAR%')
+      .eq('ativo', true);
     if (restricao?.tetoW != null) query = query.lte('potencia_watts', restricao.tetoW);
     const { data } = await query
       .order('potencia_watts', { ascending: true })
@@ -276,6 +277,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         .eq('tipo_produto', 'fita')
         .ilike('descricao', '%BABY%')
         .not('descricao', 'ilike', '%DESCONTINUAR%')
+        .eq('ativo', true)
         .order('codigo');
     } else {
       if (!familia) return;
@@ -292,6 +294,7 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         .eq('tipo_produto', 'fita')
         .lte('largura_mm', larguraMax)
         .not('descricao', 'ilike', '%DESCONTINUAR%')
+        .eq('ativo', true)
         .order('largura_mm', { ascending: true })
         .order('codigo');
     }

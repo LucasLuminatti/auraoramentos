@@ -10,7 +10,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PERFIL_30MM = "LM1997";   // canal até 30mm, catálogo com passadas_padrao=1
 const PERFIL_RIPADO = "LM1987"; // canal estreito (Baby-only pela família/nome)
-const FITA_COMUM = "LM1149";    // não é Baby
+const FITA_COMUM = "LM2029";    // não é Baby (a LM1149 saiu de linha em 2026-09-14)
 const SPOT_TINY_5W = "LM3182";
 const SPOT_TINY_1W = "LM3177";
 

@@ -55,6 +55,24 @@ test("perfil flexível entra como FITA do sistema, não como perfil", async ({ p
   await expect(descricaoFita).toHaveValue(/PERFIL FLEXIVEL/i);
 });
 
+test("fora de linha e AU* somem da busca; produto ativo continua", async ({ page }) => {
+  await abrirPassoDeAmbientes(page);
+  const busca = page.locator('input[placeholder*="Buscar produto"]');
+
+  // A lista vazia não prova nada sozinha (ela também está vazia antes de a busca voltar):
+  // quem prova é a resposta do banco para AQUELE termo, já com o filtro de ativo.
+  for (const codigo of ["AU004", "LM805"]) {
+    const resposta = page.waitForResponse((r) => r.url().includes("/rest/v1/produtos") && r.url().includes(codigo));
+    await busca.fill(codigo);
+    const r = await resposta;
+    expect(r.url()).toContain("ativo=eq.true");
+    expect(await r.json()).toEqual([]);
+  }
+
+  await busca.fill("LM2029"); // fita do portfólio do Jonathan
+  await expect(page.getByRole("button", { name: /^LM2029[^0-9]/i }).first()).toBeVisible({ timeout: 15_000 });
+});
+
 test("GRAN FOCUS entra como luminária, sem abrir sistema de fita", async ({ page }) => {
   await abrirPassoDeAmbientes(page);
   await adicionarAoAmbiente(page, GRAN_FOCUS);

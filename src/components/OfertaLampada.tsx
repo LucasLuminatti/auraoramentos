@@ -71,6 +71,7 @@ const OfertaLampada = ({
         .select("codigo, descricao, preco_tabela, preco_minimo, imagem_url, potencia_watts")
         // RULE-003: nunca oferecer item fora do catálogo atual.
         .not("descricao", "ilike", "%DESCONTINUAR%")
+        .eq("ativo", true)
         .or(filtros)
         .order("codigo")
         .limit(60);

@@ -1,0 +1,800 @@
+[
+  {
+    "id": "e1323467-a4be-4497-a3e3-af1b418a2af2",
+    "codigo": "AU001",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "6ad2ceab-0923-46d5-aceb-5b91b03c1d9d",
+    "codigo": "AU002",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "81d99762-7fbe-4447-87f9-a67e81fb77ca",
+    "codigo": "AU003",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "9b49f692-9151-44b7-83f1-bcd475ae4736",
+    "codigo": "AU004",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b945f7bc-a4a9-4dcb-9e5f-2609bf90547a",
+    "codigo": "AU005",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "649bb8ac-7bbb-4534-9fec-da66fff895c1",
+    "codigo": "AU006",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "f444032a-1d2a-4fb7-afc2-96352368925d",
+    "codigo": "AU007",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "146c442a-310f-4596-add3-6da4af21f84e",
+    "codigo": "AU008",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "05a88222-3bbb-41b5-855f-b16594143a4d",
+    "codigo": "AU009",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "70a017cc-bdcc-403b-b2fd-194708cce3f1",
+    "codigo": "AU010",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "d7c3942c-8dfa-4b4b-8b61-74cc9e6ef79f",
+    "codigo": "AU011",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b21d8b05-ca7d-40b0-b0b1-e37e551effb6",
+    "codigo": "AU012",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "85a1351a-5b4f-4b94-8e9d-d42aa65e74f8",
+    "codigo": "AU013",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "f3c981f0-ab10-47b6-aa3a-613efd700d99",
+    "codigo": "AU014",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "ababbe0d-4b5c-4f98-aca9-a38bee963dd0",
+    "codigo": "AU015",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "94d469de-c40f-4e1c-b278-7946e759c2c2",
+    "codigo": "AU016",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "6cc8687e-d55b-45a2-a443-96857f524703",
+    "codigo": "LM1148",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "6c5033d3-db3a-406a-9699-96f9d8dc4408",
+    "codigo": "LM1149",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "08174935-f03e-41fb-8a89-6061caa72de8",
+    "codigo": "LM1150",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "52f3e8ae-30dd-44c6-8e12-7c874c570fad",
+    "codigo": "LM1151",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "7a377e1d-d642-49a7-b9c5-7147c9564aa7",
+    "codigo": "LM1152",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "267fc9b7-f195-4216-9f74-8ba0c67463f8",
+    "codigo": "LM1153",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "c8354432-c5a5-4eec-a3d7-d88ad0b89611",
+    "codigo": "LM1256",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "e0ce945f-969a-4a6b-96fd-307b059ece84",
+    "codigo": "LM1257",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "3a935c1c-e607-4cd6-9159-ab63d9951ffa",
+    "codigo": "LM1365",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "4aaae3c3-fc90-438c-9b84-5878b607cea1",
+    "codigo": "LM1366",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1fe54238-9ecf-4eee-b5c4-b3137c7ce008",
+    "codigo": "LM1367",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1f0988b2-e48a-461e-a2db-3df5e94d178f",
+    "codigo": "LM1368",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "cb057b72-91d7-4f60-9257-7269c5308921",
+    "codigo": "LM1528",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "fbcfaa47-4725-4c22-99f1-896ac5eea11c",
+    "codigo": "LM1530",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "58403560-8073-4b40-a968-63bcf42b5ab8",
+    "codigo": "LM1820",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "424a06fd-b468-4a34-899a-ccfa2bc0bb1e",
+    "codigo": "LM1823",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "a55e41db-6e74-4728-94dd-7a5fab949f3d",
+    "codigo": "LM1824",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "3bd83d7c-06fc-4ee6-8e00-b2972c9275ca",
+    "codigo": "LM2439",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "cf59b365-46e2-4543-921e-b19260c96e46",
+    "codigo": "LM2440",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "a4df5ae9-09f8-44e5-973b-66454ab3f07e",
+    "codigo": "LM2451",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "c2cdfdb2-a963-4aed-9c52-7de7822756f4",
+    "codigo": "LM2452",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "14aeb1de-09b3-45dd-84eb-b9498550daac",
+    "codigo": "LM2453",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "d0eed045-24df-44b1-813c-1956233adebf",
+    "codigo": "LM2454",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b3191f95-6792-4ebe-9256-28f0faa63d77",
+    "codigo": "LM2455",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "8cb479c0-a134-4e07-95f0-bda5f99fd492",
+    "codigo": "LM2456",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "6a740cdd-e301-4666-a312-cf8c255d32e6",
+    "codigo": "LM2457",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "13499102-268f-4fe1-a7ea-63cec7a6ec14",
+    "codigo": "LM2458",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "19561116-144a-4908-8f3e-2d04848ce34f",
+    "codigo": "LM2459",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "affd3a4c-1487-48b8-bd73-4a6305b2096a",
+    "codigo": "LM2460",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "74f7f44d-ce31-46b4-8695-d513fc90313f",
+    "codigo": "LM2461",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1e673f60-6990-4cb3-a2aa-4983cbe57569",
+    "codigo": "LM2462",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "fb8bcd6a-1b88-4fa9-957e-bc3c0804021a",
+    "codigo": "LM2570",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "ff3364a7-253d-4db2-ae9b-a6e4cdeec612",
+    "codigo": "LM268",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "d0b8e3c2-c55c-4429-8db8-ccff130f10b1",
+    "codigo": "LM2773",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1377163f-df9c-4fd4-8646-33864c7b5de6",
+    "codigo": "LM2789",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1a7a6aa6-9154-4742-84e2-99714612bef0",
+    "codigo": "LM2790",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "59dd24c2-78e1-42be-b35c-449a7c65bcd7",
+    "codigo": "LM2791",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "9b669efc-d287-4da8-a5b9-2e8f9e7360d9",
+    "codigo": "LM2800",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "5d4c6eeb-9d5f-4c5a-ba40-f27702d45b07",
+    "codigo": "LM3435",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "d10d8b9f-0894-4ccf-ad1b-5d8c1199293d",
+    "codigo": "LM3439",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "312222e9-b72e-4f00-8bd3-b58db5b2e69b",
+    "codigo": "LM3440",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b3da65c2-e6ec-48fa-a56c-333c7749c790",
+    "codigo": "LM3441",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "cb3fca09-7e41-4346-afa9-b9e30e649b15",
+    "codigo": "LM3494",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "51029812-8471-454d-ad7b-677d9b517573",
+    "codigo": "LM3503",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "785356a4-78b0-48cc-b938-d0dc9e4c0d78",
+    "codigo": "LM3505",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "7b56602e-a73c-41a0-a5c5-2bb400944880",
+    "codigo": "LM460",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "bb03535d-7bcc-4b37-a201-5f468aadf9ef",
+    "codigo": "LM461",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "025351fd-a658-4161-b8e2-bd36f5242e14",
+    "codigo": "LM462",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "46849619-1bca-436a-8f56-e1158e3dfd4d",
+    "codigo": "LM463",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "42ed7d08-c446-4bcd-86df-191d6ae88cd0",
+    "codigo": "LM519",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "45d3d482-c932-440f-add8-8184fad2b937",
+    "codigo": "LM520",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "202b11a7-ea40-4b5c-bafa-6cf1d425aca8",
+    "codigo": "LM521",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "5e803b90-4e17-42c3-b27b-5c665fcf6202",
+    "codigo": "LM525",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1becffc9-feb4-4ed6-86c0-00d294308198",
+    "codigo": "LM526",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "061e5343-2731-4b81-a614-1087418deb99",
+    "codigo": "LM527",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "a7db6abe-3ce2-4cde-89b6-19d11e44293b",
+    "codigo": "LM529",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "73620649-bfad-4507-8d9e-f95c4df6c00e",
+    "codigo": "LM533",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b7e7a82a-7a87-4b14-9d96-a750f7beeb8b",
+    "codigo": "LM534",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "5579bc5a-5c20-46ea-9118-8258320680d2",
+    "codigo": "LM536",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "0bde7932-6d18-4caf-9c69-0fea95d22e6a",
+    "codigo": "LM537",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "a3eef0e1-ff42-4134-b0b7-3f4b2111e5fb",
+    "codigo": "LM690",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "3ca7aeaa-f95f-4247-a4d2-dbf40be680e2",
+    "codigo": "LM691",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "0767384d-303a-4d26-b716-1ec65204511e",
+    "codigo": "LM789",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b8be248a-3647-408d-8a62-921def6196b9",
+    "codigo": "LM792",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "aef88409-7f8c-4781-b36b-5344f0a9cfc3",
+    "codigo": "LM793",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "abb318ef-dbce-4ca6-885b-ccca5f3d4618",
+    "codigo": "LM794",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "0cd465f9-bb61-4727-a82b-4e8df7ea7508",
+    "codigo": "LM795",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "5b8160b2-db42-4d38-8f66-942dd9cd1877",
+    "codigo": "LM796",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "a9f668f0-4fd6-46a2-97ea-1f651fe5ef7f",
+    "codigo": "LM797",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "01929739-65ef-4ed2-8d9a-c162987c9243",
+    "codigo": "LM798",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "5041dcf9-0eb7-4c1c-8c81-a374b179f410",
+    "codigo": "LM799",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "33c52bb9-63c4-4f9e-ba0f-c846750f4914",
+    "codigo": "LM800",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "c534cd26-2f56-4b6b-a80b-c5f991c546ef",
+    "codigo": "LM801",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1e33d35f-04b2-485c-84e1-abf07d7d7bc3",
+    "codigo": "LM802",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "7cc571fc-8ce0-4b85-86da-f5ae7156d0b1",
+    "codigo": "LM805",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "247d2789-f9ec-4550-9849-56f077554092",
+    "codigo": "LM806",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b3c02d3e-141d-4ce0-95d2-019fd74c0814",
+    "codigo": "LM807",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "779d2a6f-984c-4373-8d27-9acfb66c330e",
+    "codigo": "LM808",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "bd2d3374-7f41-4dcb-942a-7abab9dd2741",
+    "codigo": "LM809",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b82d347d-6a2b-4b50-b10f-9d767f159349",
+    "codigo": "LM810",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "f131a775-f271-496a-994b-d7346d9cdcf6",
+    "codigo": "LM811",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "360db240-8761-4cb4-a602-67e0d2af864d",
+    "codigo": "LM812",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "0c2369f9-110e-4f55-860d-9ee3262e4868",
+    "codigo": "LM813",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "f49f402b-0283-487d-ab63-7e0fdf6073d9",
+    "codigo": "LM814",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b2380b7f-a6ed-4614-91e6-5669993112b0",
+    "codigo": "LM817",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "b1a49054-0299-42bf-a89b-c1657eaa8ffe",
+    "codigo": "LM818",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "db95170a-d12b-4eab-b02e-d7b024221833",
+    "codigo": "LM821",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "d63ff187-21dc-49f1-8b1a-4239c283b01a",
+    "codigo": "LM822",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "889ed736-b8e9-40fb-bb53-2fa6fc06665d",
+    "codigo": "LM826",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "55dc0c84-cb4d-4ba5-8aa1-564a9e674db8",
+    "codigo": "LM918",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "aeebc3db-31cd-4d5c-afe7-96825c6832ba",
+    "codigo": "LM919",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "1e07e3cf-6385-403f-aac6-4bb199ef8157",
+    "codigo": "LM920",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "4589c515-aada-482b-bb5c-639b5b3484c8",
+    "codigo": "LM921",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "fd1a48c9-e2c4-4465-9fc1-301cab30c18f",
+    "codigo": "LM922",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "a5c607c2-a2d8-4a6c-9499-dacd6c77d419",
+    "codigo": "LM923",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "3a03c205-b669-41a7-a1f3-427b6c37f904",
+    "codigo": "LM924",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "f2e4581f-822a-40a3-916a-9b5a391ca657",
+    "codigo": "LM925",
+    "antes": {
+      "ativo": true
+    }
+  },
+  {
+    "id": "e34d617e-6cc6-40cd-80da-4243365effd6",
+    "codigo": "LM926",
+    "antes": {
+      "ativo": true
+    }
+  }
+]

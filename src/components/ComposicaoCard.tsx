@@ -229,7 +229,8 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
         .eq("tipo_produto", "driver")
         .eq("tensao", opts.voltagem ?? 24)
         .gte("potencia_watts", opts.consumoSeguroW)
-        .not("descricao", "ilike", "%DESCONTINUAR%");
+        .not("descricao", "ilike", "%DESCONTINUAR%")
+        .eq("ativo", true);
       if (opts.tetoW != null) q = q.lte("potencia_watts", opts.tetoW);
       if (restringirTrilho) {
         q = q.or(
@@ -607,6 +608,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
         .ilike("descricao", "%TAMPA CEGA%")
         .not("descricao", "ilike", "%COM FURO%")     // RULE-039 (tampa de spot) fora do escopo
         .not("descricao", "ilike", "%DESCONTINUAR%")
+        .eq("ativo", true)
         .limit(100);
 
       const rows = (data ?? []) as Array<{
@@ -675,6 +677,7 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
         // RULE-003: nunca oferecer código fora do catálogo atual. Se a tampa sair de linha,
         // a busca volta vazia e cai no aviso abaixo, em vez de sugerir item descontinuado.
         .not("descricao", "ilike", "%DESCONTINUAR%")
+        .eq("ativo", true)
         .limit(1);
 
       const tampa = data?.[0] as
