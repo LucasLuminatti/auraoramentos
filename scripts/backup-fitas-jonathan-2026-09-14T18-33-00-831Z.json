@@ -1,0 +1,288 @@
+[
+  {
+    "id": "d7cfcaa3-a6e9-4cd5-8458-70cfb7cb0541",
+    "codigo": "LM1478",
+    "antes": {
+      "tamanho_rolo_m": null,
+      "tipo_produto": "perfil"
+    }
+  },
+  {
+    "id": "6c29e3e4-264f-4605-9eac-1bf71727513e",
+    "codigo": "LM2991",
+    "antes": {
+      "tamanho_rolo_m": null,
+      "tipo_produto": "acessorio"
+    }
+  },
+  {
+    "id": "8f5254a1-e184-4cc2-8e25-460487f23945",
+    "codigo": "LM2378",
+    "antes": {
+      "tamanho_rolo_m": null,
+      "tipo_produto": "perfil"
+    }
+  },
+  {
+    "id": "c5fa0265-1004-4946-94fd-45d42f61dbc1",
+    "codigo": "LM2379",
+    "antes": {
+      "tamanho_rolo_m": null,
+      "tipo_produto": "perfil"
+    }
+  },
+  {
+    "id": "3633eb87-cb23-4a2c-8165-ed309ba3aeb2",
+    "codigo": "LM2855",
+    "antes": {
+      "tamanho_rolo_m": null,
+      "tipo_produto": "perfil"
+    }
+  },
+  {
+    "id": "3219bb3f-91e6-4a99-866f-bfd82d0091d0",
+    "codigo": "LM3211",
+    "antes": {
+      "tamanho_rolo_m": null,
+      "tipo_produto": "perfil"
+    }
+  },
+  {
+    "id": "b045b154-43e5-43d1-91af-26e36e030be4",
+    "codigo": "LM269",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "598fc741-b859-457a-ad23-c7be04803a4e",
+    "codigo": "LM286",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "f5ede50d-2898-482f-ae74-130507e4e610",
+    "codigo": "LM287",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "9e922aa5-e9f5-4fcf-9d3b-521815c4d42f",
+    "codigo": "LM288",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "2466d237-d408-4bee-9ccc-5998dde08b7c",
+    "codigo": "LM464",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "2951497a-459c-4b3b-a151-7a55b6c50cb2",
+    "codigo": "LM465",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "74493ac0-1e00-42eb-93d6-e1fda0378480",
+    "codigo": "LM290",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "3b840ae7-0f70-4abb-a526-476e85db428b",
+    "codigo": "LM522",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "84dc4d0d-2a2c-4ea1-b8ab-d576c787d882",
+    "codigo": "LM523",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "3fcf3819-51f8-4e2e-bf44-ae3d85e5934a",
+    "codigo": "LM524",
+    "antes": {
+      "tamanho_rolo_m": null
+    }
+  },
+  {
+    "id": "bf605fef-f454-4b4c-9c6a-427823e9c86b",
+    "codigo": "LM3257",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "529b00b3-9e27-491f-9a74-7633a8159121",
+    "codigo": "LM3258",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "b91611d5-606c-4797-a638-fb7608120482",
+    "codigo": "LM3259",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "8212772e-03ff-4554-95be-1a3bd774498a",
+    "codigo": "LM3260",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "7e2d2493-ad9c-4673-b780-b402d62f35d9",
+    "codigo": "LM3261",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "aee00c04-3c71-4bb6-989c-63e241bc9895",
+    "codigo": "LM3262",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "d3059ea9-5b2d-430e-9066-209ec4ab1846",
+    "codigo": "LM3263",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "ac7f46cc-f811-48eb-9dfa-4d97e641ea8e",
+    "codigo": "LM3264",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "f1641c10-a31f-434c-9534-603518cb8c2c",
+    "codigo": "LM3273",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "3e732e99-f88f-4fcb-9e6f-6e4f935b09a7",
+    "codigo": "LM3274",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "86a7efb0-aecc-48a0-8172-69d79b8ea7b4",
+    "codigo": "LM3275",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "94e953e7-c389-489a-9085-e8b320248c22",
+    "codigo": "LM3276",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "737003df-77dd-4baf-9445-06c78df759b7",
+    "codigo": "LM3277",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "ce0729d2-f273-455a-b420-caa87770936b",
+    "codigo": "LM3278",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "e855135e-397d-4e02-996b-bd851c2250f6",
+    "codigo": "LM3279",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "ac0a17a3-7629-49ba-9def-18a25f3ae244",
+    "codigo": "LM3280",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "ee7953aa-59bd-4fa5-9f25-a9f481e1077d",
+    "codigo": "LM3281",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "506d85c9-334c-4f20-876d-c9d8debe5971",
+    "codigo": "LM3282",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "e7ca9cfa-7966-4617-9af4-475ed3c26c86",
+    "codigo": "LM3283",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "0a75c8fa-2efa-4f6d-9579-56b4fcd458e2",
+    "codigo": "LM3284",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "3ed8a5cb-471c-432a-83eb-03d608d18cf8",
+    "codigo": "LM3285",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "d3c751ff-406a-4747-a702-72581b21f5fe",
+    "codigo": "LM3286",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "217512ad-e4ca-4211-bdb5-c9c636d9fee8",
+    "codigo": "LM3287",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  },
+  {
+    "id": "0466d847-64b0-4fe4-8bc4-f310f3fa4869",
+    "codigo": "LM3288",
+    "antes": {
+      "tipo_produto": "fita"
+    }
+  }
+]
