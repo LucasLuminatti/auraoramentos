@@ -50,6 +50,12 @@ function formatarData(): string {
   return new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+/** Valor numérico do snapshot interpolado no HTML: o snapshot é JSON gravado pelo cliente,
+ *  então "número" pode chegar como texto com HTML. Escapa sempre (auditoria 2026-09-15). */
+function n(v: unknown): string {
+  return esc(v == null ? "" : String(v));
+}
+
 /** Escapa texto pra HTML — defensivo contra nomes de cliente/projeto/local com `<` ou `&`. */
 function esc(s: string | null | undefined): string {
   if (s == null) return "";
@@ -67,10 +73,13 @@ function chip(text: string, variant: "neutral" | "orange" = "neutral"): string {
   return `<span class="chip" style="background:${bg};color:${color}">${esc(text)}</span>`;
 }
 
-/** Thumbnail 48×48 com fallback (espaço em branco) quando imagemUrl ausente. */
+/** Thumbnail 48×48 com fallback (espaço em branco) quando imagemUrl ausente.
+ *  Só aceita http(s) e data:image — a URL vem do snapshot (auditoria de segurança 2026-09-15). */
 function thumb(url: string | undefined): string {
-  if (!url) return `<div class="thumb-empty"></div>`;
-  return `<img src="${esc(url)}" alt="" class="thumb" />`;
+  const u = (url ?? "").trim();
+  const permitida = u.startsWith("https://") || u.startsWith("http://") || u.startsWith("data:image/");
+  if (!permitida) return `<div class="thumb-empty"></div>`;
+  return `<img src="${esc(u)}" alt="" class="thumb" />`;
 }
 
 /** Agrupa sistemas de um ambiente por `local`. Sistemas com local null/undefined/"" caem em "Geral". */
@@ -125,8 +134,8 @@ function rowLuminaria(item: ItemLuminaria, atributosMap: AtributosMap): string {
         <div class="desc-name">${esc(descRica)}</div>
         ${chipsHtml ? `<div class="chips">${chipsHtml}</div>` : ""}
       </td>
-      <td class="qty-cell">${item.quantidade} un</td>
-      <td class="watts-cell">${item.potencia_watts ?? "—"}${item.potencia_watts ? "W" : ""}${item.tensao ? ` / ${item.tensao}V` : ""}</td>
+      <td class="qty-cell">${n(item.quantidade)} un</td>
+      <td class="watts-cell">${n(item.potencia_watts ?? "—")}${item.potencia_watts ? "W" : ""}${item.tensao ? ` / ${n(item.tensao)}V` : ""}</td>
       <td class="price-cell">${formatarMoeda(item.precoUnitario)}</td>
       <td class="sku-cell"><span class="code-tag">RV${esc(item.codigo)}</span></td>
       <td class="subtotal-cell">${formatarMoeda(subtotal)}</td>
@@ -159,7 +168,7 @@ function rowFita(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
         <div class="chips">${chipsHtml}</div>
       </td>
       <td class="qty-cell">${demanda} m</td>
-      <td class="watts-cell">${sis.fita.wm}W/m${sis.fita.voltagem ? ` / ${sis.fita.voltagem}V` : ""}</td>
+      <td class="watts-cell">${n(sis.fita.wm)}W/m${sis.fita.voltagem ? ` / ${n(sis.fita.voltagem)}V` : ""}</td>
       <td class="price-cell">${formatarMoeda(sis.fita.precoUnitario)}</td>
       <td class="sku-cell"><span class="code-tag">RV${esc(sis.fita.codigo)}</span></td>
       <td class="subtotal-cell muted">— global —</td>
@@ -189,7 +198,7 @@ function rowPerfil(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
         <div class="desc-name"><span class="comp-tag">Perfil</span> ${esc(descRica)}</div>
         <div class="chips">${chipsHtml}</div>
       </td>
-      <td class="qty-cell">${sis.perfil.quantidade} un</td>
+      <td class="qty-cell">${n(sis.perfil.quantidade)} un</td>
       <td class="watts-cell">—</td>
       <td class="price-cell">${formatarMoeda(sis.perfil.precoUnitario)}</td>
       <td class="sku-cell"><span class="code-tag">RV${esc(sis.perfil.codigo)}</span></td>
@@ -220,7 +229,7 @@ function rowDriver(sis: SistemaIluminacao, atributosMap: AtributosMap): string {
         <div class="chips">${chipsHtml}</div>
       </td>
       <td class="qty-cell">${qtd} un</td>
-      <td class="watts-cell">${sis.driver.potencia}W / ${sis.driver.voltagem}V</td>
+      <td class="watts-cell">${n(sis.driver.potencia)}W / ${n(sis.driver.voltagem)}V</td>
       <td class="price-cell">${formatarMoeda(sis.driver.precoUnitario)}</td>
       <td class="sku-cell"><span class="code-tag">RV${esc(sis.driver.codigo)}</span></td>
       <td class="subtotal-cell">${formatarMoeda(subtotal)}</td>
@@ -245,7 +254,7 @@ function rowsAcessoriosSistema(sis: SistemaIluminacao, atributosMap: AtributosMa
       <td class="desc-cell">
         <div class="desc-name">${esc(descRica)}</div>
       </td>
-      <td class="qty-cell">${a.quantidade} un</td>
+      <td class="qty-cell">${n(a.quantidade)} un</td>
       <td class="watts-cell">—</td>
       <td class="price-cell">${formatarMoeda(a.precoUnitario)}</td>
       <td class="sku-cell"><span class="code-tag">RV${esc(a.codigo)}</span></td>

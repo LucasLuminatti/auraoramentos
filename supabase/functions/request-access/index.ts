@@ -7,6 +7,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Endpoint público (verify_jwt=false). Segurança (auditoria 2026-09-15):
+// - nome e e-mail entravam crus no HTML do e-mail ao admin (phishing pelo domínio da Luminatti);
+// - sem limite, qualquer um disparava e-mails ilimitados e esgotava a cota do Resend.
+const NOME_MAX = 100;
+const EMAIL_MAX = 254;
+const PEDIDOS_NOVOS_POR_HORA = 20;
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function hmacSign(secret: string, message: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -23,34 +39,36 @@ async function hmacSign(secret: string, message: string): Promise<string> {
     .replace(/=+$/, "");
 }
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return json({ error: "Method not allowed" }, 405);
   }
 
   try {
-    const { name, email } = await req.json();
+    const body = await req.json().catch(() => null);
+    // espaços internos colapsados e sem caracteres de controle (o nome vai no assunto do e-mail)
+    const name = typeof body?.name === "string"
+      ? [...body.name].map((ch: string) => (ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? " " : ch)).join("").replace(/\s+/g, " ").trim()
+      : "";
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
 
-    if (!name || typeof name !== "string" || name.trim().length < 2) {
-      return new Response(JSON.stringify({ error: "Nome inválido" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    if (name.length < 2 || name.length > NOME_MAX) {
+      return json({ error: "Nome inválido" }, 400);
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      return new Response(JSON.stringify({ error: "E-mail inválido" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    const emailRegex = /^[^\s@<>"]+@[^\s@<>"']+\.[^\s@<>"']+$/;
+    if (!email || email.length > EMAIL_MAX || !emailRegex.test(email)) {
+      return json({ error: "E-mail inválido" }, 400);
     }
 
     const supabase = createClient(
@@ -62,50 +80,57 @@ Deno.serve(async (req) => {
     const { data: existing } = await supabase
       .from("access_requests")
       .select("status")
-      .eq("email", email.toLowerCase())
+      .eq("email", email)
       .maybeSingle();
 
     if (existing) {
       if (existing.status === "PENDING") {
-        return new Response(
-          JSON.stringify({
-            error: "pending",
-            message: "Seu pedido já está aguardando aprovação. Verifique seu e-mail.",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
+        return json({
+          error: "pending",
+          message: "Seu pedido já está aguardando aprovação. Verifique seu e-mail.",
+        });
       }
       if (existing.status === "APPROVED") {
-        return new Response(
-          JSON.stringify({
-            error: "approved",
-            message: "Seu acesso já foi aprovado! Acesse a página de login para criar sua conta.",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
+        return json({
+          error: "approved",
+          message: "Seu acesso já foi aprovado! Acesse a página de login para criar sua conta.",
+        });
       }
+    }
+
+    // Limite global de pedidos novos: cada pedido dispara um e-mail ao admin. Acima do limite o
+    // pedido é registrado normalmente, mas sem e-mail — um robô não esgota a cota do Resend e
+    // também não consegue travar o pedido de quem é legítimo (recusar com 429 permitia isso).
+    const umaHoraAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: pedidosRecentes, error: countError } = await supabase
+      .from("access_requests")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", umaHoraAtras);
+    if (countError) {
+      console.error("request-access count error:", countError);
+      return json({ error: "Erro interno do servidor" }, 500);
+    }
+    const acimaDoLimite = (pedidosRecentes ?? 0) >= PEDIDOS_NOVOS_POR_HORA;
+
+    if (existing) {
       // REJECTED — delete old entry and allow re-request
-      await supabase.from("access_requests").delete().eq("email", email.toLowerCase());
+      await supabase.from("access_requests").delete().eq("email", email);
     }
 
     // Insert new request
     const { data: inserted, error: insertError } = await supabase
       .from("access_requests")
-      .insert({ name: name.trim(), email: email.toLowerCase() })
+      .insert({ name, email })
       .select("id")
       .single();
 
     if (insertError || !inserted) {
       console.error("Insert error:", insertError);
-      return new Response(JSON.stringify({ error: "Erro ao registrar pedido" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return json({ error: "Erro ao registrar pedido" }, 500);
     }
 
     const requestId = inserted.id;
     const secret = Deno.env.get("APPROVAL_TOKEN_SECRET")!;
-    const appUrl = Deno.env.get("APP_URL") || "https://auraoramentos-kappa.vercel.app";
     const adminEmail = Deno.env.get("ADMIN_EMAIL")!;
 
     // Generate HMAC token (24h expiry)
@@ -122,13 +147,20 @@ Deno.serve(async (req) => {
     const rejectUrl = `${funcBaseUrl}/review-access?action=reject&requestId=${requestId}&token=${encodeURIComponent(token)}`;
 
     const requestedAt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const nameHtml = escapeHtml(name);
+    const emailHtml = escapeHtml(email);
+
+    if (acimaDoLimite) {
+      console.warn(`request-access: limite de ${PEDIDOS_NOVOS_POR_HORA} pedidos/h atingido — pedido ${requestId} registrado sem e-mail ao admin`);
+      return json({ success: true });
+    }
 
     // Send email to admin
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: "Aura Orçamentos <noreply@orcamentosaura.com.br>",
       to: [adminEmail],
-      subject: `Novo pedido de acesso: ${name.trim()}`,
+      subject: `Novo pedido de acesso: ${name}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -150,13 +182,13 @@ Deno.serve(async (req) => {
                       <tr>
                         <td style="padding:6px 0;">
                           <span style="color:#6b7280;font-size:13px;font-weight:500;">Nome</span><br>
-                          <span style="color:#111827;font-size:15px;font-weight:600;">${name.trim()}</span>
+                          <span style="color:#111827;font-size:15px;font-weight:600;">${nameHtml}</span>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:6px 0;">
                           <span style="color:#6b7280;font-size:13px;font-weight:500;">E-mail</span><br>
-                          <span style="color:#111827;font-size:15px;">${email.toLowerCase()}</span>
+                          <span style="color:#111827;font-size:15px;">${emailHtml}</span>
                         </td>
                       </tr>
                       <tr>
@@ -186,16 +218,14 @@ Deno.serve(async (req) => {
         </html>
       `,
     });
+    if (sendError) {
+      // o pedido já está gravado; o admin ainda o vê no painel
+      console.error("request-access resend error:", sendError);
+    }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return json({ success: true });
   } catch (err) {
     console.error("request-access error:", err);
-    return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return json({ error: "Erro interno do servidor" }, 500);
   }
 });

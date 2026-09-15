@@ -227,7 +227,13 @@ function buildHtml(args: {
   idade: number;
   contato: string | null;
 }): string {
-  const { nome, dataFormatada, idade, contato } = args;
+  // Nome e contato são digitados por colaboradores e o e-mail vai para todos os admins:
+  // escapar antes de interpolar no HTML (auditoria de segurança 2026-09-15).
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  const nome = esc(args.nome ?? "");
+  const contato = args.contato ? esc(args.contato) : null;
+  const { dataFormatada, idade } = args;
   const idadeLabel = idade > 0 ? ` (completa ${idade} anos)` : "";
   const contatoBlock = contato
     ? `

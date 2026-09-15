@@ -193,7 +193,19 @@ const OrcamentoDetalhe = () => {
         ? (data.ambientes as unknown as Ambiente[])
         : [];
 
-      setOrc({ ...(data as unknown as OrcamentoFull), ambientes: ambientesParsed });
+      // O cadastro do colaborador (com CPF e telefone) só é legível pelo próprio e pelo admin.
+      // Quando o dono do cliente abre um orçamento criado por outra pessoa, o join vem vazio —
+      // o nome do autor sai por uma RPC que devolve só o nome (auditoria de segurança 2026-09-15).
+      const nomeDoAutor = async (orcamentoId: string) => {
+        const { data: nome } = await supabase.rpc("nome_autor_orcamento", { p_orcamento_id: orcamentoId });
+        return nome ? { nome } : null;
+      };
+
+      const orcFull = data as unknown as OrcamentoFull;
+      if (!orcFull.colaboradores && orcFull.colaborador_id) {
+        orcFull.colaboradores = await nomeDoAutor(orcFull.id);
+      }
+      setOrc({ ...orcFull, ambientes: ambientesParsed });
 
       // Histórico de revisões: todos os orçamentos do mesmo projeto (mesma chave projeto_id).
       if (data.projeto_id) {
@@ -202,7 +214,13 @@ const OrcamentoDetalhe = () => {
           .select("id, tipo, data, valor, status, created_at, colaboradores ( nome )")
           .eq("projeto_id", data.projeto_id)
           .order("created_at", { ascending: true });
-        setRevisoes((revData ?? []) as unknown as RevisaoRow[]);
+        const revs = (revData ?? []) as unknown as RevisaoRow[];
+        await Promise.all(
+          revs.map(async (r) => {
+            if (!r.colaboradores) r.colaboradores = await nomeDoAutor(r.id);
+          })
+        );
+        setRevisoes(revs);
       } else {
         setRevisoes([]);
       }

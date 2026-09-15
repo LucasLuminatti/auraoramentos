@@ -1,6 +1,7 @@
 /**
  * Template v1 — LEGACY. Preservado para snapshots criados antes da Phase 5
- * (orcamentos.pdf_template_version IS NULL ou < 2). NÃO modificar — qualquer
+ * (orcamentos.pdf_template_version IS NULL ou < 2). NÃO modificar (exceção: escape de HTML por
+ * segurança, 2026-09-15, que não muda o visual de dado legítimo) — qualquer
  * mudança aqui afeta orçamentos históricos. Para o template novo, veja v2.ts.
  *
  * Movido de src/lib/gerarPdfHtml.ts em Phase 5 / Plan 05.
@@ -39,6 +40,26 @@ function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+/** Escapa texto do snapshot antes de interpolar no HTML. O HTML do PDF vai para `innerHTML`
+ *  dentro da própria app (Step3Revisao / OrcamentoDetalhe): sem escape, um nome de cliente ou
+ *  de ambiente com `<img onerror=...>` executava script (auditoria de segurança 2026-09-15).
+ *  Para texto legítimo o resultado visual é idêntico — só `& < > "` e aspas simples mudam. */
+function esc(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** URL de imagem: só http(s) ou data:image — e escapada para o atributo. */
+function safeUrl(url?: string): string {
+  const u = String(url ?? "").trim();
+  const permitida = u.startsWith("https://") || u.startsWith("http://") || u.startsWith("data:image/");
+  return permitida ? esc(u) : "";
+}
+
 function splitMoeda(valor: number): { symbol: string; amount: string } {
   const f = formatarMoeda(valor);
   return { symbol: "R$", amount: f.replace("R$", "").trim() };
@@ -46,7 +67,7 @@ function splitMoeda(valor: number): { symbol: string; amount: string } {
 
 function imgCell(url?: string): string {
   if (!url) return "";
-  return `<td style="width:44px;padding:6px 8px"><img src="${url}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px" /></td>`;
+  return `<td style="width:44px;padding:6px 8px"><img src="${safeUrl(url)}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px" /></td>`;
 }
 
 /* ── table builders ── */
@@ -56,9 +77,9 @@ function tabelaLuminarias(items: Ambiente["luminarias"]): string {
   const hasImg = items.some((i) => i.imagemUrl);
   const rows = items.map((i) => `<tr>
     ${hasImg ? imgCell(i.imagemUrl) : ""}
-    <td><span class="code-tag">RV${i.codigo}</span></td>
-    <td><span class="desc-main">${i.descricao}</span></td>
-    <td class="c"><span class="qty-circle">${i.quantidade}</span></td>
+    <td><span class="code-tag">RV${esc(i.codigo)}</span></td>
+    <td><span class="desc-main">${esc(i.descricao)}</span></td>
+    <td class="c"><span class="qty-circle">${esc(i.quantidade)}</span></td>
     <td class="r"><span class="price-unit">${formatarMoeda(i.precoUnitario)}</span></td>
     <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalLuminaria(i))}</span></td>
   </tr>`).join("");
@@ -80,9 +101,9 @@ function tabelaSistemas(sistemas: SistemaIluminacao[]): string {
     // Fita row (always present)
     let html = `<tr>
       <td><span class="code-tag" style="background:#fff4e0;color:#E68601;border-color:rgba(230,134,1,.18)">Fita</span></td>
-      <td><span class="code-tag">RV${sis.fita.codigo}</span></td>
-      <td><span class="desc-main">${sis.fita.descricao}</span></td>
-      <td class="r"><span class="price-unit">${demanda}m | ${sis.fita.wm}W/m | ${consumo.toFixed(1)}W</span></td>
+      <td><span class="code-tag">RV${esc(sis.fita.codigo)}</span></td>
+      <td><span class="desc-main">${esc(sis.fita.descricao)}</span></td>
+      <td class="r"><span class="price-unit">${esc(demanda)}m | ${esc(sis.fita.wm)}W/m | ${consumo.toFixed(1)}W</span></td>
       <td class="r"><span class="price-unit">${formatarMoeda(sis.fita.precoUnitario)}</span></td>
       <td class="r"><span class="price-unit" style="font-style:italic;color:#9aa3b0">Global →</span></td>
     </tr>`;
@@ -92,9 +113,9 @@ function tabelaSistemas(sistemas: SistemaIluminacao[]): string {
       const metragem = sis.perfil.comprimentoPeca * sis.perfil.quantidade;
       html += `<tr>
         <td><span class="code-tag" style="background:#e0ecf5;color:#2E78A6;border-color:rgba(46,120,166,.18)">Perfil</span></td>
-        <td><span class="code-tag">RV${sis.perfil.codigo}</span></td>
-        <td><span class="desc-main">${sis.perfil.descricao}</span></td>
-        <td class="r"><span class="price-unit">${sis.perfil.comprimentoPeca}m × ${sis.perfil.quantidade} = ${metragem}m | ${sis.perfil.passadas} passada(s)</span></td>
+        <td><span class="code-tag">RV${esc(sis.perfil.codigo)}</span></td>
+        <td><span class="desc-main">${esc(sis.perfil.descricao)}</span></td>
+        <td class="r"><span class="price-unit">${esc(sis.perfil.comprimentoPeca)}m × ${esc(sis.perfil.quantidade)} = ${esc(metragem)}m | ${esc(sis.perfil.passadas)} passada(s)</span></td>
         <td class="r"><span class="price-unit">${formatarMoeda(sis.perfil.precoUnitario)}</span></td>
         <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalPerfilSistema(sis))}</span></td>
       </tr>`;
@@ -103,9 +124,9 @@ function tabelaSistemas(sistemas: SistemaIluminacao[]): string {
     // Driver row (always present)
     html += `<tr>
       <td><span class="code-tag" style="background:#e8ecf0;color:#5a6475;border-color:rgba(90,100,117,.18)">Driver</span></td>
-      <td><span class="code-tag">RV${sis.driver.codigo}</span></td>
-      <td><span class="desc-main">${sis.driver.descricao}</span></td>
-      <td class="r"><span class="price-unit">${sis.driver.potencia}W | ${sis.driver.voltagem}V | ×${qtdDrv}</span></td>
+      <td><span class="code-tag">RV${esc(sis.driver.codigo)}</span></td>
+      <td><span class="desc-main">${esc(sis.driver.descricao)}</span></td>
+      <td class="r"><span class="price-unit">${esc(sis.driver.potencia)}W | ${esc(sis.driver.voltagem)}V | ×${esc(qtdDrv)}</span></td>
       <td class="r"><span class="price-unit">${formatarMoeda(sis.driver.precoUnitario)}</span></td>
       <td class="r"><span class="price-total">${formatarMoeda(calcularSubtotalDriverSistema(sis))}</span></td>
     </tr>`;
@@ -128,10 +149,10 @@ function tabelaResumoFitas(ambientes: Ambiente[]): string {
   const rows = grupos.map((g) => {
     const rolosStr = g.rolos.map((r) => `${r.quantidade}×${r.tamanho}m`).join(" + ");
     return `<tr>
-      <td><span class="code-tag">RV${g.codigo}</span></td>
-      <td><span class="desc-main">${g.descricao}</span></td>
-      <td class="r"><span class="price-unit">${g.demandaTotal}m</span></td>
-      <td class="r"><span class="price-unit">${rolosStr} (${g.qtdRolosTotal} rolos)</span></td>
+      <td><span class="code-tag">RV${esc(g.codigo)}</span></td>
+      <td><span class="desc-main">${esc(g.descricao)}</span></td>
+      <td class="r"><span class="price-unit">${esc(g.demandaTotal)}m</span></td>
+      <td class="r"><span class="price-unit">${esc(rolosStr)} (${esc(g.qtdRolosTotal)} rolos)</span></td>
       <td class="r"><span class="price-unit">${formatarMoeda(g.precoUnitario)}</span></td>
       <td class="r"><span class="price-total">${formatarMoeda(g.subtotal)}</span></td>
     </tr>`;
@@ -179,7 +200,7 @@ export function gerarOrcamentoHtmlV1(params: PdfParamsV1): string {
       <div class="section-header">
         <span class="section-num">${num}</span>
         <div class="section-info">
-          <div class="section-title">${amb.nome}</div>
+          <div class="section-title">${esc(amb.nome)}</div>
           <div class="section-sub">Subtotal (s/ fita): ${subtotal}</div>
         </div>
         <div class="section-line"></div>
@@ -197,7 +218,7 @@ export function gerarOrcamentoHtmlV1(params: PdfParamsV1): string {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Proposta Comercial — ${clienteNome} — ${projetoNome}</title>
+<title>Proposta Comercial — ${esc(clienteNome)} — ${esc(projetoNome)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--blue:#2E78A6;--blue-mid:#4a93c0;--blue-soft:#c8e2f0;--blue-pale:#eef6fb;--orange:#E68601;--orange-soft:#fff4e0;--gray-900:#1a1f2e;--gray-600:#5a6475;--gray-400:#9aa3b0;--gray-200:#e8ecf0;--gray-100:#f4f6f8;--white:#ffffff;--cream:#fdfcfb}
@@ -303,10 +324,10 @@ td.c{text-align:center}
     <div style="display:flex;flex-direction:column;gap:16px;align-items:flex-end">
       <div class="doc-label">Proposta Comercial</div>
       <div class="meta-grid">
-        <div class="meta-field"><div class="meta-label">Cliente</div><div class="meta-value">${clienteNome}</div></div>
-        <div class="meta-field"><div class="meta-label">Projeto</div><div class="meta-value">${projetoNome}</div></div>
+        <div class="meta-field"><div class="meta-label">Cliente</div><div class="meta-value">${esc(clienteNome)}</div></div>
+        <div class="meta-field"><div class="meta-label">Projeto</div><div class="meta-value">${esc(projetoNome)}</div></div>
         <div class="meta-field"><div class="meta-label">Data</div><div class="meta-value">${data}</div></div>
-        <div class="meta-field"><div class="meta-label">Colaborador</div><div class="meta-value">${colaborador || "—"}</div></div>
+        <div class="meta-field"><div class="meta-label">Colaborador</div><div class="meta-value">${esc(colaborador || "—")}</div></div>
       </div>
     </div>
   </div>
@@ -317,7 +338,7 @@ td.c{text-align:center}
       <span class="tagline-text">Iluminação que transforma ambientes</span>
       <div class="validity-pills">
         <div class="pill"><span class="pill-dot"></span>Validade: 10 dias</div>
-        <div class="pill blue"><span class="pill-dot"></span>${tipo || "Orçamento"}</div>
+        <div class="pill blue"><span class="pill-dot"></span>${esc(tipo || "Orçamento")}</div>
       </div>
     </div>
   </div>

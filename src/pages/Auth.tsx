@@ -109,12 +109,11 @@ const Auth = () => {
         navigate("/");
       }
     } else {
-      // Check if email is in allowed_users before proceeding
-      const { data: allowed } = await supabase
-        .from("allowed_users")
-        .select("email")
-        .eq("email", email.toLowerCase().trim())
-        .maybeSingle();
+      // A lista allowed_users não é mais legível sem login (auditoria de segurança
+      // 2026-09-15): a checagem vira uma RPC que só responde sim/não para ESTE e-mail.
+      const { data: allowed } = await supabase.rpc("email_autorizado", {
+        p_email: email.toLowerCase().trim(),
+      });
 
       if (!allowed) {
         setLoading(false);

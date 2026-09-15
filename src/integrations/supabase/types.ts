@@ -894,6 +894,14 @@ export type Database = {
         Args: { p_qtd_sessoes: number }
         Returns: Json
       }
+      email_autorizado: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
+      nome_autor_orcamento: {
+        Args: { p_orcamento_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

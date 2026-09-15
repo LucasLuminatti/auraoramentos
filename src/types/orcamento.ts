@@ -819,7 +819,11 @@ export function calcularTotalGeral(ambientes: Ambiente[]): number {
 }
 
 export function formatarMoeda(valor: number): string {
-  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  // Sempre número: o snapshot do orçamento é JSON gravado pelo cliente, e `toLocaleString` em
+  // texto devolve o próprio texto — um preço "<img onerror=...>" saía cru no HTML do PDF
+  // (revisão de segurança 2026-09-15). Valor inválido vira R$ 0,00.
+  const n = Number(valor);
+  return (Number.isFinite(n) ? n : 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 // ─── Clonagem de sistemas e ambientes (Phase 18 — RES-04 / UX-04) ───
