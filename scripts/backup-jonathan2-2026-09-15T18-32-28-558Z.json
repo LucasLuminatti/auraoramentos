@@ -1,0 +1,135 @@
+{
+  "alteracoes": [
+    {
+      "id": "c19b7497-0b18-472a-b75f-cb36e27e6cee",
+      "codigo": "LM3827",
+      "antes": {
+        "watts_por_metro": 7,
+        "nome": "FITA LED BABY COB 50W 700W/M 3000K 12V 5M"
+      }
+    },
+    {
+      "id": "ef656eb5-e557-45ee-a539-154efeb44d75",
+      "codigo": "LM3823",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "2f38892c-73ad-401a-82fc-1602680507fd",
+      "codigo": "LM3824",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "b445a8e8-9792-4d5c-87e0-d8c12605d16c",
+      "codigo": "LM3828",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "94c3ed33-46cb-4b4c-9104-3b123908331f",
+      "codigo": "LM927",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "3bd83d7c-06fc-4ee6-8e00-b2972c9275ca",
+      "codigo": "LM2439",
+      "antes": {
+        "ativo": false
+      }
+    },
+    {
+      "id": "cf59b365-46e2-4543-921e-b19260c96e46",
+      "codigo": "LM2440",
+      "antes": {
+        "ativo": false
+      }
+    },
+    {
+      "id": "1c8dc24a-1af6-4fd0-b642-7f056b494fce",
+      "codigo": "LM3634",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "835b64e5-18b0-4d73-88fa-b638644c1747",
+      "codigo": "LM3637",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "f7602324-804f-4fd9-a3b8-722a6f6c0fd2",
+      "codigo": "LM3638",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "fb8bcd6a-1b88-4fa9-957e-bc3c0804021a",
+      "codigo": "LM2570",
+      "antes": {
+        "ativo": false
+      }
+    },
+    {
+      "id": "419fba93-3643-42bb-8031-415944a2671f",
+      "codigo": "LM3635",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "9b669efc-d287-4da8-a5b9-2e8f9e7360d9",
+      "codigo": "LM2800",
+      "antes": {
+        "ativo": false
+      }
+    },
+    {
+      "id": "698f1084-9083-4ad8-992a-8aa774b66126",
+      "codigo": "LM3636",
+      "antes": {
+        "ativo": true
+      }
+    },
+    {
+      "id": "5d4c6eeb-9d5f-4c5a-ba40-f27702d45b07",
+      "codigo": "LM3435",
+      "antes": {
+        "ativo": false
+      }
+    },
+    {
+      "id": "d10d8b9f-0894-4ccf-ad1b-5d8c1199293d",
+      "codigo": "LM3439",
+      "antes": {
+        "ativo": false
+      }
+    },
+    {
+      "id": "312222e9-b72e-4f00-8bd3-b58db5b2e69b",
+      "codigo": "LM3440",
+      "antes": {
+        "ativo": false
+      }
+    }
+  ],
+  "cadastrados": [
+    "LM3849",
+    "LM3850",
+    "LM3848",
+    "LM3844",
+    "LM3845",
+    "LM3846",
+    "LM3847",
+    "LM3843",
+    "LM3851"
+  ]
+}

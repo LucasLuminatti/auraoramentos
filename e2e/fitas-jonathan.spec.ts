@@ -10,6 +10,11 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PERFIL_FLEXIVEL = "LM1478";
 const GRAN_FOCUS = "LM3257";
+const PERFIL_RIPADO = "LM1987";
+const MICRO_BABY = "LM3851";
+// transição de código (2026-09-15): mesmo produto; só o que tem preço na lista AURA aparece
+const CODIGO_ANTIGO_COM_PRECO = "LM2440";
+const CODIGO_NOVO_SEM_PRECO = "LM3634";
 
 async function abrirPassoDeAmbientes(page: Page) {
   await page.goto("/");
@@ -79,4 +84,35 @@ test("GRAN FOCUS entra como luminária, sem abrir sistema de fita", async ({ pag
 
   await expect(page.locator('input[placeholder="Código do item"]').last()).toHaveValue(GRAN_FOCUS, { timeout: 10_000 });
   await expect(page.locator('input[placeholder="Código da fita"]')).toHaveCount(0);
+});
+
+test("transição de código: aparece o código com preço AURA, não o gêmeo novo sem preço", async ({ page }) => {
+  await abrirPassoDeAmbientes(page);
+  const busca = page.locator('input[placeholder*="Buscar produto"]');
+
+  const resposta = page.waitForResponse(
+    (r) => r.url().includes("/rest/v1/produtos") && r.url().includes(CODIGO_NOVO_SEM_PRECO),
+  );
+  await busca.fill(CODIGO_NOVO_SEM_PRECO);
+  expect(await (await resposta).json()).toEqual([]);
+
+  await busca.fill(CODIGO_ANTIGO_COM_PRECO);
+  await expect(
+    page.getByRole("button", { name: new RegExp("^" + CODIGO_ANTIGO_COM_PRECO + "[^0-9]", "i") }).first(),
+  ).toBeVisible({ timeout: 15_000 });
+});
+
+test("Micro Baby é sugerida e aceita no perfil Ripado (2ª fita Baby)", async ({ page }) => {
+  await abrirPassoDeAmbientes(page);
+  await adicionarAoAmbiente(page, PERFIL_RIPADO);
+  await expect(page.getByText(/a fita Baby é a indicada/i)).toBeVisible({ timeout: 15_000 });
+
+  const descricaoFita = page
+    .locator('input[placeholder="Código da fita"]')
+    .last()
+    .locator("xpath=following::input[@placeholder='Descrição'][1]");
+  await page.getByRole("button", { name: new RegExp(MICRO_BABY) }).first().click();
+
+  await expect(descricaoFita).toHaveValue(/MICRO BABY/i);
+  await expect(page.getByText(/não cabe no canal/i)).toHaveCount(0);
 });

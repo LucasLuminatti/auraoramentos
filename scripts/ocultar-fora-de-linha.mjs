@@ -27,7 +27,12 @@ for (const r of au.filter((r) => /^AU\d+$/.test(r.codigo))) origem.set(r.codigo,
 for (const r of res.foraDeLinhaExplicito) if (!origem.has(r.codigo)) origem.set(r.codigo, "fora de linha (Jonathan)");
 for (const r of res.foraDoPortfolioECatalogo) if (!origem.has(r.codigo)) origem.set(r.codigo, "fora do portfólio e do catálogo 2026");
 
-// trava: nada que alguma fonte ainda dá como vivo pode entrar
+// trava: nada que alguma fonte ainda dá como vivo pode entrar.
+// TRANSICAO: códigos antigos de uma troca de código (mesmo produto do código novo, vendidos até
+// acabar o estoque). Pareciam fora de linha e foram ocultados por engano em 2026-09-14; quem
+// decide a visibilidade deles é `aplicar-respostas-jonathan-2.mjs`.
+const TRANSICAO = ["LM2439", "LM2440", "LM2570", "LM2800", "LM3435", "LM3439", "LM3440"];
+for (const c of TRANSICAO) origem.delete(c);
 const vivos = new Set([
   ...res.foraDoPortfolioMasNoCatalogo.map((r) => r.codigo),
   ...res.conflitos.map((r) => r.codigo),
