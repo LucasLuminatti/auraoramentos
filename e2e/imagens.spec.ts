@@ -1,4 +1,5 @@
 import { test, expect, request } from "@playwright/test";
+import { admin } from "./helpers/supabaseAdmin";
 
 /**
  * Acervo de imagens de produto no bucket público `produtos-imagens`.
@@ -23,19 +24,28 @@ test("imagens públicas de produto servem 200 + content-type image/*", async () 
 });
 
 test("cobertura de fotos do catálogo é alta (>= 75%)", async () => {
-  const ctx = await request.newContext();
-  const countOf = async (filtro: string) => {
-    const res = await ctx.get(`${SUPA}/rest/v1/product_variants?select=id${filtro}`, {
-      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, Prefer: "count=exact", Range: "0-0" },
-    });
-    expect(res.status()).toBeLessThan(300);
-    return Number((res.headers()["content-range"] || "").split("/")[1] || "0");
+  // O catálogo deixou de ser legível sem login (auditoria de segurança 2026-09-15), então a
+  // contagem passa pela service role dos helpers em vez da chave pública.
+  const sb = admin();
+  const contar = async (comFoto: boolean) => {
+    const q = sb.from("product_variants").select("id", { count: "exact", head: true });
+    const { count, error } = comFoto ? await q.not("imagem_url", "is", null) : await q;
+    if (error) throw new Error(`contagem falhou: ${error.message}`);
+    return count ?? 0;
   };
-  const total = await countOf("");
-  const comFoto = await countOf("&imagem_url=not.is.null");
+  const total = await contar(false);
+  const comFoto = await contar(true);
   expect(total, "catálogo não vazio").toBeGreaterThan(0);
   const pct = comFoto / total;
   expect(pct, `cobertura ${comFoto}/${total} = ${(pct * 100).toFixed(1)}%`).toBeGreaterThanOrEqual(0.75);
+});
+
+test("catálogo não é legível sem login (RLS)", async () => {
+  const ctx = await request.newContext();
+  const res = await ctx.get(`${SUPA}/rest/v1/product_variants?select=id`, {
+    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+  });
+  expect(res.status(), "chave pública sozinha não deve ler o catálogo").toBe(401);
   await ctx.dispose();
 });
 
