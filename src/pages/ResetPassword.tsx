@@ -8,30 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, Eye, EyeOff, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
+import { getPasswordStrength, REGRAS_SENHA as RULES, senhaAtendeRequisitos, MENSAGEM_REQUISITOS_SENHA, SENHA_MIN_CARACTERES } from "@/lib/senha";
 
-function getPasswordStrength(password: string) {
-  const checks = {
-    minLength: password.length >= 8,
-    hasUpper: /[A-Z]/.test(password),
-    hasLower: /[a-z]/.test(password),
-    hasNumber: /[0-9]/.test(password),
-    hasSpecial: /[^A-Za-z0-9]/.test(password),
-  };
-  const score = Object.values(checks).filter(Boolean).length;
-  const label =
-    score <= 1 ? "Muito fraca" : score === 2 ? "Fraca" : score === 3 ? "Média" : score === 4 ? "Forte" : "Muito forte";
-  const color =
-    score <= 1 ? "bg-destructive" : score === 2 ? "bg-orange-500" : score === 3 ? "bg-yellow-500" : score === 4 ? "bg-emerald-400" : "bg-emerald-600";
-  return { checks, score, label, color, percent: (score / 5) * 100 };
-}
-
-const RULES = [
-  { key: "minLength" as const, text: "Mínimo 8 caracteres" },
-  { key: "hasUpper" as const, text: "Uma letra maiúscula" },
-  { key: "hasLower" as const, text: "Uma letra minúscula" },
-  { key: "hasNumber" as const, text: "Um número" },
-  { key: "hasSpecial" as const, text: "Um caractere especial (!@#$...)" },
-];
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -91,8 +69,8 @@ const ResetPassword = () => {
       toast({ title: "Senhas não conferem", variant: "destructive" });
       return;
     }
-    if (strength.score < 3) {
-      toast({ title: "Senha muito fraca", description: "Crie uma senha mais forte.", variant: "destructive" });
+    if (!senhaAtendeRequisitos(password)) {
+      toast({ title: "Senha muito fraca", description: MENSAGEM_REQUISITOS_SENHA, variant: "destructive" });
       return;
     }
 
@@ -186,7 +164,7 @@ const ResetPassword = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={SENHA_MIN_CARACTERES}
                   className="pr-10"
                 />
                 <button
