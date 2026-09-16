@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ProdutoAutocomplete from "./ProdutoAutocomplete";
 import ValidacaoPanel from "./ValidacaoPanel";
-import { useValidarSistemas } from "@/hooks/useValidarSistemas";
+import type { ValidacaoState } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, SistemaIluminacao, ItemPerfil, ItemFitaLED, ItemDriver, Produto, CategoriaFita, ItemComposicao } from "@/types/orcamento";
 import { calcularMetragemTotal, calcularDemandaFita, calcularConsumoW, calcularQtdDrivers, calcularQtdDriversEfetiva, calcularSubtotalLuminaria, calcularSubtotalSistemaSemFita, formatarMoeda, motivoQtdDrivers, analisarMagneto48V, MARGEM_SEGURANCA_DRIVER, TAMANHOS_ROLO_CATALOGO, aplicarSufixoMetragem, clonarSistema, detectarTipoAncora, perfilSomenteFitaBaby, perfilRejeitaFitaIP, fitaEhIP, fitaEhBaby, exigeDriverAlojado, classificarDriverSlim, LIMITE_W_DRIVER_ALOJADO, tipoLampadaDoSpot, fachosDoSpot, ehSpotConnectNoFrame, skuJuncaoConnect, avisoConferirPassadas, passadasPorCanal, ehSpotTiny, ehTrilhoSobrepor, qtdTrilhosSobrepor, ambienteTemConectorTrilho, corDoTrilho, type TipoLampada } from "@/types/orcamento";
 import ComposicaoCard from "./ComposicaoCard";
@@ -24,6 +24,9 @@ interface AmbienteCardProps {
   onDuplicarComposto?: (item: ItemLuminaria) => void;   // Phase 21 / DUP-01 (D-05)
   /** Categorias de fita do orçamento (RULE-014) para vincular ao sistema (RULE-016). */
   categorias?: CategoriaFita[];
+  /** Validação da edge por id de sistema. Vem do wizard (Index), que chama o hook uma única vez
+   *  para todos os ambientes — o mesmo resultado alimenta o bloqueio do "Próximo" e do PDF. */
+  validacoes?: ValidacaoState;
 }
 
 function PrecoInput({ value, min, onChange }: { value: number; min: number; onChange: (v: number) => void }) {
@@ -44,7 +47,7 @@ function PrecoInput({ value, min, onChange }: { value: number; min: number; onCh
   );
 }
 
-const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarComposto, categorias = [] }: AmbienteCardProps) => {
+const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarComposto, categorias = [], validacoes = {} }: AmbienteCardProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(ambiente.nome);
@@ -60,7 +63,6 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
   const [ofertasLampada, setOfertasLampada] = useState<Record<string, TipoLampada>>({});
 
   const uid = () => crypto.randomUUID();
-  const { validacoes } = useValidarSistemas(ambiente.sistemas);
 
   // Ref sempre apontando para o ambiente mais recente — usado para reconciliar
   // escritas que acontecem após um await (ex.: sugestão de driver assíncrona),
@@ -235,7 +237,16 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
   /** RULE-029/100: restrição de driver imposta pelo perfil do sistema.
    *  Usa os campos do catálogo quando existem e cai na família/nome do perfil
    *  (Trick/Alojamento) quando o cadastro ainda não tem a restrição. */
-  const restricaoDriverDoPerfil = (perfil: ItemPerfil | null) => {
+  const restricaoDriverDoPerfil = (
+    // aceita o perfil já aplicado (ItemPerfil) e o produto de perfil vindo da busca (Produto),
+    // que tem os mesmos campos de restrição
+    perfil: {
+      descricao?: string | null;
+      familia_perfil?: string | null;
+      driver_restr_tipo?: string | null;
+      driver_restr_max_w?: number | null;
+    } | null,
+  ) => {
     const alojado = exigeDriverAlojado({
       descricao: perfil?.descricao,
       familiaPerfil: perfil?.familia_perfil,
@@ -389,17 +400,22 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
         familiaPerfil: produto.familia_perfil,
         somenteBaby: produto.somente_baby,
       });
+      // RULE-103/104 — BLOQUEIO nas duas ordens de escolha. Até 2026-09-15 este caminho (perfil
+      // depois da fita) só avisava, então bastava inverter a ordem para o orçamento sair com item
+      // fisicamente incompatível. O perfil não é aplicado: o vendedor troca a fita primeiro.
       if (novoSoBaby && !fitaEhBaby({ descricao: sis.fita.descricao, isBaby: sis.fita.is_baby })) {
-        toast.warning(
-          `⚠️ Este perfil aceita SOMENTE fita Baby. A fita atual (${sis.fita.codigo}) não é Baby — troque a fita.`,
-          { duration: 7000 }
+        toast.error(
+          `🚫 Este perfil aceita SOMENTE fita Baby e a fita atual (${sis.fita.codigo}) não é Baby — não cabe no canal. Troque para uma fita Baby (LM3827 ou LM3851) antes de aplicar este perfil.`,
+          { duration: 9000 }
         );
+        return;
       }
       if (perfilRejeitaFitaIP({ descricao: produto.descricao, familiaPerfil: produto.familia_perfil }) && fitaEhIP(sis.fita.descricao)) {
-        toast.warning(
-          `⚠️ Perfil Nano/Cantoneira não aceita fita com IP. A fita atual (${sis.fita.codigo}) tem IP — troque a fita.`,
-          { duration: 7000 }
+        toast.error(
+          `🚫 Perfil Nano/Cantoneira não aceita fita com IP e a fita atual (${sis.fita.codigo}) tem IP — a vedação engrossa a fita. Troque para uma fita sem IP antes de aplicar este perfil.`,
+          { duration: 9000 }
         );
+        return;
       }
     }
 
@@ -412,6 +428,35 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
     }
 
     if (component === 'perfil') {
+      // RULE-029/100 — o perfil novo pode ALOJAR o driver (Trik/Alojamento: Slim, teto de 72 W).
+      // Espelho da checagem que já existia só na ordem perfil → driver: sem isto, escolher o
+      // driver antes do perfil furava a trava.
+      if (sis.driver.codigo) {
+        const restrNova = restricaoDriverDoPerfil(produto);
+        if (restrNova.exigeSlim) {
+          const classe = classificarDriverSlim({ driverTipo: sis.driver.driver_tipo, descricao: sis.driver.descricao });
+          if (classe === 'nao_slim') {
+            toast.error(
+              `🚫 Este perfil aceita SOMENTE Driver Slim e o driver já lançado (${sis.driver.codigo}) não é Slim. Troque o driver antes de aplicar este perfil.`,
+              { duration: 9000 }
+            );
+            return;
+          }
+          if (classe === 'indeterminado') {
+            toast.warning(
+              `⚠️ Este perfil aceita SOMENTE Driver Slim e o catálogo não classifica o ${sis.driver.codigo} — confira antes de fechar.`,
+              { duration: 7000 }
+            );
+          }
+        }
+        if (restrNova.tetoW != null && sis.driver.potencia > 0 && sis.driver.potencia > restrNova.tetoW) {
+          toast.error(
+            `🚫 O driver já lançado (${sis.driver.codigo}, ${sis.driver.potencia}W) não cabe alojado neste perfil. Máximo: ${restrNova.tetoW}W. Troque o driver antes de aplicar este perfil.`,
+            { duration: 9000 }
+          );
+          return;
+        }
+      }
       const base: ItemPerfil = sis.perfil || { id: uid(), codigo: "", descricao: "", comprimentoPeca: 1 as const, quantidade: 1, passadas: 1 as const, precoUnitario: 0, precoMinimo: 0 };
       // RULE-009 (2ª rodada, resposta 4): quantas fitas cabem lado a lado no canal declarado
       // no nome. O padrão do catálogo continua valendo quando é maior; o seletor não trava.
@@ -567,6 +612,32 @@ const AmbienteCard = ({ ambiente, onChange, onRemove, onDuplicate, onDuplicarCom
     }
     const cat = categorias.find((c) => c.id === categoriaId);
     if (!cat) return;
+    // RULE-103/104: vincular COPIA a fita da categoria para o sistema — se ela não cabe no perfil
+    // deste sistema, o vínculo é recusado. Antes de 2026-09-15 este caminho furava as duas travas.
+    if (sis.perfil && cat.fita.codigo) {
+      const soBaby = perfilSomenteFitaBaby({
+        descricao: sis.perfil.descricao,
+        familiaPerfil: sis.perfil.familia_perfil,
+        somenteBaby: sis.perfil.somente_baby,
+      });
+      if (soBaby && !fitaEhBaby({ descricao: cat.fita.descricao, isBaby: cat.fita.is_baby })) {
+        toast.error(
+          `🚫 A categoria "${cat.nome}" usa a fita ${cat.fita.codigo}, que não é Baby, e o perfil deste sistema aceita SOMENTE fita Baby. Vínculo não aplicado.`,
+          { duration: 9000 }
+        );
+        return;
+      }
+      if (
+        perfilRejeitaFitaIP({ descricao: sis.perfil.descricao, familiaPerfil: sis.perfil.familia_perfil }) &&
+        fitaEhIP(cat.fita.descricao)
+      ) {
+        toast.error(
+          `🚫 A categoria "${cat.nome}" usa a fita ${cat.fita.codigo}, que tem IP, e o perfil Nano/Cantoneira não aceita fita com IP. Vínculo não aplicado.`,
+          { duration: 9000 }
+        );
+        return;
+      }
+    }
     updateSistema(si, {
       ...sis,
       categoriaId,

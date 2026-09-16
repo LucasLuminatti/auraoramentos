@@ -409,7 +409,7 @@ function blocoTermos(): string {
 export function gerarOrcamentoHtmlV2(params: PdfParamsV2): string {
   const { clienteNome, projetoNome, colaborador, tipo, ambientes, logoBase64, atributosMap = {}, categorias, parceiro } = params;
   const data = formatarData();
-  const totalGeral = calcularTotalGeral(ambientes);
+  const totalGeral = calcularTotalGeral(ambientes, categorias);
 
   const logoHtml = logoBase64
     ? `<img src="${logoBase64}" alt="Aura" class="logo" />`

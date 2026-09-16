@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle } from "lucide-react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import AmbienteCard from "./AmbienteCard";
+import { errosBloqueantes, type StatusValidacao, type ValidacaoState } from "@/hooks/useValidarSistemas";
 import type { Ambiente, ItemLuminaria, CategoriaFita } from "@/types/orcamento";
 import { luminariaPrecisaLampada, ambienteTemLampada, clonarAmbiente, REGRAS_COMPOSICAO, calcularMetragemModulosDifusos, clonarItemLuminaria, qtdSpotsTiny, potenciaSpotsTiny, potenciaMinimaDriverTiny, ambienteTemDriver24V, qtdTrilhosSobrepor, ambienteTemConectorTrilho } from "@/types/orcamento";
 import { toast } from "sonner";
@@ -75,6 +76,10 @@ interface Step2Props {
   /** Categorias criadas na etapa anterior (RULE-014) — oferecidas em cada sistema para
    *  vincular o perfil à fita da categoria (RULE-016). Vazio = fluxo sem categorias. */
   categorias?: CategoriaFita[];
+  /** Validação da edge por id de sistema (vem do wizard). `erros` bloqueiam o "Próximo". */
+  validacoes?: ValidacaoState;
+  /** `pendente`: a validação na mão é de um estado anterior — o avanço espera. */
+  statusValidacao?: StatusValidacao;
 }
 
 const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
@@ -89,7 +94,7 @@ const ADVISORY_LABELS: Record<AdvisoryItem['tipo'], string> = {
   'trilho-sem-conector': 'Mais de um trilho de sobrepor, sem conector de emenda',
 };
 
-const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }: Step2Props) => {
+const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [], validacoes = {}, statusValidacao = "ok" }: Step2Props) => {
   const [advisoryOpen, setAdvisoryOpen] = useState(false);
   const [advisoryItems, setAdvisoryItems] = useState<AdvisoryItem[]>([]);
 
@@ -188,6 +193,30 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }
       return; // BLOQUEIO (D-02)
     }
 
+    // Erros da edge `validar-sistema-orcamento` (RULE-029/100/103/104): incompatibilidade FÍSICA
+    // bloqueia (CONF-01). Até 2026-09-15 esses erros só apareciam no painel de validação e davam
+    // para ignorar. `alertas` continuam passando; a divergência de tensão também, porque por
+    // decisão da equipe (D-05/D-10) ela é orientativa.
+    // Resultado de antes da última edição não bloqueia nem libera: espera a validação atual
+    // (sem isto, corrigir a fita e clicar em seguida esbarrava no erro já corrigido).
+    if (statusValidacao === "pendente") {
+      toast.info("Validando os sistemas no servidor — tente de novo em um instante.");
+      return;
+    }
+    const errosServidor = statusValidacao === "falhou"
+      ? []
+      : ambientesLimpos.flatMap((amb) =>
+          amb.sistemas.flatMap((sis) =>
+            errosBloqueantes(sis, validacoes[sis.id]?.erros ?? []).map((e) => `${amb.nome}: ${e}`)
+          )
+        );
+    if (errosServidor.length > 0) {
+      toast.error("Corrija as incompatibilidades apontadas na validação antes de continuar.", {
+        description: errosServidor.join(" · "),
+      });
+      return; // BLOQUEIO
+    }
+
     const removidos =
       ambientes.reduce((acc, a) => acc + a.sistemas.length, 0) -
       ambientesLimpos.reduce((acc, a) => acc + a.sistemas.length, 0);
@@ -278,6 +307,7 @@ const Step2Ambientes = ({ ambientes, onChange, onNext, onPrev, categorias = [] }
             key={amb.id}
             ambiente={amb}
             categorias={categorias}
+            validacoes={validacoes}
             onChange={(a) => updateAmbiente(i, a)}
             onRemove={() => removeAmbiente(i)}
             onDuplicate={() => duplicarAmbiente(i)}

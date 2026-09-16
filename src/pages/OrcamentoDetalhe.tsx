@@ -277,7 +277,9 @@ const OrcamentoDetalhe = () => {
         logoBase64: logoBase64 || undefined,
         // O PDF re-emitido tem que sair igual ao original: categorias (RULE-018) e o
         // parceiro no cabeçalho (RULE-064) vêm do próprio snapshot do orçamento.
-        categorias: orc.categorias ?? undefined,
+        // `[]` e não `undefined`: é assim que o wizard carrega (Index.tsx) — o agrupamento dos
+        // rolos precisa ser o mesmo do PDF original e do `valor` gravado
+        categorias: orc.categorias ?? [],
         parceiro: orc.clientes?.arquitetos?.nome ?? null,
         // PDF-05: rows criadas antes da Phase 5 têm pdf_template_version NULL — coage para 1 (legacy).
         // Rows criadas pela Phase 5 em diante têm 2 explicitamente persistido em Step3Revisao.
@@ -333,7 +335,7 @@ const OrcamentoDetalhe = () => {
     }
   };
 
-  const totalGeral = orc ? calcularTotalGeral(orc.ambientes ?? []) : 0;
+  const totalGeral = orc ? calcularTotalGeral(orc.ambientes ?? [], orc.categorias ?? []) : 0;
   const podeExcluir = isAdmin || (!!colaborador?.id && orc?.colaborador_id === colaborador.id);
 
   return (

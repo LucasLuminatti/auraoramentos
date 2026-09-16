@@ -13,7 +13,7 @@ import { construirDescricaoRica } from "@/lib/produtoDescricao";
 import {
   calcularDemandaFita, calcularConsumoW, calcularQtdDriversEfetiva,
   calcularSubtotalLuminaria, calcularSubtotalPerfilSistema, calcularSubtotalDriverSistema,
-  calcularSubtotalSistemaSemFita, calcularTotalAmbienteSemFita, calcularRolosPorGrupo,
+  calcularSubtotalSistemaSemFita, calcularTotalAmbienteSemFita, calcularRolosPorGrupo, chaveGrupoFita,
   calcularDriversPorProjeto, calcularTotalGeral, formatarMoeda,
   detectarChecklistIssues, LIMITE_ORCAMENTOS_POR_PROJETO, rotuloUltimaRevisao
 } from "@/types/orcamento";
@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useColaborador } from "@/hooks/useColaborador";
 import ExceptionChat from "./ExceptionChat";
+import { errosBloqueantes, type StatusValidacao, type ValidacaoState } from "@/hooks/useValidarSistemas";
 
 interface Step3Props {
   orcamento: Orcamento;
@@ -41,6 +42,11 @@ interface Step3Props {
   initialOrcamentoId?: string;
   /** BUG-22: o orçamento virou registro no banco — a rede de segurança local pode sair. */
   onOrcamentoSalvo?: (orcamentoId: string) => void;
+  /** Validação da edge por id de sistema (vem do wizard). `erros` entram na verificação
+   *  pré-PDF como bloqueantes. */
+  validacoes?: ValidacaoState;
+  /** `pendente` segura o PDF até a validação do estado atual chegar. */
+  statusValidacao?: StatusValidacao;
 }
 
 interface Violacao {
@@ -113,7 +119,7 @@ async function imageToBase64(src: string): Promise<string> {
   });
 }
 
-const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes, initialOrcamentoId, onOrcamentoSalvo }: Step3Props) => {
+const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, projetoId, onUpdateAmbientes, initialOrcamentoId, onOrcamentoSalvo, validacoes = {}, statusValidacao = "ok" }: Step3Props) => {
   const { dados, ambientes, categorias } = orcamento;
   const { user } = useAuth();
   const { colaborador } = useColaborador();
@@ -154,10 +160,40 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
 
   const gruposFita = useMemo(() => calcularRolosPorGrupo(ambientes, categorias), [ambientes, categorias]);
   const resumoDrivers = useMemo(() => calcularDriversPorProjeto(ambientes), [ambientes]);
-  const totalGeral = useMemo(() => calcularTotalGeral(ambientes), [ambientes]);
+  const totalGeral = useMemo(() => calcularTotalGeral(ambientes, categorias), [ambientes, categorias]);
 
-  // UX-05: checklist pré-PDF derivado dos ambientes
-  const checklistIssues = useMemo(() => detectarChecklistIssues(ambientes), [ambientes]);
+  // UX-05: checklist pré-PDF derivado dos ambientes + erros da edge de validação.
+  // Os erros do servidor entram como 'error', então `temErroBloqueante` já desabilita o PDF e a
+  // mensagem aparece na "Verificação pré-PDF", com o atalho de volta para o Step 2. A divergência
+  // de tensão fica de fora: por decisão da equipe (D-05/D-10) ela é orientativa.
+  const checklistIssues = useMemo(() => {
+    const locais = detectarChecklistIssues(ambientes);
+    const servidor: ChecklistIssue[] = [];
+    if (statusValidacao === 'falhou') {
+      servidor.push({
+        id: 'edge-indisponivel',
+        level: 'warning',
+        ambienteNome: 'Validação',
+        mensagem: 'Não foi possível validar os sistemas no servidor agora. As travas do passo de ambientes continuam valendo.',
+      });
+    } else if (statusValidacao === 'ok') {
+      // `pendente`: resultado de um estado anterior não entra (nem para bloquear, nem para liberar)
+      for (const amb of ambientes) {
+        for (const sis of amb.sistemas) {
+          errosBloqueantes(sis, validacoes[sis.id]?.erros ?? []).forEach((msg, i) => {
+            servidor.push({
+              id: `${amb.id}-${sis.id}-edge${i}`,
+              level: 'error',
+              ambienteNome: amb.nome,
+              mensagem: msg,
+            });
+          });
+        }
+      }
+    }
+    return [...servidor, ...locais];
+  }, [ambientes, validacoes, statusValidacao]);
+  const validandoServidor = statusValidacao === 'pendente';
   const temErroBloqueante = checklistIssues.some((i) => i.level === 'error');
 
   // WIZ-05 (D-23): coleta de códigos distintos para batch lookup de atributos ricos
@@ -375,19 +411,52 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
     onUpdateAmbientes(updated);
   };
 
-  // WIZ-01 — Edita preço unitário da fita de um sistema
-  const handleEditPrecoFita = (ambienteId: string, sistemaId: string, novo: number) => {
+  // Erros de valor (auditoria 2026-09-15): a quantidade do componente era só leitura aqui.
+  // Driver/conector/kit do composto entram calculados, mas a divisão em circuitos é decisão
+  // de projeto — sem este edit o vendedor tinha que voltar ao Step 2 (ou nem podia).
+  const handleEditQtdComposicao = (ambienteId: string, luminariaId: string, compId: string, nova: number) => {
     const updated = ambientes.map((amb) => {
       if (amb.id !== ambienteId) return amb;
       return {
         ...amb,
-        sistemas: amb.sistemas.map((sis) =>
-          sis.id === sistemaId
-            ? { ...sis, fita: { ...sis.fita, precoUnitario: Math.max(0, novo) } }
-            : sis
-        ),
+        luminarias: amb.luminarias.map((l) => {
+          if (l.id !== luminariaId || !l.composicao) return l;
+          return {
+            ...l,
+            composicao: l.composicao.map((c) =>
+              c.id === compId
+                ? {
+                    ...c,
+                    quantidade: Math.max(1, Math.floor(nova)),
+                    // rolos ajustados à mão: a fita do modular deixa de seguir os difusos
+                    ...(c.papel === "fita_modular" ? { metragemEditada: true } : {}),
+                  }
+                : c
+            ),
+          };
+        }),
       };
     });
+    onUpdateAmbientes(updated);
+  };
+
+  // WIZ-01 — Edita preço unitário da fita de um sistema
+  // A fita é comprada e cobrada por GRUPO (mesma categoria ou mesmo código, em qualquer
+  // ambiente) e o grupo lê o preço do primeiro sistema. Editar só a linha clicada fazia o preço
+  // digitado num sistema que não fosse o primeiro simplesmente não chegar ao total.
+  const handleEditPrecoFita = (ambienteId: string, sistemaId: string, novo: number) => {
+    const alvo = ambientes.find((a) => a.id === ambienteId)?.sistemas.find((s) => s.id === sistemaId);
+    if (!alvo) return;
+    const chave = chaveGrupoFita(alvo, categorias);
+    const preco = Math.max(0, novo);
+    const updated = ambientes.map((amb) => ({
+      ...amb,
+      sistemas: amb.sistemas.map((sis) =>
+        sis.fita.codigo && chaveGrupoFita(sis, categorias) === chave
+          ? { ...sis, fita: { ...sis.fita, precoUnitario: preco } }
+          : sis
+      ),
+    }));
     onUpdateAmbientes(updated);
   };
 
@@ -553,6 +622,16 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
     // Guarda sincrona contra double-click: setSavingOrcamento é assincrono e
     // nao bloqueia um segundo clique disparado na mesma render.
     if (pdfInFlightRef.current) return;
+    // O `disabled` do botão não é garantia (o handler também é alcançável por teclado/DOM) e
+    // gerar PDF GRAVA o orçamento no banco — então a checagem se repete aqui.
+    if (temErroBloqueante) {
+      toast.error("Corrija os itens em vermelho da Verificação pré-PDF antes de gerar o PDF.");
+      return;
+    }
+    if (validandoServidor) {
+      toast.info("Validando os sistemas no servidor — tente de novo em um instante.");
+      return;
+    }
     pdfInFlightRef.current = true;
     try {
       // Phase 5: pre-resolver fontes + imagens antes de rasterizar (Pitfalls 1 e 2 do RESEARCH).
@@ -768,7 +847,14 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
                               <Badge variant="outline" className="text-xs mr-2">{labelPapel(c.papel)}</Badge>
                               {descricaoRica(c.codigo, c.descricao)}
                             </TableCell>
-                            <TableCell className="text-right text-muted-foreground">{c.quantidade}</TableCell>
+                            <TableCell className="text-right">
+                              <EditableNumericCell
+                                value={c.quantidade}
+                                onCommit={(v) => handleEditQtdComposicao(amb.id, item.id, c.id, v)}
+                                mode="integer"
+                                ariaLabel={`Quantidade ${c.codigo}`}
+                              />
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <EditableNumericCell
@@ -1035,8 +1121,8 @@ const Step3Revisao = ({ orcamento, onPrev, clienteId, clienteNome, projetoNome, 
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
         <Button onClick={handlePDF} className="gap-2 print:hidden"
-          disabled={hasUnresolved || savingOrcamento || temErroBloqueante}
-          title={temErroBloqueante ? "Corrija a fita sem metragem (0m) antes de gerar o PDF" : (hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : "")}>
+          disabled={hasUnresolved || savingOrcamento || temErroBloqueante || validandoServidor}
+          title={validandoServidor ? "Validando os sistemas no servidor…" : temErroBloqueante ? "Corrija os itens em vermelho da Verificação pré-PDF antes de gerar o PDF" : (hasUnresolved ? "Resolva as violações de preço antes de gerar o PDF" : "")}>
           <FileDown className="h-4 w-4" /> {savingOrcamento ? "Salvando..." : "Gerar PDF"}
         </Button>
       </div>

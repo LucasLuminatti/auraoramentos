@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import logo from "@/assets/logo.png";
 import StepIndicator from "@/components/StepIndicator";
 import Step1DadosOrcamento from "@/components/Step1DadosOrcamento";
@@ -8,10 +8,11 @@ import Step3Revisao from "@/components/Step3Revisao";
 import ClienteList from "@/components/ClienteList";
 import { salvarRascunho, lerRascunho, limparRascunho, rascunhoTemConteudo, resumirRascunho, descreverIdade, type RascunhoWizard } from "@/lib/rascunhoLocal";
 import type { DadosOrcamento, Ambiente, Orcamento, CategoriaFita } from "@/types/orcamento";
-import { LIMITE_ORCAMENTOS_POR_PROJETO, rotuloUltimaRevisao } from "@/types/orcamento";
+import { LIMITE_ORCAMENTOS_POR_PROJETO, rotuloUltimaRevisao, propagarFitaDasCategorias, harmonizarPrecoFitaPorGrupo } from "@/types/orcamento";
 import { useAuth } from "@/hooks/useAuth";
 import { useColaborador } from "@/hooks/useColaborador";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useValidarSistemas } from "@/hooks/useValidarSistemas";
 import { getSaudacao } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogOut, Plus, User, FolderOpen, ChevronRight, Shield, HardDrive } from "lucide-react";
@@ -75,6 +76,16 @@ const Index = () => {
   const [reopenedOrcamentoId, setReopenedOrcamentoId] = useState<string | null>(null);
   // BUG-22: rascunho local encontrado ao abrir a página (oferta de restauração).
   const [rascunhoOferecido, setRascunhoOferecido] = useState<RascunhoWizard | null>(null);
+
+  // Validação do servidor (edge `validar-sistema-orcamento`) de TODOS os sistemas do orçamento,
+  // numa chamada só: o Step 2 usa para bloquear o "Próximo" e o Step 3 para bloquear o PDF quando
+  // há incompatibilidade física (auditoria de prontidão 2026-09-15 — antes o erro do servidor só
+  // aparecia num painel e não impedia nada). Subir o hook para cá também garante que o resultado
+  // já esteja carregado quando o Step 3 monta.
+  // O useMemo é obrigatório: um array novo a cada render reiniciaria o debounce do hook e a
+  // validação nunca dispararia.
+  const todosSistemas = useMemo(() => ambientes.flatMap((a) => a.sistemas), [ambientes]);
+  const { validacoes: validacoesEdge, status: statusValidacao } = useValidarSistemas(todosSistemas);
 
   // ─── BUG-22: espelho local do wizard ───
   // Grava a cada mudança enquanto o wizard está aberto; some quando o orçamento é salvo
@@ -273,21 +284,29 @@ const Index = () => {
   /** Remover uma categoria precisa desvincular os sistemas que apontavam para ela — senão o
    *  `categoriaId` órfão continua agrupando a fita num grupo separado (RULE-017), e o
    *  colaborador acaba comprando dois rolos da mesma fita sem entender por quê. */
+  // Passos 2 e 3 devolvem a lista inteira de ambientes. O grupo de fita é cobrado por UM preço
+  // (o do primeiro sistema), então o preço editado num sistema vale para o grupo todo e quem entra
+  // no grupo herda o preço vigente — senão a linha mostrava um valor e o total cobrava outro.
+  const atualizarAmbientes = (novos: Ambiente[]) => {
+    setAmbientes((anteriores) => harmonizarPrecoFitaPorGrupo(anteriores, novos, categorias));
+  };
+
   const atualizarCategorias = (novas: CategoriaFita[]) => {
     setCategorias(novas);
-    const idsVivos = new Set(novas.map((c) => c.id));
-    setAmbientes((prev) => {
-      let mudou = false;
-      const arr = prev.map((amb) => ({
-        ...amb,
-        sistemas: amb.sistemas.map((sis) => {
-          if (!sis.categoriaId || idsVivos.has(sis.categoriaId)) return sis;
-          mudou = true;
-          return { ...sis, categoriaId: null };
-        }),
-      }));
-      return mudou ? arr : prev;
-    });
+    // Calculado fora do updater: o toast não pode disparar de dentro do setState (StrictMode
+    // chama o updater duas vezes). `ambientes` é o estado deste render — a tela de categorias
+    // não edita ambientes, então não há escrita concorrente para perder.
+    const { ambientes: propagados, desvinculados } = propagarFitaDasCategorias(ambientes, novas);
+    if (propagados !== ambientes) setAmbientes(propagados);
+    for (const d of desvinculados) {
+      const onde = d.local ? `${d.ambienteNome} — ${d.local}` : d.ambienteNome;
+      toast.error(
+        `🚫 ${onde}: a fita ${d.fitaCodigo} da categoria "${d.categoriaNome}" ${
+          d.motivo === "baby" ? "não é Baby e o perfil aceita SOMENTE fita Baby" : "tem IP e o perfil Nano/Cantoneira não aceita"
+        }. O sistema foi desvinculado da categoria e manteve a fita anterior.`,
+        { duration: 10000 }
+      );
+    }
   };
 
   const handleNovoOrcamento = async (clienteId: string, projetoId: string, projetoNome: string, clienteNome: string) => {
@@ -429,10 +448,10 @@ const Index = () => {
                 <Step2Categorias categorias={categorias} onChange={atualizarCategorias} onNext={() => setStep(3)} onPrev={() => setStep(1)} />
               )}
               {step === 3 && (
-                <Step2Ambientes ambientes={ambientes} categorias={categorias} onChange={setAmbientes} onNext={() => setStep(4)} onPrev={() => setStep(2)} />
+                <Step2Ambientes ambientes={ambientes} categorias={categorias} validacoes={validacoesEdge} statusValidacao={statusValidacao} onChange={atualizarAmbientes} onNext={() => setStep(4)} onPrev={() => setStep(2)} />
               )}
               {step === 4 && (
-                <Step3Revisao orcamento={orcamento} onPrev={() => setStep(3)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={setAmbientes} initialOrcamentoId={reopenedOrcamentoId ?? undefined} onOrcamentoSalvo={() => limparRascunho(userId)} />
+                <Step3Revisao orcamento={orcamento} validacoes={validacoesEdge} statusValidacao={statusValidacao} onPrev={() => setStep(3)} clienteId={currentClienteId || undefined} clienteNome={currentClienteNome} projetoNome={currentProjetoNome} projetoId={currentProjetoId || undefined} onUpdateAmbientes={atualizarAmbientes} initialOrcamentoId={reopenedOrcamentoId ?? undefined} onOrcamentoSalvo={() => limparRascunho(userId)} />
               )}
             </div>
           </>

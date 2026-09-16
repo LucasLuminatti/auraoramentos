@@ -66,6 +66,16 @@ export interface ItemComposicao {
    *  ser recalculado a cada render — sem ele, o aviso de driver alojado congelava no valor
    *  da última busca e não acompanhava a remoção de módulos. Opcional (snapshots antigos). */
   wm?: number;
+  /** Tamanho do rolo em metros da fita do modular (RULE-005), snapshot de `tamanho_rolo_m` no
+   *  add-time. Só em `papel: 'fita_modular'`. Ausente = item gravado antes da cobrança por rolo
+   *  (a `quantidade` era 1 unidade, e continua somando assim para não mexer em orçamento antigo). */
+  metragemRolo?: number;
+  /** Só em `fita_modular`: o vendedor digitou a metragem. Enquanto for falso/ausente, metragem e
+   *  rolos acompanham os difusos (Σ comprimento × qtd) a cada inclusão/remoção de módulo. */
+  metragemEditada?: boolean;
+  /** Só em `fita_modular`: o catálogo não trazia `tamanho_rolo_m` e o rolo de 5 m foi suposto.
+   *  A tela pede confirmação até o vendedor escolher o tamanho no seletor. */
+  roloPresumido?: boolean;
 }
 
 export interface ItemPerfil {
@@ -285,9 +295,16 @@ export function calcularCargaComposicao(composicao: ItemComposicao[] | undefined
  *  = Σ(comprimento × quantidade) dos itens papel==='modulo' com comprimento definido. */
 export function calcularMetragemModulosDifusos(composicao: ItemComposicao[] | undefined): number {
   if (!composicao?.length) return 0;
-  return composicao
+  const soma = composicao
     .filter(c => c.papel === 'modulo' && c.comprimento != null)
     .reduce((s, c) => s + (c.comprimento ?? 0) * c.quantidade, 0);
+  // Milímetro basta — sem isto 10 × 0,66 = 6.6000000000000005 ia para o campo e para o PDF.
+  return Math.round(soma * 1000) / 1000;
+}
+
+/** Metros para exibição pt-BR sem ruído de ponto flutuante ("6,6", "0,132", "12"). */
+export function formatarMetros(m: number): string {
+  return String(Math.round(m * 1000) / 1000).replace('.', ',');
 }
 
 /** Parse do comprimento (m) do módulo difuso a partir da descrição. Snapshot no add-time.
@@ -719,6 +736,105 @@ export interface GrupoFita {
  *
  *  `categorias` é opcional só para não quebrar chamadores antigos (o template v1 é congelado);
  *  sem ela, os grupos por categoria ficam sem nome na etiqueta. */
+/** RULE-005/006 — quantos rolos uma demanda em metros exige, com 5% de perda POR ROLO.
+ *  Mesma conta que `calcularRolosPorGrupo` faz por grupo, que a edge faz em `otimizarRolos` e a
+ *  RPC `otimizar_rolos_fita` faz em SQL — aqui isolada para ser usada também POR ITEM (a fita do
+ *  SYSTEM MOLD, que é cobrada dentro da composição). Fallback de 5 m quando o produto não traz
+ *  `tamanho_rolo_m` (cadastro incompleto ou snapshot antigo). */
+export function calcularRolosParaDemanda(demandaM: number, tamanhoRoloM?: number | null): number {
+  const tamanhoRolo = tamanhoRoloM != null && tamanhoRoloM > 0 ? tamanhoRoloM : 5;
+  const metrosUteisPorRolo = tamanhoRolo * (1 - SOBRA_ROLO_FITA);
+  // Ceil no valor CRU (WR-03); epsilon compensa 5×0.95 ≠ 4.75 em ponto flutuante.
+  return demandaM > 0 ? Math.ceil(demandaM / metrosUteisPorRolo - 1e-9) : 0;
+}
+
+/** RULE-026 — quantos drivers um sistema COMPOSTO (magnético/modular) precisa: carga com a folga
+ *  de 20% dividida pela potência do driver, mínimo 1 quando há carga. É o análogo de
+ *  `calcularQtdDrivers` para `composicao[]`, sem o limite de extensão, que é regra de fita em
+ *  perfil. Potência desconhecida devolve 1: não se inventa quantidade sem o dado do catálogo. */
+/** Rolos cobrados pela fita do SYSTEM MOLD: nunca menos de 1 enquanto a fita estiver no
+ *  composto — metragem apagada ou difusos removidos não podem zerar a linha em silêncio (o
+ *  vendedor remove a fita se não quiser cobrá-la). */
+export function calcularRolosFitaModular(metragemM: number, tamanhoRoloM?: number | null): number {
+  return Math.max(1, calcularRolosParaDemanda(metragemM, tamanhoRoloM));
+}
+
+export function calcularQtdDriversComposicao(cargaTotalW: number, potenciaDriverW?: number | null): number {
+  if (!(cargaTotalW > 0)) return 0;
+  if (!potenciaDriverW || potenciaDriverW <= 0) return 1;
+  return Math.max(1, Math.ceil((cargaTotalW * MARGEM_SEGURANCA_DRIVER) / potenciaDriverW));
+}
+
+/** Chave do grupo de compra de fita (RULE-017): sistema vinculado a categoria viva agrupa pela
+ *  categoria; o resto, pelo código da fita. Categoria removida depois de vinculada deixa
+ *  `categoriaId` órfão no sistema — sem o teste de existência o grupo fantasma continuaria
+ *  separado do grupo da mesma fita (dois pedidos de rolo para a mesma fita, sem nome).
+ *  `categorias` ausente = chamada que não conhece as categorias: confia no vínculo. */
+export function chaveGrupoFita(sis: SistemaIluminacao, categorias?: CategoriaFita[]): string {
+  const categoriaValida =
+    !!sis.categoriaId && (categorias == null || categorias.some((c) => c.id === sis.categoriaId));
+  return categoriaValida ? `cat:${sis.categoriaId}` : sis.fita.codigo;
+}
+
+/** Preço único por grupo de compra de fita. O grupo é cobrado pelo preço do PRIMEIRO sistema,
+ *  então preço diferente dentro do grupo é preço mostrado e não cobrado. Aplicado a cada
+ *  atualização dos ambientes (passos 2 e 3):
+ *  - sistema que já estava no grupo com a mesma fita e teve o preço editado → o preço digitado
+ *    vale para o grupo inteiro (em qualquer ambiente);
+ *  - sistema que ENTROU no grupo (novo, trocou de fita ou de categoria) → herda o preço vigente
+ *    do grupo (ex.: vincular à categoria copiava o preço de catálogo por cima do desconto).
+ *  Devolve o mesmo array quando nada muda. */
+export function harmonizarPrecoFitaPorGrupo(
+  antes: Ambiente[],
+  depois: Ambiente[],
+  categorias?: CategoriaFita[]
+): Ambiente[] {
+  const anterior = new Map<string, SistemaIluminacao>();
+  for (const a of antes) for (const s of a.sistemas) anterior.set(s.id, s);
+
+  const editado = new Map<string, number>();
+  const vigente = new Map<string, number>();
+  const entrou = new Set<string>();
+  for (const a of depois) {
+    for (const s of a.sistemas) {
+      if (!s.fita.codigo) continue;
+      const chave = chaveGrupoFita(s, categorias);
+      const prev = anterior.get(s.id);
+      const permaneceu =
+        !!prev && prev.fita.codigo === s.fita.codigo && chaveGrupoFita(prev, categorias) === chave;
+      if (!permaneceu) {
+        entrou.add(s.id);
+      } else if (prev!.fita.precoUnitario !== s.fita.precoUnitario) {
+        editado.set(chave, s.fita.precoUnitario);
+      } else if (!vigente.has(chave)) {
+        vigente.set(chave, s.fita.precoUnitario);
+      }
+    }
+  }
+  if (editado.size === 0 && entrou.size === 0) return depois;
+
+  let mudou = false;
+  const out = depois.map((a) => {
+    let mudouAmb = false;
+    const sistemas = a.sistemas.map((s) => {
+      if (!s.fita.codigo) return s;
+      const chave = chaveGrupoFita(s, categorias);
+      const preco = editado.has(chave)
+        ? editado.get(chave)
+        : entrou.has(s.id)
+          ? vigente.get(chave)
+          : undefined;
+      if (preco === undefined || preco === s.fita.precoUnitario) return s;
+      mudouAmb = true;
+      return { ...s, fita: { ...s.fita, precoUnitario: preco } };
+    });
+    if (!mudouAmb) return a;
+    mudou = true;
+    return { ...a, sistemas };
+  });
+  return mudou ? out : depois;
+}
+
 export function calcularRolosPorGrupo(ambientes: Ambiente[], categorias?: CategoriaFita[]): GrupoFita[] {
   const nomePorCategoria = new Map((categorias ?? []).map(c => [c.id, c.nome]));
   const grupos = new Map<string, {
@@ -736,11 +852,13 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[], categorias?: Catego
   for (const amb of ambientes) {
     for (const sis of amb.sistemas) {
       if (!sis.fita.codigo) continue;
-      // Categoria removida depois de vinculada deixa `categoriaId` órfão no sistema. Sem este
-      // fallback o grupo fantasma continuaria separado do grupo da mesma fita — dois pedidos
-      // de rolo para a mesma fita, sem nome de categoria em nenhum dos dois.
-      const categoriaValida = sis.categoriaId && (categorias == null || nomePorCategoria.has(sis.categoriaId));
-      const key = categoriaValida ? `cat:${sis.categoriaId}` : sis.fita.codigo;
+      const key = chaveGrupoFita(sis, categorias);
+      const categoriaValida = key.startsWith('cat:');
+      // Produto e preço vêm do SNAPSHOT do sistema, nunca da categoria: o total geral é calculado
+      // sem categorias (PDF v1, detalhe, `valor` gravado) e o preço editado no passo 3 mora no
+      // sistema. Ler da categoria fazia o Resumo de Fitas e o TOTAL divergirem no mesmo PDF.
+      // A troca de fita da categoria chega aos sistemas por `propagarFitaDasCategorias`.
+      const fitaGrupo = sis.fita;
       const demanda = calcularDemandaFita(sis);
       const label = (sis.local && sis.local.trim())
         ? `${amb.nome} — ${sis.local.trim()}`
@@ -752,17 +870,17 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[], categorias?: Catego
         // Mesmo código de fita com tamanhos de rolo divergentes (ex.: sistema de snapshot
         // antigo + sistema novo do catálogo): fica o MAIOR, senão a ordem dos ambientes
         // decidiria o preço. O maior é o que veio do catálogo — o menor é o default legado.
-        existing.metragemRolo = Math.max(existing.metragemRolo, sis.fita.metragemRolo || 0);
+        existing.metragemRolo = Math.max(existing.metragemRolo, fitaGrupo.metragemRolo || 0);
       } else {
         grupos.set(key, {
-          codigoFita: sis.fita.codigo,
+          codigoFita: fitaGrupo.codigo,
           categoriaId: categoriaValida ? sis.categoriaId! : undefined,
-          descricao: sis.fita.descricao,
+          descricao: fitaGrupo.descricao,
           demanda,
-          metragemRolo: sis.fita.metragemRolo,
-          precoUnitario: sis.fita.precoUnitario,
-          precoMinimo: sis.fita.precoMinimo,
-          imagemUrl: sis.fita.imagemUrl,
+          metragemRolo: fitaGrupo.metragemRolo,
+          precoUnitario: fitaGrupo.precoUnitario,
+          precoMinimo: fitaGrupo.precoMinimo,
+          imagemUrl: fitaGrupo.imagemUrl,
           localAcc: new Map([[label, demanda]]),
         });
       }
@@ -773,10 +891,8 @@ export function calcularRolosPorGrupo(ambientes: Ambiente[], categorias?: Catego
   for (const g of grupos.values()) {
     // RULE-005: rolo único por produto (tamanho do catálogo via snapshot); fallback 5 m.
     // RULE-006: 5% de sobra POR ROLO — de um rolo de 5 m aproveitam-se ~4,75 m.
-    // Ceil no valor CRU (WR-03); epsilon compensa 5×0.95 ≠ 4.75 em ponto flutuante.
     const tamanhoRolo = g.metragemRolo > 0 ? g.metragemRolo : 5;
-    const metrosUteisPorRolo = tamanhoRolo * (1 - SOBRA_ROLO_FITA);
-    const qtdRolosTotal = g.demanda > 0 ? Math.ceil(g.demanda / metrosUteisPorRolo - 1e-9) : 0;
+    const qtdRolosTotal = calcularRolosParaDemanda(g.demanda, tamanhoRolo);
     const rolos = qtdRolosTotal > 0 ? [{ tamanho: tamanhoRolo, quantidade: qtdRolosTotal }] : [];
     resultado.push({
       codigo: g.codigoFita,
@@ -809,13 +925,16 @@ export function calcularTotalAmbienteSemFita(amb: Ambiente): number {
   return totalLum + totalSistemas;
 }
 
-export function calcularTotalFitasGlobal(ambientes: Ambiente[]): number {
-  return calcularRolosPorGrupo(ambientes).reduce((s, g) => s + g.subtotal, 0);
+/** `categorias` deve ser a MESMA lista passada ao Resumo de Fitas: o agrupamento muda o número
+ *  de rolos (2 m + 2 m num grupo = 1 rolo; em dois grupos = 2), então total e resumo só batem
+ *  quando os dois agrupam igual. */
+export function calcularTotalFitasGlobal(ambientes: Ambiente[], categorias?: CategoriaFita[]): number {
+  return calcularRolosPorGrupo(ambientes, categorias).reduce((s, g) => s + g.subtotal, 0);
 }
 
-export function calcularTotalGeral(ambientes: Ambiente[]): number {
+export function calcularTotalGeral(ambientes: Ambiente[], categorias?: CategoriaFita[]): number {
   const totalAmbientes = ambientes.reduce((s, a) => s + calcularTotalAmbienteSemFita(a), 0);
-  return totalAmbientes + calcularTotalFitasGlobal(ambientes);
+  return totalAmbientes + calcularTotalFitasGlobal(ambientes, categorias);
 }
 
 export function formatarMoeda(valor: number): string {
@@ -993,21 +1112,79 @@ function itemEhDriver24V(descricao?: string | null, tensao?: number | null): boo
   return tensao === 24 || /\b24\s*V\b/.test(d);
 }
 
-/** RULE-108 — o ambiente já tem de onde alimentar os spots TINY? Vale driver de sistema,
- *  driver aplicado dentro de um composto e driver lançado avulso. */
+/** RULE-108 — o ambiente já tem de onde alimentar os spots TINY?
+ *
+ *  Só conta a capacidade LIVRE dos drivers 24V: potência × quantidade menos o que já está
+ *  comprometido (fita do sistema, módulos/fita do composto), com a mesma folga de 20%. Antes de
+ *  2026-09-15 qualquer driver 24V calava o aviso; depois disso, o driver de sistema com fita era
+ *  descartado inteiro (um driver de 200 W para 2 m de fita acusava falta) e o do composto contava
+ *  como capacidade desconhecida (um de 20 W já tomado pelos módulos calava o aviso).
+ *  Quando dá para comparar potências, a soma livre tem de cobrir `potenciaMinimaDriverTiny`;
+ *  quando a potência é desconhecida (spot ou driver sem cadastro), vale a PRESENÇA — exigir o
+ *  número faria o aviso gritar por falta de dado, não por erro real. */
 export function ambienteTemDriver24V(amb: Ambiente): boolean {
-  const emSistema = amb.sistemas.some((s) => !!s.driver.codigo && s.driver.voltagem === 24);
-  const avulso = amb.luminarias.some((l) => itemEhDriver24V(l.descricao, l.tensao));
-  // O sub-item do composto não guarda tensão, então quem decide é o NOME. Fixar 24 aqui
-  // faria o driver 48V de um trilho MAGNETO contar como alimentação dos spots TINY.
-  const emComposto = amb.luminarias.some((l) =>
-    (l.composicao ?? []).some(
-      (c) =>
+  // null = capacidade desconhecida (não cadastrada); só entra capacidade livre > 0
+  const capacidades: (number | null)[] = [];
+  const somarLivre = (potenciaTotal: number, comprometido: number) => {
+    const livre = potenciaTotal - comprometido * MARGEM_SEGURANCA_DRIVER;
+    if (livre > 0) capacidades.push(livre);
+  };
+
+  for (const s of amb.sistemas) {
+    if (!s.driver.codigo || s.driver.voltagem !== 24) continue;
+    if (s.fita.codigo) {
+      // driver dimensionado para a fita deste sistema: sobra o que passar da carga dela.
+      // Carga desconhecida (fita sem W/m ou sem metragem) não libera nada — o driver está
+      // comprometido com uma fita cujo consumo não sabemos.
+      const consumo = calcularConsumoW(s);
+      if (s.driver.potencia > 0 && consumo > 0) {
+        somarLivre(s.driver.potencia * calcularQtdDriversEfetiva(s), consumo);
+      }
+      continue;
+    }
+    // Sem fita não há demanda de onde derivar a quantidade (calcularQtdDrivers é conta de fita em
+    // perfil): vale o que o vendedor digitou, ou 1.
+    const qtd = s.qtdDriversManual != null && s.qtdDriversManual > 0 ? Math.floor(s.qtdDriversManual) : 1;
+    if (s.driver.potencia > 0) capacidades.push(s.driver.potencia * qtd);
+    else capacidades.push(null);
+  }
+
+  for (const l of amb.luminarias) {
+    if (itemEhDriver24V(l.descricao, l.tensao)) {
+      const p = l.potencia_watts ?? 0;
+      capacidades.push(p > 0 ? p * Math.max(1, l.quantidade || 1) : null);
+    }
+    // O sub-item do composto não guarda tensão, então quem decide é o NOME. Fixar 24 aqui faria o
+    // driver 48V de um trilho MAGNETO contar como alimentação dos spots TINY.
+    const composicao = l.composicao ?? [];
+    const cargaComposto =
+      calcularCargaComposicao(composicao) +
+      composicao
+        .filter((c) => c.papel === 'fita_modular')
+        .reduce((acc, c) => acc + (c.wm ?? 0) * (c.comprimento ?? 0), 0);
+    // módulo "?W" ou fita modular sem W/m: não dá para saber quanto do driver sobra
+    const cargaDesconhecida =
+      composicao.some((c) => c.papel === 'modulo' && c.potenciaW == null && c.comprimento == null) ||
+      composicao.some((c) => c.papel === 'fita_modular' && !(c.wm && c.wm > 0));
+    for (const c of composicao) {
+      if (
         (c.papel === 'driver_recomendado' || c.papel === 'driver_obrigatorio') &&
-        itemEhDriver24V(c.descricao, null),
-    ),
-  );
-  return emSistema || avulso || emComposto;
+        itemEhDriver24V(c.descricao, null)
+      ) {
+        if (c.potenciaW == null || c.potenciaW <= 0) {
+          capacidades.push(null); // potência do driver não cadastrada: vale a presença
+        } else if (!cargaDesconhecida) {
+          somarLivre(c.potenciaW * Math.max(1, c.quantidade || 1), cargaComposto);
+        }
+      }
+    }
+  }
+
+  if (capacidades.length === 0) return false;
+  const minimo = potenciaMinimaDriverTiny(amb);
+  if (minimo <= 0) return true; // spots sem potência cadastrada: presença basta
+  if (capacidades.some((c) => c === null)) return true; // capacidade desconhecida: não reprova
+  return capacidades.reduce((soma, c) => soma + (c as number), 0) >= minimo;
 }
 
 /** RULE-108 — potência mínima que os drivers 24V precisam somar para os spots TINY do
@@ -1386,6 +1563,77 @@ export function fitaEhIP(descricao?: string | null): boolean {
 export function fitaEhBaby(params: { descricao?: string | null; isBaby?: boolean | null }): boolean {
   if (params.isBaby === true) return true;
   return /\bBABY\b/i.test(params.descricao ?? '');
+}
+
+/** RULE-103/104: por que a fita não cabe fisicamente no perfil — `null` quando cabe (ou quando
+ *  falta perfil ou fita para comparar). Mesma checagem dos caminhos de montagem do passo 2. */
+export function motivoFitaNaoCabeNoPerfil(
+  perfil: Pick<ItemPerfil, 'descricao' | 'familia_perfil' | 'somente_baby'> | null | undefined,
+  fita: Pick<ItemFitaLED, 'codigo' | 'descricao' | 'is_baby'>
+): 'baby' | 'ip' | null {
+  if (!perfil || !fita.codigo) return null;
+  const soBaby = perfilSomenteFitaBaby({
+    descricao: perfil.descricao,
+    familiaPerfil: perfil.familia_perfil,
+    somenteBaby: perfil.somente_baby,
+  });
+  if (soBaby && !fitaEhBaby({ descricao: fita.descricao, isBaby: fita.is_baby })) return 'baby';
+  if (
+    perfilRejeitaFitaIP({ descricao: perfil.descricao, familiaPerfil: perfil.familia_perfil }) &&
+    fitaEhIP(fita.descricao)
+  ) return 'ip';
+  return null;
+}
+
+export interface SistemaDesvinculado {
+  ambienteNome: string;
+  local?: string | null;
+  categoriaNome: string;
+  fitaCodigo: string;
+  motivo: 'baby' | 'ip';
+}
+
+/** RULE-016/017: a fita da categoria manda — sistemas vinculados acompanham a troca.
+ *  - categoria removida → sistema desvinculado (mantém a fita que tinha);
+ *  - fita nova que não cabe no perfil do sistema (Baby/IP) → sistema DESVINCULADO, com a fita
+ *    antiga, e listado em `desvinculados` para a tela avisar (antes a troca furava as travas);
+ *  - mesma fita → nada muda (preserva preço editado no passo 3).
+ *  Devolve o MESMO array quando nada mudou, para o setState não re-renderizar à toa. */
+export function propagarFitaDasCategorias(
+  ambientes: Ambiente[],
+  categorias: CategoriaFita[]
+): { ambientes: Ambiente[]; desvinculados: SistemaDesvinculado[] } {
+  const porId = new Map(categorias.map((c) => [c.id, c]));
+  const desvinculados: SistemaDesvinculado[] = [];
+  let mudou = false;
+  const novos = ambientes.map((amb) => ({
+    ...amb,
+    sistemas: amb.sistemas.map((sis) => {
+      if (!sis.categoriaId) return sis;
+      const cat = porId.get(sis.categoriaId);
+      if (!cat) {
+        mudou = true;
+        return { ...sis, categoriaId: null };
+      }
+      if (!cat.fita?.codigo || cat.fita.codigo === sis.fita.codigo) return sis;
+      mudou = true;
+      const motivo = motivoFitaNaoCabeNoPerfil(sis.perfil, cat.fita);
+      if (motivo) {
+        desvinculados.push({
+          ambienteNome: amb.nome,
+          local: sis.local,
+          categoriaNome: cat.nome,
+          fitaCodigo: cat.fita.codigo,
+          motivo,
+        });
+        return { ...sis, categoriaId: null };
+      }
+      // mesmo contrato de `vincularCategoria`: preserva o id da fita do sistema e invalida o
+      // override manual de drivers (o W/m mudou — o driver precisa ser redimensionado)
+      return { ...sis, fita: { ...cat.fita, id: sis.fita.id }, qtdDriversManual: null };
+    }),
+  }));
+  return { ambientes: mudou ? novos : ambientes, desvinculados };
 }
 
 export interface ChecklistIssue {

@@ -27,6 +27,7 @@ import {
   calcularSubtotalDriverSistema,
   calcularTotalAmbienteSemFita,
   calcularRolosPorGrupo,
+  formatarMetros,
   calcularTotalGeral,
   calcularSubtotalComposicao,
   calcularCargaComposicao,
@@ -304,7 +305,7 @@ function chipsPorPapel(c: ItemComposicao, atributosMap: AtributosMap): string {
     case "modulo": {
       const parts: string[] = [];
       if (c.potenciaW != null && c.potenciaW > 0) parts.push(chip(`${c.potenciaW}W`));
-      if (c.comprimento != null && c.comprimento > 0) parts.push(chip(`${c.comprimento}m`));
+      if (c.comprimento != null && c.comprimento > 0) parts.push(chip(`${formatarMetros(c.comprimento)}m`));
       return parts.join("");
     }
     case "fita_modular": {
@@ -315,7 +316,7 @@ function chipsPorPapel(c: ItemComposicao, atributosMap: AtributosMap): string {
         const volt = (lookup.atributos as Record<string, unknown>)["voltagem"];
         if (volt != null) parts.push(chip(`${volt}V`, "orange"));
       }
-      if (c.comprimento != null && c.comprimento > 0) parts.push(chip(`${c.comprimento}m`));
+      if (c.comprimento != null && c.comprimento > 0) parts.push(chip(`${formatarMetros(c.comprimento)}m`));
       return parts.join("");
     }
     case "driver_recomendado":
@@ -693,7 +694,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 export function gerarOrcamentoHtmlV3(params: PdfParamsV2): string {
   const { clienteNome, projetoNome, colaborador, tipo, ambientes, logoBase64, atributosMap = {}, categorias, parceiro } = params;
   const data = formatarData();
-  const totalGeral = calcularTotalGeral(ambientes);
+  const totalGeral = calcularTotalGeral(ambientes, categorias);
 
   const logoHtml = logoBase64
     ? `<img src="${logoBase64}" alt="Aura" class="logo" />`

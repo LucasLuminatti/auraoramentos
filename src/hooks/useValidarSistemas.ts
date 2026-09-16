@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { SistemaIluminacao } from "@/types/orcamento";
 
@@ -67,67 +67,130 @@ export function sistemaParaPayload(sis: SistemaIluminacao) {
   };
 }
 
+/** Situação da validação do servidor em relação ao estado ATUAL dos sistemas:
+ *  - `ok`: os resultados em `validacoes` são do payload atual;
+ *  - `pendente`: houve edição depois da última validação (debounce ou chamada em voo) — os
+ *    resultados na mão são de um estado anterior e não servem para bloquear nem liberar;
+ *  - `falhou`: a chamada para o payload atual falhou (rede/edge fora) — o gate não trava por
+ *    isso; as travas locais do passo 2 continuam valendo. */
+export type StatusValidacao = "ok" | "pendente" | "falhou";
+
+/** Erros do validador que BLOQUEIAM o avanço do passo 2 e o PDF.
+ *  - "Tensão incompatível" (fita × driver) fica de fora: por decisão da equipe (D-05/D-10) é
+ *    orientativa. O teste é pelo início da mensagem — `/tensão/` solto também casava "extensão".
+ *  - Sistema ainda sem fita não tem incompatibilidade DE FITA real: a edge publicada acusa
+ *    "aceita SOMENTE fita Baby" num Light Mini/Ripado que só tem driver, e isso travava o vendedor
+ *    no meio da montagem. */
+export function errosBloqueantes(sis: Pick<SistemaIluminacao, "fita">, erros: string[]): string[] {
+  return erros.filter((e) => {
+    if (/^\s*Tens[ãa]o incompat[íi]vel/i.test(e)) return false;
+    if (!sis.fita.codigo && /\bfita\b/i.test(e)) return false;
+    return true;
+  });
+}
+
+const TIMEOUT_VALIDACAO_MS = 15_000;
+/** Esperas antes da 2ª e da 3ª tentativa quando a edge falha. */
+const ESPERAS_NOVA_TENTATIVA_MS = [2_000, 5_000];
+
 export function useValidarSistemas(sistemas: SistemaIluminacao[]) {
   const [validacoes, setValidacoes] = useState<ValidacaoState>({});
   const [loading, setLoading] = useState(false);
+  // Chave (ids + payload) dos resultados que estão em `validacoes`, e a última que falhou.
+  const [chaveValidada, setChaveValidada] = useState("");
+  const [chaveFalhou, setChaveFalhou] = useState<string | null>(null);
+  const chaveValidadaRef = useRef("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Último payload validado com sucesso — edições que não afetam o payload
-  // (ex.: qtdDriversManual, preços) não re-invocam a edge function à toa.
-  const lastPayloadRef = useRef<string>("");
+  // Cada chamada leva um id: resposta de um estado já superado é descartada (antes, uma resposta
+  // atrasada podia sobrescrever a mais nova).
+  const reqIdRef = useRef(0);
+
+  // Só valida sistema com fita ou driver. A chave inclui os ids: payload igual em sistemas
+  // diferentes (add/remove/reorder) ainda precisa revalidar para remapear os resultados.
+  // Edições que não mudam o payload (preço, qtdDriversManual) não re-invocam a edge.
+  const { sistemasComDados, itens, chave } = useMemo(() => {
+    const comDados = sistemas.filter((s) => s.fita.codigo || s.driver.codigo);
+    const payload = comDados.map(sistemaParaPayload);
+    return {
+      sistemasComDados: comDados,
+      itens: payload,
+      chave: comDados.length ? JSON.stringify({ ids: comDados.map((s) => s.id), itens: payload }) : "",
+    };
+  }, [sistemas]);
 
   useEffect(() => {
-    // Só valida se tiver pelo menos fita ou driver selecionado
-    const sistemasComDados = sistemas.filter(
-      (s) => s.fita.codigo || s.driver.codigo
-    );
-    if (sistemasComDados.length === 0) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (chave === "") {
+      // Nada a validar (só luminárias/compostos, ou sistemas vazios). Tratado ANTES da comparação:
+      // com a chave antiga na ref, o caminho normal chamava a edge com `itens: []` → 400 → falhou.
+      reqIdRef.current++;
+      setLoading(false);
       setValidacoes({});
-      lastPayloadRef.current = ""; // estado limpo — payload igual no futuro precisa revalidar
+      chaveValidadaRef.current = "";
+      setChaveValidada("");
+      setChaveFalhou(null);
       return;
     }
+    if (chave === chaveValidadaRef.current) {
+      // voltou a um estado já validado: invalida chamada em voo
+      reqIdRef.current++;
+      setLoading(false);
+      return;
+    }
+    const reqId = ++reqIdRef.current;
 
-    // Debounce de 800ms para não chamar a edge function a cada keystroke
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      const itens = sistemasComDados.map(sistemaParaPayload);
-      // Inclui os ids na chave: payload igual mas sistemas diferentes (add/remove/reorder)
-      // ainda precisa revalidar para remapear os resultados por id.
-      const payloadKey = JSON.stringify({ ids: sistemasComDados.map((s) => s.id), itens });
-      if (payloadKey === lastPayloadRef.current) return;
+    const validar = async (tentativa: number) => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke(
-          "validar-sistema-orcamento",
-          { body: { itens } }
-        );
-
+        const { data, error } = await supabase.functions.invoke("validar-sistema-orcamento", {
+          body: { itens },
+          timeout: TIMEOUT_VALIDACAO_MS,
+        });
         if (error) throw error;
+        if (reqId !== reqIdRef.current) return;
 
         const novasValidacoes: ValidacaoState = {};
-        data.resultados.forEach(
-          (r: { item_index: number } & ValidacaoResultado, idx: number) => {
-            const sis = sistemasComDados[idx];
-            novasValidacoes[sis.id] = {
-              valido: r.valido,
-              erros: r.erros,
-              alertas: r.alertas,
-              sugestoes: r.sugestoes,
-            };
-          }
-        );
+        data.resultados.forEach((r: { item_index: number } & ValidacaoResultado, idx: number) => {
+          const sis = sistemasComDados[idx];
+          novasValidacoes[sis.id] = {
+            valido: r.valido,
+            erros: r.erros,
+            alertas: r.alertas,
+            sugestoes: r.sugestoes,
+          };
+        });
         setValidacoes(novasValidacoes);
-        lastPayloadRef.current = payloadKey;
+        chaveValidadaRef.current = chave;
+        setChaveValidada(chave);
+        setChaveFalhou(null);
+        setLoading(false);
       } catch {
-        // Silencia erros de rede — validação offline é feita no AmbienteCard
-      } finally {
+        if (reqId !== reqIdRef.current) return;
+        // Falha passageira (cold start da edge, rede) não pode desligar o bloqueio do servidor
+        // até a próxima edição: tenta de novo com espera crescente antes de desistir.
+        const espera = ESPERAS_NOVA_TENTATIVA_MS[tentativa];
+        if (espera != null) {
+          debounceRef.current = setTimeout(() => void validar(tentativa + 1), espera);
+          return;
+        }
+        // Desistiu: a validação local do AmbienteCard continua; o gate não trava por isso.
+        setChaveFalhou(chave);
         setLoading(false);
       }
-    }, 800);
+    };
+
+    // Debounce de 800ms para não chamar a edge function a cada keystroke
+    debounceRef.current = setTimeout(() => void validar(0), 800);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [sistemas]);
+    // `itens`/`sistemasComDados` são derivados de `chave` no mesmo memo
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chave]);
 
-  return { validacoes, loading };
+  const status: StatusValidacao =
+    chave === chaveValidada ? "ok" : chaveFalhou === chave ? "falhou" : "pendente";
+
+  return { validacoes, loading, status };
 }

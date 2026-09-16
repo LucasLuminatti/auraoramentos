@@ -310,7 +310,10 @@ function validarSistemaPadrao(
     // Regras #15, #16, #17 / RULE-103 — Somente Baby (BLOQUEIO; ver histórico da decisão
     // em `validarPerfilFita`). O caso "sem regra cadastrada" (família detectada pelo nome)
     // é coberto por `validarPerfilFita`, chamado transversalmente no handler.
-    if (somenteBaby && subtipo_fita !== "baby" && !fitaEhBaby(item)) {
+    // Só com fita escolhida (mesmo critério de `validarPerfilFita`): Light Mini/Ripado com driver e
+    // ainda sem fita recebia "aceita SOMENTE fita Baby" — erro sobre uma fita que não existe.
+    const temFita = !!(item.codigo_fita ?? "").trim();
+    if (temFita && somenteBaby && subtipo_fita !== "baby" && !fitaEhBaby(item)) {
       erros.push(
         `Perfil ${familia_perfil} aceita SOMENTE fita Baby. ` +
         `Selecione uma fita Baby (largura ≤ ${larguraMaxCanal}mm).`,

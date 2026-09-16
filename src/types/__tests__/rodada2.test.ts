@@ -131,24 +131,75 @@ describe('RULE-108 — linha TINY exige driver 24V externo', () => {
     expect(potenciaSpotsTiny(amb([lum('LM9999', 'SPOT COMUM 7W', { potencia_watts: 7 })]))).toBe(0);
   });
 
-  it('detecta driver 24V no sistema, avulso ou dentro do composto', () => {
-    expect(ambienteTemDriver24V(amb([], [sistemaComDriver(24)]))).toBe(true);
+  /** Driver 24V de um sistema SEM fita: capacidade livre para os spots. */
+  const sistemaSoDriver24V = (potencia: number): SistemaIluminacao => {
+    const s = sistemaComDriver(24);
+    return { ...s, fita: { ...s.fita, codigo: '' }, driver: { ...s.driver, potencia } };
+  };
+
+  /** Sistema com fita: fita 10 W/m × `metros` e driver 24V de `potencia`. */
+  const sistemaComFita = (metros: number, potencia: number): SistemaIluminacao => {
+    const s = sistemaComDriver(24);
+    return { ...s, metragemManual: metros, driver: { ...s.driver, potencia } };
+  };
+  const spotsTiny = (qtd: number) => [lum('LM3182', SPOT_TINY, { potencia_watts: 5, quantidade: qtd })];
+  const compostoTiny24V = (potenciaDriver: number | undefined, potenciaModulos: number): ItemLuminaria =>
+    lum('LM3145', 'TINY MAG TRILHO DE SOBREPOR MAGNETICO PT 1M MAX. 24V', {
+      composicao: [
+        {
+          id: 'm', codigo: 'LM3150', descricao: 'TINY MAG MODULO', quantidade: 1, potenciaW: potenciaModulos,
+          precoUnitario: 100, precoMinimo: 90, papel: 'modulo', obrigatorio: false,
+        },
+        {
+          id: 'c', codigo: 'LM2350', descricao: 'DRIVER 24V', quantidade: 1, potenciaW: potenciaDriver,
+          precoUnitario: 200, precoMinimo: 180, papel: 'driver_recomendado', obrigatorio: true,
+        },
+      ],
+    });
+
+  it('driver 24V de sistema com fita só oferece a SOBRA aos spots TINY', () => {
+    // fita 50 W × 1,20 = 60 W comprometidos num driver de 100 W → sobram 40 W
+    expect(ambienteTemDriver24V(amb(spotsTiny(6), [sistemaComFita(5, 100)]))).toBe(true);  // mínimo 36
+    expect(ambienteTemDriver24V(amb(spotsTiny(8), [sistemaComFita(5, 100)]))).toBe(false); // mínimo 48
+  });
+
+  it('driver 24V totalmente tomado pela fita não alimenta os spots, nem por presença', () => {
+    // 50 W × 1,20 = 60 W num driver de 60 W: sobra zero (auditoria 2026-09-15 — antes qualquer
+    // driver 24V calava o aviso)
+    const semPotencia = [lum('LM3182', SPOT_TINY)];
+    expect(ambienteTemDriver24V(amb(semPotencia, [sistemaComFita(5, 60)]))).toBe(false);
+  });
+
+  it('carga comprometida desconhecida não libera o driver (fita sem W/m, módulo ?W)', () => {
+    const semWm = sistemaComFita(5, 100);
+    const fitaSemWm = { ...semWm, fita: { ...semWm.fita, wm: 0 } };
+    expect(ambienteTemDriver24V(amb(spotsTiny(6), [fitaSemWm]))).toBe(false);
+    const moduloSemPotencia = compostoTiny24V(100, 15);
+    moduloSemPotencia.composicao = moduloSemPotencia.composicao!.map((c) =>
+      c.papel === 'modulo' ? { ...c, potenciaW: undefined } : c
+    );
+    expect(ambienteTemDriver24V(amb([...spotsTiny(6), moduloSemPotencia]))).toBe(false);
+  });
+
+  it('driver 24V livre precisa cobrir a potência mínima dos spots', () => {
+    const spots = spotsTiny(6); // 30W → mínimo 36W
+    expect(potenciaMinimaDriverTiny(amb(spots))).toBe(36);
+    expect(ambienteTemDriver24V(amb(spots, [sistemaSoDriver24V(20)]))).toBe(false);
+    expect(ambienteTemDriver24V(amb(spots, [sistemaSoDriver24V(60)]))).toBe(true);
+  });
+
+  it('driver 24V do composto conta só o que sobra dos módulos', () => {
+    // 15 W × 1,20 = 18 W dos módulos: 20 W sobra 2 W; 100 W sobra 82 W
+    expect(ambienteTemDriver24V(amb([...spotsTiny(6), compostoTiny24V(20, 15)]))).toBe(false);
+    expect(ambienteTemDriver24V(amb([...spotsTiny(6), compostoTiny24V(100, 15)]))).toBe(true);
+  });
+
+  it('driver sem potência cadastrada vale pela presença, mesmo com spots de potência conhecida', () => {
     expect(ambienteTemDriver24V(amb([], [sistemaComDriver(12)]))).toBe(false);
-    expect(ambienteTemDriver24V(amb([lum('LM2350', 'DRIVER 100W 24V IP20')]))).toBe(true);
-    expect(
-      ambienteTemDriver24V(
-        amb([
-          lum('LM3145', 'TINY MAG TRILHO DE SOBREPOR MAGNETICO PT 1M MAX. 24V', {
-            composicao: [
-              {
-                id: 'c', codigo: 'LM2350', descricao: 'DRIVER 100W 24V', quantidade: 1,
-                precoUnitario: 200, precoMinimo: 180, papel: 'driver_recomendado', obrigatorio: true,
-              },
-            ],
-          }),
-        ]),
-      ),
-    ).toBe(true);
+    // avulso sem potência
+    expect(ambienteTemDriver24V(amb([...spotsTiny(6), lum('LM2350', 'DRIVER 100W 24V IP20')]))).toBe(true);
+    // do composto, sem potência
+    expect(ambienteTemDriver24V(amb([...spotsTiny(6), compostoTiny24V(undefined, 15)]))).toBe(true);
   });
 
   it('ambiente só com spot TINY e nenhum driver 24V fica sem alimentação', () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { errosBloqueantes } from '@/hooks/useValidarSistemas';
 
 // Cobre CALC-01 (D-01..D-06): lógica do gate de avanço do Step 2.
 // Fonte: src/components/Step2Ambientes.tsx — handleNext (linhas 34–82)
@@ -113,5 +114,50 @@ describe('Gate CALC-01 — totalmenteVazio (D-06)', () => {
     const vazio = sistemaVazio();
     expect(totalmenteVazio(vazio)).toBe(true);
     expect(metragemInvalida(vazio)).toBe(false);
+  });
+});
+
+// ─── Gate dos erros da edge (auditoria 2026-09-15) ───
+// Usa a função REAL que o passo 2 e o passo 3 chamam, com as mensagens reais da edge
+// `validar-sistema-orcamento` — um espelho local passaria mesmo com o filtro quebrado.
+
+const comFita = { fita: { codigo: 'LM2029' } } as Parameters<typeof errosBloqueantes>[0];
+const semFita = { fita: { codigo: '' } } as Parameters<typeof errosBloqueantes>[0];
+
+const MSG = {
+  tensao: 'Tensão incompatível: fita é 12V mas o driver é 24V. Use driver 12V.',
+  babyRegra15: 'Perfil light_mini aceita SOMENTE fita Baby. Selecione uma fita Baby (largura ≤ 5mm).',
+  babyTransversal: 'Perfil ripado aceita SOMENTE fita Baby — outra fita não cabe no canal. Selecione uma fita Baby.',
+  ip: 'Perfil nano não aceita fita com IP (LM1234) — não cabe no canal. Selecione uma fita sem IP.',
+  slim: 'Perfil trik aceita SOMENTE driver Slim. Drivers Convencionais, PRO ou acima de 72W não cabem fisicamente.',
+  tiny: 'Sistema Tiny Magneto requer driver 24V. Driver 12V é proibido.',
+  // hoje é alerta na edge; se um dia virar erro, não pode escapar por conter "tensão"
+  extensao: 'Extensão de fita (12m) excede o limite de 10m por driver para 24V.',
+};
+
+describe('errosBloqueantes — o que o validador do servidor trava', () => {
+  it('incompatibilidade física com fita escolhida bloqueia', () => {
+    expect(errosBloqueantes(comFita, [MSG.babyRegra15, MSG.babyTransversal, MSG.ip])).toHaveLength(3);
+  });
+
+  it('tensão fita × driver continua advisory (D-05/D-10)', () => {
+    expect(errosBloqueantes(comFita, [MSG.tensao])).toEqual([]);
+  });
+
+  it('"extensão" não é confundida com tensão', () => {
+    expect(errosBloqueantes(comFita, [MSG.extensao])).toEqual([MSG.extensao]);
+  });
+
+  it('driver errado bloqueia com ou sem fita', () => {
+    expect(errosBloqueantes(comFita, [MSG.slim, MSG.tiny])).toEqual([MSG.slim, MSG.tiny]);
+    expect(errosBloqueantes(semFita, [MSG.slim, MSG.tiny])).toEqual([MSG.slim, MSG.tiny]);
+  });
+
+  it('sistema ainda sem fita não trava por erro de fita (Light Mini só com driver)', () => {
+    expect(errosBloqueantes(semFita, [MSG.babyRegra15, MSG.ip])).toEqual([]);
+  });
+
+  it('sem erro não bloqueia', () => {
+    expect(errosBloqueantes(comFita, [])).toEqual([]);
   });
 });

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Check, AlertCircle, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,6 +18,9 @@ import {
   MARGEM_SEGURANCA_DRIVER,
   REGRAS_COMPOSICAO,
   calcularMetragemModulosDifusos,
+  calcularRolosFitaModular,
+  calcularQtdDriversComposicao,
+  TAMANHOS_ROLO_CATALOGO,
   parsearComprimentoModulo,
   parsearComprimentoDescricao,
   calcularOcupacaoTrilho,
@@ -140,6 +144,9 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   const [qtdDraft, setQtdDraft] = useState<Record<string, string>>({});
 
   const qtdInputProps = (c: ItemComposicao) => ({
+    // Rótulo acessível também é o que permite mirar a quantidade certa no E2E (a tela tem
+    // vários campos numéricos por linha).
+    "aria-label": `Quantidade ${c.codigo}`,
     value: qtdDraft[c.id] ?? String(c.quantidade),
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = e.target.value;
@@ -167,6 +174,17 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   // Ocupação do trilho âncora (RULE-056 aviso / RULE-037 sobra) — recalcula a cada render
   const acessorios = composicao.filter((c) => c.papel === "acessorio_opcional");
   const lampadas = composicao.filter((c) => c.papel === "lampada");
+  // Conector de energia e kit de fixação entravam na composição (e no subtotal) sem aparecer
+  // em lugar nenhum do card: cobrados às cegas, sem quantidade, preço nem remoção.
+  // Qualquer papel não coberto pelas listas acima cai aqui — nada mais fica invisível.
+  const outrosComponentes = composicao.filter(
+    (c) =>
+      c.papel !== "modulo" &&
+      c.papel !== "driver_recomendado" &&
+      c.papel !== "fita_modular" &&
+      c.papel !== "acessorio_opcional" &&
+      c.papel !== "lampada"
+  );
   const ocupacao = calcularOcupacaoTrilho(item);
   const EPS_TRILHO = 0.005; // meio centímetro — ruído de float/parse não gera aviso
   const excedeTrilho = !!ocupacao && ocupacao.ocupadoM > ocupacao.trilhoM + EPS_TRILHO;
@@ -196,6 +214,43 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     : cargaTotalW * MARGEM_SEGURANCA_DRIVER;
   const excedeDriverAlojado =
     driverAlojado && consumoSeguro24v > LIMITE_W_DRIVER_ALOJADO;
+
+  // RULE-005/006: a fita do SYSTEM MOLD acompanha os difusos. A metragem era gravada uma vez,
+  // na escolha da fita — incluir 10 difusos depois deixava a linha com 1 rolo e o card dizendo
+  // "fita 11 m". Só roda quando a soma dos difusos MUDA (não no mount): reabrir o passo 2 não
+  // pode desfazer a quantidade ajustada à mão no passo 3. Metragem digitada pelo vendedor manda.
+  const metragemDerivadaAnterior = useRef(metragemDerivada);
+  useEffect(() => {
+    if (metragemDerivadaAnterior.current === metragemDerivada) return;
+    metragemDerivadaAnterior.current = metragemDerivada;
+    if (!isModular) return;
+    const base = itemRef.current;
+    const fita = (base.composicao ?? []).find((c) => c.papel === "fita_modular");
+    // sem `metragemRolo` = item gravado antes da cobrança por rolo: fica como está
+    if (!fita || fita.metragemEditada || fita.metragemRolo == null) return;
+    const quantidade = calcularRolosFitaModular(metragemDerivada, fita.metragemRolo);
+    if (fita.comprimento === metragemDerivada && fita.quantidade === quantidade) return;
+    onChange({
+      ...base,
+      composicao: (base.composicao ?? []).map((c) =>
+        c.id === fita.id ? { ...c, comprimento: metragemDerivada, quantidade } : c
+      ),
+    });
+    // onChange muda de identidade a cada render do pai; o gatilho é só a metragem derivada
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metragemDerivada, isModular]);
+
+  /** Carga CRUA (sem a folga) que o driver do composto precisa alimentar.
+   *  Magnético: soma dos módulos. SYSTEM MOLD: W/m × metragem dos difusos — é a fita que puxa
+   *  o driver, mesma conta que escolhe o SKU em `buscarDriver24V`.
+   *  Recebe o item para poder ser reavaliado depois do await (Pitfall 3). */
+  const cargaDoDriver = (base: ItemLuminaria): number => {
+    if (!isModular) return calcularCargaComposicao(base.composicao);
+    const fita = (base.composicao ?? []).find((c) => c.papel === "fita_modular");
+    const metragem = calcularMetragemModulosDifusos(base.composicao);
+    if (fita?.wm != null) return fita.wm * metragem;
+    return consumoModularW / MARGEM_SEGURANCA_DRIVER; // snapshot antigo: valor da última busca
+  };
 
   /** Busca o driver recomendado (menor potência suficiente) para os sistemas 24V.
    *  - `somenteTrilho` (RULE-031): tenta primeiro os drivers de TRILHO; se o catálogo não
@@ -327,13 +382,25 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
 
   // ─── Helpers de mutação ───
 
+  // Sempre sobre `itemRef.current`: o efeito de sincronização da fita modular grava depois do
+  // commit, e mapear o `composicao` do render podia regravar a fita com valores antigos.
   const atualizarComposicaoItem = (id: string, patch: Partial<ItemComposicao>) => {
-    const nova = composicao.map((c) => (c.id === id ? { ...c, ...patch } : c));
+    const nova = (itemRef.current.composicao ?? []).map((c) => (c.id === id ? { ...c, ...patch } : c));
     onChange({ ...itemRef.current, composicao: nova });
   };
 
+  /** Devolve a fita do modular ao cálculo pelos difusos (desfaz a metragem digitada). */
+  const usarMetragemDosDifusos = (fita: ItemComposicao) => {
+    const m = calcularMetragemModulosDifusos(itemRef.current.composicao);
+    atualizarComposicaoItem(fita.id, {
+      comprimento: m,
+      metragemEditada: false,
+      ...(fita.metragemRolo != null ? { quantidade: calcularRolosFitaModular(m, fita.metragemRolo) } : {}),
+    });
+  };
+
   const removerComposicaoItem = (id: string) => {
-    const nova = composicao.filter((c) => c.id !== id);
+    const nova = (itemRef.current.composicao ?? []).filter((c) => c.id !== id);
     onChange({ ...itemRef.current, composicao: nova });
   };
 
@@ -383,11 +450,16 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       | undefined;
     if (!drv) return;
 
+    // Reconciliação pós-await: usar itemRef, remover driver anterior
+    const base = itemRef.current;
     const driverItem: ItemComposicao = {
       id: crypto.randomUUID(),
       codigo: drv.codigo,
       descricao: drv.descricao,
-      quantidade: 1,
+      // RULE-026: carga acima da potência do driver pede mais de um (folga de 20% inclusa).
+      // Entrava fixo em 1 — o orçamento saía com um driver só para 2 circuitos. Editável depois.
+      // `|| 1`: carga desconhecida (snapshot antigo sem W/m) não zera a peça aplicada à mão.
+      quantidade: calcularQtdDriversComposicao(cargaDoDriver(base), drv.driver_potencia_w) || 1,
       precoUnitario: Math.round((drv.preco_tabela || 0) * 100) / 100,
       precoMinimo: Math.round((drv.preco_minimo || 0) * 100) / 100,
       papel: "driver_recomendado",
@@ -395,8 +467,6 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       potenciaW: drv.driver_potencia_w ?? undefined,
     };
 
-    // Reconciliação pós-await: usar itemRef, remover driver anterior
-    const base = itemRef.current;
     const semDriverAnterior = (base.composicao ?? []).filter(
       (c) => c.papel !== "driver_recomendado"
     );
@@ -420,11 +490,13 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       | undefined;
     if (!drv) return;
 
+    const base = itemRef.current;
     const driverItem: ItemComposicao = {
       id: crypto.randomUUID(),
       codigo: drv.codigo,
       descricao: drv.descricao,
-      quantidade: 1,
+      // RULE-026 — ver comentário em aplicarDriver48V
+      quantidade: calcularQtdDriversComposicao(cargaDoDriver(base), drv.driver_potencia_w) || 1,
       precoUnitario: Math.round((drv.preco_tabela || 0) * 100) / 100,
       precoMinimo: Math.round((drv.preco_minimo || 0) * 100) / 100,
       papel: "driver_recomendado",
@@ -432,7 +504,6 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       potenciaW: drv.driver_potencia_w ?? undefined,
     };
 
-    const base = itemRef.current;
     const semDriverAnterior = (base.composicao ?? []).filter(
       (c) => c.papel !== "driver_recomendado"
     );
@@ -491,11 +562,18 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
   // Adiciona fita modular escolhida pelo vendedor (SYSTEM MOLD) com metragem pré-preenchida
   const handleAdicionarFitaModular = (produto: Produto) => {
     const metragem = calcularMetragemModulosDifusos(itemRef.current.composicao);
+    // RULE-005/006: a fita é vendida em ROLO, então a quantidade cobrada são os rolos que a
+    // metragem dos difusos exige (com 5% de perda por rolo) — até 2026-09-16 entrava sempre
+    // `1`, e 12 m de difusor saíam com o preço de um rolo só.
+    const roloPresumido = produto.tamanho_rolo_m == null || produto.tamanho_rolo_m <= 0;
+    const metragemRolo = roloPresumido ? 5 : (produto.tamanho_rolo_m as number);
     const novaFita: ItemComposicao = {
       id: crypto.randomUUID(),
       codigo: produto.codigo,
       descricao: produto.descricao,
-      quantidade: 1,
+      quantidade: calcularRolosFitaModular(metragem, metragemRolo),
+      metragemRolo,
+      ...(roloPresumido ? { roloPresumido: true } : {}),
       precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100,
       precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100,
       imagemUrl: produto.imagem_url || undefined,
@@ -576,18 +654,20 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       }
     }
 
+    const base = itemRef.current;
     const driverItem: ItemComposicao = {
       id: crypto.randomUUID(),
       codigo: produto.codigo,
       descricao: produto.descricao,
-      quantidade: 1,
+      // RULE-026 — ver comentário em aplicarDriver48V. Vale também para o driver escolhido à
+      // mão: carga de 150W com Slim de 72W entra como 3 (um por circuito), não como 1.
+      quantidade: calcularQtdDriversComposicao(cargaDoDriver(base), produto.driver_potencia_w) || 1,
       precoUnitario: Math.round((produto.preco_tabela || 0) * 100) / 100,
       precoMinimo: Math.round((produto.preco_minimo || 0) * 100) / 100,
       papel: "driver_recomendado",
       obrigatorio: true,
       potenciaW: produto.driver_potencia_w ?? undefined,
     };
-    const base = itemRef.current;
     const semDriverAnterior = (base.composicao ?? []).filter(
       (c) => c.papel !== "driver_recomendado"
     );
@@ -766,12 +846,102 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       ? "LM3169"
       : "LM3168";
 
+  // ─── Painel de driver — box "aplicado" (compartilhado 48V/24V) ───
+
+  /** Box do driver já aplicado. A QUANTIDADE é editável aqui (RULE-001): o número que entra é o
+   *  cálculo da folga de 20%, mas a divisão em circuitos é decisão de projeto.
+   *  `alerta` (subdimensionado) entra DENTRO deste box, e não como um box separado: trocar de
+   *  box desmontava o input no meio da digitação — quem digitasse "12" perdia o "2" ao passar
+   *  por "1" (quantidade insuficiente). */
+  const renderDriverAplicado = (
+    drv: ItemComposicao,
+    drvPotencia: number,
+    alerta?: React.ReactNode
+  ) => (
+    <div
+      className={cn(
+        "rounded-md border px-3 py-2 text-xs space-y-2",
+        alerta
+          ? "border-amber-400/40 bg-amber-50 text-amber-900"
+          : "border-green-400/40 bg-green-50 text-green-900"
+      )}
+    >
+      <div className="flex items-center gap-1 flex-wrap">
+        {alerta ? (
+          <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+        ) : (
+          <Check className="h-3.5 w-3.5 text-green-700 shrink-0" />
+        )}
+        <span>
+          Driver aplicado: {drv.codigo} ({drvPotencia}W) ×
+        </span>
+        <Input
+          type="number"
+          min={1}
+          step={1}
+          className="h-7 w-16 text-xs"
+          {...qtdInputProps(drv)}
+          aria-label="Quantidade de drivers"
+        />
+        {drvPotencia > 0 && (
+          <span className={alerta ? "text-amber-800" : "text-green-700"}>
+            = {Math.round(drvPotencia * drv.quantidade * 10) / 10}W
+          </span>
+        )}
+      </div>
+      {alerta}
+      {mostrarBuscaDriver ? (
+        <>
+          <ProdutoAutocomplete
+            value=""
+            onSelect={handleSelecionarDriverManual}
+            placeholder="Buscar driver..."
+            filtro="driver"
+            filtroVoltagem={is48V ? 48 : 24}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8"
+            onClick={() => setMostrarBuscaDriver(false)}
+          >
+            Cancelar
+          </Button>
+        </>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8"
+            onClick={() => setMostrarBuscaDriver(true)}
+          >
+            Alterar
+          </Button>
+          {/* Driver sem carga (módulos removidos) continuava cobrado sem jeito de tirar */}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 text-destructive"
+            onClick={() => removerComposicaoItem(drv.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            Remover
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   // ─── Painel de driver — estado 48V ───
 
   const renderPainelDriver48V = () => {
     if (!rec48v) return null;
 
     if (rec48v.estado === "sem_carga") {
+      // Driver aplicado continua cobrado mesmo sem módulo (ou com módulo "?W") — tem que
+      // continuar na tela para poder ser conferido ou removido.
+      if (driverAplicado) return renderDriverAplicado(driverAplicado, driverAplicado.potenciaW ?? 0);
       return (
         <div className="rounded-md border border-dashed p-3 bg-muted/30 text-xs text-muted-foreground">
           Adicione módulos para calcular o driver recomendado.
@@ -780,27 +950,68 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
     }
 
     if (rec48v.estado === "excede_200w") {
+      // Nº de circuitos pela mesma conta do driver (RULE-026: folga de 20% sobre a carga).
+      // Antes dividia pela potência crua e o aviso podia pedir menos circuitos do que o cálculo.
+      const nCircuitos = calcularQtdDriversComposicao(cargaTotalW, 200);
+      const drvPotencia = driverAplicado?.potenciaW ?? 0;
+      const faltaPotencia =
+        !!driverAplicado &&
+        drvPotencia * driverAplicado.quantidade < cargaTotalW * MARGEM_SEGURANCA_DRIVER;
       return (
-        <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1">
-          <p>Atenção: carga total {cargaTotalW}W excede 200W.</p>
-          <p>
-            Recomendado dividir em {Math.ceil(cargaTotalW / 200)} circuitos com
-            driver LM2344 (200W) cada.
-          </p>
-          <p>
-            A divisão do trilho é decisão de projeto — adicione os drivers
-            manualmente.
-          </p>
+        <div className="space-y-2">
+          <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1">
+            <p>Atenção: carga total {cargaTotalW}W excede 200W.</p>
+            <p>
+              Recomendado dividir em {nCircuitos} circuitos com driver LM2344 (200W) cada.
+            </p>
+            <p>A divisão do trilho é decisão de projeto — a quantidade fica editável.</p>
+            {!driverAplicado && (
+              <Button
+                size="sm"
+                variant="default"
+                className="h-8 mt-1"
+                onClick={() => aplicarDriver48V("LM2344")}
+              >
+                Aplicar {nCircuitos}× LM2344
+              </Button>
+            )}
+          </div>
+          {/* Acima de 200W o painel voltava só o aviso: o driver já aplicado desaparecia da
+              tela e a quantidade ficava sem como ser conferida/editada. */}
+          {driverAplicado &&
+            renderDriverAplicado(
+              driverAplicado,
+              drvPotencia,
+              faltaPotencia ? (
+                <div className="space-y-1">
+                  <p>
+                    Potência aplicada insuficiente para {cargaTotalW}W ×{" "}
+                    {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} ={" "}
+                    {Math.round(cargaTotalW * MARGEM_SEGURANCA_DRIVER * 10) / 10}W.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-8"
+                    onClick={() => aplicarDriver48V("LM2344")}
+                  >
+                    Reaplicar {nCircuitos}× LM2344
+                  </Button>
+                </div>
+              ) : undefined
+            )}
         </div>
       );
     }
 
     // estado === 'recomendado'
     if (!driverAplicado) {
+      const nRec = calcularQtdDriversComposicao(cargaTotalW, rec48v.potenciaW) || 1;
       return (
         <div className="rounded-md border border-blue-400/40 bg-blue-50 px-3 py-2 text-xs text-blue-900 space-y-1">
           <p>
-            Driver recomendado: {rec48v.sku} ({rec48v.potenciaW}W) — 1 unidade
+            Driver recomendado: {rec48v.sku} ({rec48v.potenciaW}W) — {nRec}{" "}
+            {nRec === 1 ? "unidade" : "unidades"}
           </p>
           <p>
             Carga: {cargaTotalW}W × {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} = {rec48v.potenciaSeguraW}W calculados
@@ -819,82 +1030,73 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
 
     // Driver aplicado
     const drvPotencia = driverAplicado.potenciaW ?? 0;
-    const drvOk = drvPotencia >= cargaTotalW * MARGEM_SEGURANCA_DRIVER;
-
-    if (drvOk) {
-      if (mostrarBuscaDriver) {
-        return (
-          <div className="rounded-md border border-green-400/40 bg-green-50 px-3 py-2 text-xs text-green-900 space-y-2">
-            <p className="flex items-center gap-1">
-              <Check className="h-3.5 w-3.5 text-green-700" />
-              Driver aplicado: {driverAplicado.codigo} ({drvPotencia}W) ×{" "}
-              {driverAplicado.quantidade}
-            </p>
-            <ProdutoAutocomplete
-              value=""
-              onSelect={handleSelecionarDriverManual}
-              placeholder="Buscar driver..."
-              filtro="driver"
-              filtroVoltagem={is48V ? 48 : 24}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8"
-              onClick={() => setMostrarBuscaDriver(false)}
-            >
-              Cancelar
-            </Button>
-          </div>
-        );
-      }
-      return (
-        <div className="rounded-md border border-green-400/40 bg-green-50 px-3 py-2 text-xs text-green-900 space-y-1">
-          <p className="flex items-center gap-1">
-            <Check className="h-3.5 w-3.5 text-green-700" />
-            Driver aplicado: {driverAplicado.codigo} ({drvPotencia}W) ×{" "}
-            {driverAplicado.quantidade}
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8"
-            onClick={() => setMostrarBuscaDriver(true)}
-          >
-            Alterar
-          </Button>
-        </div>
-      );
-    }
+    // A potência disponível é a do driver × quantidade: 2 × 100W cobrem 160W de carga segura.
+    // Antes só a unitária era comparada e o aviso de subdimensionado nunca saía do lugar.
+    const drvOk = drvPotencia * driverAplicado.quantidade >= cargaTotalW * MARGEM_SEGURANCA_DRIVER;
 
     // Subdimensionado — rec48v é garantidamente 'recomendado' aqui (sem_carga e excede_200w
     // já retornaram no topo da função), então rec48v.sku está sempre definido.
-    return (
-      <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1">
+    const alerta = drvOk ? undefined : (
+      <div className="space-y-1">
         <p>
-          Driver atual ({drvPotencia}W) insuficiente para a carga atual (
-          {cargaTotalW}W).
+          Potência aplicada insuficiente para a carga atual ({cargaTotalW}W ×{" "}
+          {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} ={" "}
+          {rec48v.potenciaSeguraW}W). Recomendado: {rec48v.sku} ({rec48v.potenciaW}W).
         </p>
-        <p>Recomendado: {rec48v.sku} ({rec48v.potenciaW}W)</p>
         <Button
           size="sm"
           variant="default"
-          className="h-8 mt-1"
+          className="h-8"
           onClick={() => aplicarDriver48V(rec48v.sku)}
         >
           Reaplicar recomendação
         </Button>
       </div>
     );
+    return renderDriverAplicado(driverAplicado, drvPotencia, alerta);
   };
 
   // ─── Painel de driver — estado 24V ───
 
   const renderPainelDriver24V = () => {
-    if (cargaTotalW <= 0) {
+    // Carga de referência: no SYSTEM MOLD é a fita (os difusos não têm potência própria, então
+    // `cargaTotalW` é 0 e o painel escondia a sugestão do driver da fita). No magnético é a
+    // soma dos módulos — `cargaDoDriver` devolve exatamente `cargaTotalW` nesse caso.
+    const cargaDriverW = cargaDoDriver(item);
+
+    // Driver aplicado vem ANTES dos gates: com carga 0 ou busca em voo o box desaparecia da
+    // tela e a quantidade cobrada ficava sem como ser conferida.
+    if (driverAplicado) {
+      const drvPotencia = driverAplicado.potenciaW ?? 0;
+      // Potência disponível = unitária × quantidade (ver comentário no painel 48V)
+      const drvOk = drvPotencia * driverAplicado.quantidade >= cargaDriverW * MARGEM_SEGURANCA_DRIVER;
+
+      // Subdimensionado: o alerta entra dentro do próprio box (o input de quantidade fica)
+      const alerta = drvOk ? undefined : (
+        <div className="space-y-1">
+          <p>
+            Potência aplicada insuficiente para a carga atual (
+            {Math.round(cargaDriverW * 10) / 10}W ×{" "}
+            {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} ={" "}
+            {Math.round(cargaDriverW * MARGEM_SEGURANCA_DRIVER * 10) / 10}W).
+            {sugestao24v && ` Recomendado: ${sugestao24v.sku} (${sugestao24v.potenciaW}W).`}
+          </p>
+          {sugestao24v && (
+            <Button size="sm" variant="default" className="h-8" onClick={aplicarDriver24V}>
+              Reaplicar recomendação
+            </Button>
+          )}
+        </div>
+      );
+      return renderDriverAplicado(driverAplicado, drvPotencia, alerta);
+    }
+
+    if (cargaDriverW <= 0) {
       return (
         <div className="rounded-md border border-dashed p-3 bg-muted/30 text-xs text-muted-foreground">
-          Adicione módulos para calcular o driver recomendado.
+          {isModular
+            ? "Adicione a fita para calcular o driver recomendado."
+            : "Adicione módulos para calcular o driver recomendado."}
         </div>
       );
     }
@@ -907,93 +1109,27 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
       );
     }
 
-    if (driverAplicado) {
-      const drvPotencia = driverAplicado.potenciaW ?? 0;
-      const drvOk = drvPotencia >= cargaTotalW * MARGEM_SEGURANCA_DRIVER;
-
-      if (drvOk) {
-        if (mostrarBuscaDriver) {
-          return (
-            <div className="rounded-md border border-green-400/40 bg-green-50 px-3 py-2 text-xs text-green-900 space-y-2">
-              <p className="flex items-center gap-1">
-                <Check className="h-3.5 w-3.5 text-green-700" />
-                Driver aplicado: {driverAplicado.codigo} ({drvPotencia}W) ×{" "}
-                {driverAplicado.quantidade}
-              </p>
-              <ProdutoAutocomplete
-                value=""
-                onSelect={handleSelecionarDriverManual}
-                placeholder="Buscar driver..."
-                filtro="driver"
-                filtroVoltagem={is48V ? 48 : 24}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8"
-                onClick={() => setMostrarBuscaDriver(false)}
-              >
-                Cancelar
-              </Button>
-            </div>
-          );
-        }
-        return (
-          <div className="rounded-md border border-green-400/40 bg-green-50 px-3 py-2 text-xs text-green-900 space-y-1">
-            <p className="flex items-center gap-1">
-              <Check className="h-3.5 w-3.5 text-green-700" />
-              Driver aplicado: {driverAplicado.codigo} ({drvPotencia}W) ×{" "}
-              {driverAplicado.quantidade}
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8"
-              onClick={() => setMostrarBuscaDriver(true)}
-            >
-              Alterar
-            </Button>
-          </div>
-        );
-      }
-
-      // Subdimensionado
-      return (
-        <div className="rounded-md border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1">
-          <p>
-            Driver atual ({drvPotencia}W) insuficiente para a carga atual (
-            {cargaTotalW}W).
-          </p>
-          {sugestao24v && <p>Recomendado: {sugestao24v.sku} ({sugestao24v.potenciaW}W)</p>}
-          <Button
-            size="sm"
-            variant="default"
-            className="h-8 mt-1"
-            onClick={aplicarDriver24V}
-          >
-            Reaplicar recomendação
-          </Button>
-        </div>
-      );
-    }
-
     if (sem24v) {
       return (
         <div className="rounded-md border border-dashed p-3 text-xs text-destructive">
-          Nenhum driver 24V compatível no catálogo para {cargaTotalW}W. Selecione manualmente.
+          Nenhum driver 24V compatível no catálogo para{" "}
+          {Math.round(cargaDriverW * MARGEM_SEGURANCA_DRIVER * 10) / 10}W. Selecione manualmente.
         </div>
       );
     }
 
     if (sugestao24v) {
+      const nRec = calcularQtdDriversComposicao(cargaDriverW, sugestao24v.potenciaW) || 1;
       return (
         <div className="rounded-md border border-blue-400/40 bg-blue-50 px-3 py-2 text-xs text-blue-900 space-y-1">
           <p>
-            Driver recomendado: {sugestao24v.sku} ({sugestao24v.potenciaW}W) — 1 unidade
+            Driver recomendado: {sugestao24v.sku} ({sugestao24v.potenciaW}W) — {nRec}{" "}
+            {nRec === 1 ? "unidade" : "unidades"}
           </p>
           <p>
-            Carga: {cargaTotalW}W × {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} ={" "}
-            {Math.round(cargaTotalW * MARGEM_SEGURANCA_DRIVER * 100) / 100}W calculados
+            Carga: {Math.round(cargaDriverW * 10) / 10}W ×{" "}
+            {MARGEM_SEGURANCA_DRIVER.toFixed(2).replace(".", ",")} ={" "}
+            {Math.round(cargaDriverW * MARGEM_SEGURANCA_DRIVER * 100) / 100}W calculados
           </p>
           {/* RULE-031: driver de trilho ≠ driver de fita. Sem marcação no catálogo,
               sugerimos assim mesmo, mas com a ressalva explícita. */}
@@ -1016,7 +1152,9 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
 
     return (
       <div className="rounded-md border border-dashed p-3 bg-muted/30 text-xs text-muted-foreground">
-        Adicione módulos para calcular o driver recomendado.
+        {isModular
+          ? "Adicione a fita para calcular o driver recomendado."
+          : "Adicione módulos para calcular o driver recomendado."}
       </div>
     );
   };
@@ -1292,6 +1430,45 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
           </div>
         )}
 
+        {/* Conector de energia / kit de fixação (papéis obrigatórios do checklist). Ficavam
+            cobrados sem linha própria — agora com quantidade, preço e remoção (RULE-001). */}
+        {outrosComponentes.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+              Outros componentes
+            </p>
+            <div className="space-y-1.5">
+              {outrosComponentes.map((o) => (
+                <div key={o.id} className="flex items-center gap-2 flex-wrap">
+                  <Input value={o.codigo} readOnly className="bg-muted/50 w-28 h-8" />
+                  <Input
+                    value={o.descricao}
+                    readOnly
+                    className="bg-muted/50 flex-1 h-8 min-w-0"
+                  />
+                  <Input type="number" min={1} {...qtdInputProps(o)} className="w-20 h-8" />
+                  <PrecoInput
+                    value={o.precoUnitario}
+                    min={o.precoMinimo}
+                    onChange={(v) => atualizarComposicaoItem(o.id, { precoUnitario: v })}
+                  />
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                    Total: {formatarMoeda(o.precoUnitario * o.quantidade)}
+                  </Badge>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => removerComposicaoItem(o.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Aviso NÃO bloqueante de capacidade do trilho (RULE-056 / BUG-19).
             Tampa cega fica fora da soma — "passa sempre" (RULE-099). */}
         {excedeTrilho && ocupacao && (
@@ -1354,19 +1531,82 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
                 />
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-muted-foreground whitespace-nowrap">m:</span>
+                  {/* Rascunho local (mesmo padrão dos acessórios): apagar o campo não grava 0.
+                      Sair com ele vazio devolve a metragem aos difusos. */}
                   <Input
                     type="number"
                     min={0}
                     step={0.1}
-                    value={fitaModular.comprimento ?? metragemDerivada}
-                    onChange={(e) =>
+                    aria-label="Metragem da fita"
+                    value={comprimentoDraft[fitaModular.id] ?? String(Math.round((fitaModular.comprimento ?? metragemDerivada) * 1000) / 1000)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setComprimentoDraft((d) => ({ ...d, [fitaModular.id]: raw }));
+                      if (raw === "") return;
+                      // a metragem define quantos ROLOS entram no pedido (RULE-005/006)
+                      const m = Math.max(0, parseFloat(raw) || 0);
                       atualizarComposicaoItem(fitaModular.id, {
-                        comprimento: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                        comprimento: m,
+                        metragemEditada: true,
+                        ...(fitaModular.metragemRolo != null
+                          ? { quantidade: calcularRolosFitaModular(m, fitaModular.metragemRolo) }
+                          : {}),
+                      });
+                    }}
+                    onBlur={() => {
+                      if (comprimentoDraft[fitaModular.id] === "") usarMetragemDosDifusos(fitaModular);
+                      setComprimentoDraft((d) => { const { [fitaModular.id]: _, ...rest } = d; return rest; });
+                    }}
                     className="w-20 h-8"
                   />
                 </div>
+                {/* RULE-005: tamanho do rolo editável, como no sistema de fita comum */}
+                <Select
+                  value={fitaModular.metragemRolo != null ? String(fitaModular.metragemRolo) : undefined}
+                  onValueChange={(v) => {
+                    const rolo = Number(v);
+                    atualizarComposicaoItem(fitaModular.id, {
+                      metragemRolo: rolo,
+                      roloPresumido: false,
+                      quantidade: calcularRolosFitaModular(fitaModular.comprimento ?? metragemDerivada, rolo),
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-28 text-xs" aria-label="Tamanho do rolo">
+                    <SelectValue placeholder="rolo?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...new Set([...TAMANHOS_ROLO_CATALOGO, ...(fitaModular.metragemRolo != null ? [fitaModular.metragemRolo] : [])])]
+                      .sort((a, b) => a - b)
+                      .map((t) => (
+                        <SelectItem key={t} value={String(t)}>
+                          rolo {t} m
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {fitaModular.roloPresumido && (
+                  <span className="text-xs text-amber-700">
+                    ⚠ rolo não cadastrado — confirme o tamanho
+                  </span>
+                )}
+                {fitaModular.metragemRolo != null && (
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                    {fitaModular.quantidade}×{fitaModular.metragemRolo}m · Total:{" "}
+                    {formatarMoeda(fitaModular.precoUnitario * fitaModular.quantidade)}
+                  </Badge>
+                )}
+                {fitaModular.metragemEditada &&
+                  Math.abs((fitaModular.comprimento ?? 0) - metragemDerivada) > 0.0005 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() => usarMetragemDosDifusos(fitaModular)}
+                    >
+                      Usar soma dos difusos ({formatarM(metragemDerivada)} m)
+                    </Button>
+                  )}
                 <PrecoInput
                   value={fitaModular.precoUnitario}
                   min={fitaModular.precoMinimo}
@@ -1514,7 +1754,10 @@ const ComposicaoCard = ({ item, onChange, onRemove, onDuplicate, indice }: Compo
                   Recomendado dividir em {Math.ceil(consumoSeguro24v / LIMITE_W_DRIVER_ALOJADO)} circuitos
                   com um driver Slim de até {LIMITE_W_DRIVER_ALOJADO}W cada.
                 </p>
-                <p>A divisão é decisão de projeto — adicione os drivers manualmente.</p>
+                <p>
+                  A divisão é decisão de projeto: ao escolher o driver Slim abaixo, a quantidade já
+                  entra com um por circuito — confira e ajuste se o projeto dividir diferente.
+                </p>
               </div>
             )}
             {is48V && renderPainelDriver48V()}
