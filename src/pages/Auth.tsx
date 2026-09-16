@@ -129,13 +129,26 @@ const Auth = () => {
       const { data: signUpData, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.origin },
+        options: {
+          emailRedirectTo: window.location.origin,
+          // Com "Confirm email" ligado o cadastro não devolve sessão, e `create-colaborador` só
+          // aceita o usuário do token — o perfil nasce no 1º login (useColaborador) a partir
+          // destes dados. CPF e telefone ficam de fora (iriam dentro do JWT); o banner de
+          // "Complete seu cadastro" pede os dois no primeiro acesso.
+          data: {
+            nome: nome.trim(),
+            cargo: cargo.trim() || null,
+            departamento: departamento.trim() || null,
+            setor: setor || null,
+          },
+        },
       });
       if (error) {
         toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
       } else {
-        // Create colaborador profile via edge function
-        const userId = signUpData.user?.id;
+        // Sem sessão (confirmação de e-mail pendente) a edge recusaria a chamada: o perfil
+        // é criado no primeiro login.
+        const userId = signUpData.session ? signUpData.user?.id : undefined;
         if (userId) {
           try {
             const res = await supabase.functions.invoke("create-colaborador", {

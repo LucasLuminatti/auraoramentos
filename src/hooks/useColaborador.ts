@@ -14,6 +14,9 @@ export interface Colaborador {
   setor: string | null;
 }
 
+/** Mesma lista do CHECK de `colaboradores.setor` e da edge `create-colaborador`. */
+const SETORES_VALIDOS = ["comercial", "projetos", "logistica", "financeiro"];
+
 function derivarNomeInicial(user: User): string {
   const meta = user.user_metadata ?? {};
   const candidatos = [meta.nome, meta.name, meta.full_name];
@@ -54,8 +57,22 @@ export function useColaborador() {
       // (usa service_role para contornar RLS da tabela colaboradores).
       try {
         const nome = derivarNomeInicial(user);
+        // Dados que o próprio usuário digitou no cadastro (Auth.tsx guarda em user_metadata
+        // quando a confirmação de e-mail adia a criação do perfil). Só preenchem o perfil
+        // dele — nada disso é usado para autorizar.
+        const meta = user.user_metadata ?? {};
+        const texto = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+        // setor fora da lista faria a edge recusar a criação inteira (400) — melhor sem setor,
+        // que o banner de "Complete seu cadastro" pede depois
+        const setor = texto(meta.setor);
         await supabase.functions.invoke("create-colaborador", {
-          body: { nome, user_id: user.id },
+          body: {
+            nome,
+            user_id: user.id,
+            cargo: texto(meta.cargo),
+            departamento: texto(meta.departamento),
+            setor: setor && SETORES_VALIDOS.includes(setor) ? setor : undefined,
+          },
         });
         const { data: created } = await supabase
           .from("colaboradores")
